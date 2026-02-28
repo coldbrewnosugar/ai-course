@@ -381,7 +381,7 @@ footer span { color: var(--ink); font-weight: 700; }
     <div class="stats-bar">
       <div><strong>1</strong> session</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-02-28 21:37 UTC</strong></div>
+      <div>Updated <strong>2026-02-28 21:38 UTC</strong></div>
     </div>
 
     <footer>
@@ -464,7 +464,7 @@ function navigate(offset) {
 
 function goToday() {
   const t = new Date(TODAY + "T00:00:00");
-  const wd = t.getDay() === 0 ? 6 : t.getDay() - 1;
+  const wd = t.getDay();
   refDate = new Date(t);
   refDate.setDate(refDate.getDate() - wd);
   renderWeek();
