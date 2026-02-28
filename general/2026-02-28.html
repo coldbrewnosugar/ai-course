@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Context Mode: Shrink MCP Output by 98% in Claude Code — Tinker</title>
+  <title>Context Mode: Slash Your MCP Context Window Burn by 98% — Tinker</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root {
@@ -565,7 +565,6 @@ body {
   margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
 }
 .other-article-card:hover {
@@ -580,6 +579,12 @@ body {
   font-size: 0.95rem;
   margin-bottom: 0.15rem;
 }
+.oa-summary {
+  font-size: 0.85rem;
+  color: var(--ink-secondary);
+  margin: 0.15rem 0;
+  line-height: 1.4;
+}
 .oa-meta {
   font-family: var(--mono);
   font-size: 0.65rem;
@@ -588,36 +593,64 @@ body {
 }
 .oa-votes {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.25rem;
   flex-shrink: 0;
 }
-.oa-vote-btn {
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.7rem;
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-decoration: none;
+  justify-content: center;
+  width: 36px; height: 36px;
+  font-size: 1.1rem;
   border: 1px solid var(--border-gray);
-  color: var(--ink);
-  background: var(--light-gray);
+  cursor: pointer;
   transition: all 0.15s;
-  white-space: nowrap;
+  background: var(--light-gray);
+  user-select: none;
 }
-.oa-vote-btn:hover {
+.oa-toggle-label:hover {
   border-color: var(--ink);
   background: #fff;
 }
-.oa-vote-btn.vote-up:hover {
+.oa-toggle:checked + .oa-toggle-label.vote-up {
   border-color: var(--green);
-  color: var(--green);
+  background: rgba(26,135,84,0.1);
 }
-.oa-vote-btn.vote-down:hover {
+.oa-toggle:checked + .oa-toggle-label.vote-down {
   border-color: var(--red);
-  color: var(--red);
+  background: rgba(230,50,38,0.1);
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.5rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.oa-submit-btn:hover { background: var(--blue); }
+.oa-submit-btn:disabled {
+  background: var(--border-gray);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 /* ── Footer ── */
@@ -650,330 +683,317 @@ body {
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>Your Context Window Is Leaking</h1>
-      <div class="hero-subtitle">One Playwright snapshot costs 56KB. Twenty GitHub issues cost 59KB. After 30 minutes, 40% of your context is gone. Let&#x27;s fix that.</div>
+      <h1>Your Context Window Has a Silent Leak</h1>
+      <div class="hero-subtitle">Every MCP tool call dumps raw data into your conversation. A single Playwright snapshot costs 56 KB. Twenty GitHub issues cost 59 KB. After 30 minutes, 40% of your context is just... tool output. Let&#x27;s fix that.</div>
       <div class="hero-meta">
-        <span>30 min</span>
-        <span> <span class="tag">MCP</span> <span class="tag">context-window</span> <span class="tag">claude-code</span> <span class="tag">developer-tools</span></span>
+        <span>35 min</span>
+        <span> <span class="tag">MCP</span> <span class="tag">context-window</span> <span class="tag">claude-code</span> <span class="tag">productivity</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>Here&#x27;s a pattern that&#x27;s been quietly killing long Claude Code sessions: <strong>MCP tool outputs are enormous</strong>.</p>
+      <p>Here&#x27;s what hit Hacker News today (180 points, 46 comments, people are <em>feeling</em> this one): a team built an MCP server called <strong>Context Mode</strong> that intercepts tool outputs before they flood your conversation. The numbers are wild — 315 KB of raw output compressed to 5.4 KB. That&#x27;s a 98% reduction.</p>
 
-<p>MCP (Model Context Protocol) is how Claude Code talks to the outside world — GitHub, Playwright, your file system, databases. Every time a tool returns data, that raw response gets dumped straight into your context window. The 200K token limit sounds generous until you realize a single browser snapshot eats 56KB and a <code>gh issue list</code> burns 59KB.</p>
+<p>Why should you care? If you&#x27;ve ever had a Claude Code session start getting sluggish after 30 minutes, or watched your agent lose track of earlier context because the window filled up with raw git diffs and API responses — this is exactly that problem. Your agent doesn&#x27;t <em>need</em> the full 56 KB Playwright snapshot sitting in the conversation. It needs a compact summary of what matters.</p>
 
-<p>A project called <strong>Context Mode</strong> just hit Hacker News with 174 points and a wild claim: they can compress MCP output by 98%. That means 315KB of raw tool output becomes 5.4KB. Sessions that used to slow down after 30 minutes now run for 3+ hours.</p>
-
-<p>The trick? Instead of letting raw data flood your conversation, Context Mode routes tool outputs through <strong>isolated sandboxes</strong>. Your code processes the data, extracts what matters, and only the summary enters the context. Think of it like having an assistant who reads the entire report and hands you a sticky note with the three things that matter.</p>
-
-<p>Today we&#x27;re going to install it, understand <em>why</em> it works (the mental model matters more than the config), and test it against real scenarios. Along the way, we&#x27;ll learn about FTS5 search, BM25 ranking, and how sandboxed execution actually keeps your context clean.</p>
+<p>The clever bit: Context Mode doesn&#x27;t just truncate things. It runs your tool outputs through isolated subprocesses (sandboxes), processes the data there, and only sends back the distilled result. The raw data never enters your context window. It&#x27;s like having a research assistant who reads the whole report and hands you a one-page brief instead of dropping the full PDF on your desk.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>Understanding the Problem: Where Do Your Tokens Go?</h2>
+        <h2>Understand the Problem: Where Your Context Actually Goes</h2>
       </div>
       <div class="step-body">
-        <p>Before we install anything, let&#x27;s build intuition for <em>why</em> this problem exists.</p>
+        <p>Before we install anything, let&#x27;s build an intuition for <em>why</em> this matters. Most people think their context window is spent on their messages and the agent&#x27;s responses. That&#x27;s like thinking your phone battery drains from phone calls — technically true, but background apps are the real culprit.</p>
 
-<p>Imagine your context window is a whiteboard in a meeting room. Every time someone references a document, they don&#x27;t just say &quot;see page 3&quot; — they photocopy the <em>entire document</em> and tape it to the whiteboard. After five references, you can&#x27;t see the whiteboard anymore.</p>
+<p>Here&#x27;s the mental model: imagine your 200K context window is a 200-page notebook. Before you even write your first message, MCP tool <em>definitions</em> have already filled 70+ pages (if you have 80+ tools active). Then every time a tool runs — fetching GitHub issues, reading a log file, taking a browser snapshot — the raw output gets copied into more pages. After 30 minutes of active tool use, you&#x27;re writing on the last 20 pages and the agent has forgotten what was on page 1.</p>
 
-<p>That&#x27;s exactly what happens with MCP tools. When Claude Code calls <code>gh issue list</code>, GitHub doesn&#x27;t return a tidy summary. It returns every issue with full metadata — labels, assignees, timestamps, URLs, body text. All of it gets pasted into your conversation.</p>
-
-<p>The key insight is that there are <strong>two directions</strong> of context consumption:</p>
-<ol>
-<li><strong>Tool definitions</strong> coming in (Cloudflare already solved this with Code Mode — 99.9% compression)</li>
-<li><strong>Tool outputs</strong> coming back (this is what Context Mode tackles)</li>
-</ol>
-
-<p>With 81+ tools active, you can lose 72% of your context to definitions alone <em>before your first message</em>. Then every tool response chips away at what&#x27;s left.</p>
+<p>Let&#x27;s get your agent to help you visualize this problem with your own setup.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to calculate how quickly a typical Claude Code session burns through context with common MCP tools
+          Get your agent to estimate how much context your current MCP tools consume before you even start working
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What&#x27;s the total context window size in tokens? (200K)</li><li>How would you convert KB to approximate token counts?</li><li>If someone runs 5 Playwright snapshots, 2 GitHub queries, and reads 3 log files in 30 minutes, what&#x27;s the total?</li><li>What percentage of the window is gone before any actual coding conversation?</li></ul>
+          <ul><li>What MCP servers do you currently have configured? Where does Claude Code store that config?</li><li>How would you estimate the token cost of tool definitions vs. tool outputs?</li><li>What&#x27;s the biggest tool output you&#x27;ve seen in a session — a test suite? A git diff? An API response?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should do some back-of-napkin math for you. Roughly: 1KB ≈ 250 tokens. So 56KB (Playwright) = ~14K tokens per snapshot. Five snapshots = 70K tokens. Two GitHub queries at 59KB each = ~30K tokens. Three log files at 45KB = ~34K tokens. That&#x27;s 134K tokens — <strong>67% of your entire context</strong> — consumed by raw tool output alone. Add the 143K for tool definitions and you&#x27;ve overflowed before writing a single line of code. The agent should present this as a simple breakdown table.</p></div>
+        <div class="reveal-body"><p>The agent should look at your <code>~/.claude/settings.json</code> or <code>.mcp.json</code> files and list your active MCP servers. It&#x27;ll estimate that each tool definition costs roughly 200-500 tokens, so 80 tools = ~16K-40K tokens just in definitions. Then it&#x27;ll point out that typical tool outputs range from 1 KB (simple commands) to 85 KB (CSV data or browser snapshots). The key insight it should surface: tool definitions are a fixed tax, but tool outputs are the variable cost that kills your session over time.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        A rough rule of thumb: 1KB of text ≈ 250 tokens. So a 56KB Playwright snapshot eats about 14,000 tokens. That&#x27;s the size of a solid conversation about architecture decisions — gone in one tool call.
+        Run <code>/mcp</code> in Claude Code to see your active MCP servers. Count the tools — you might be surprised. The Playwright MCP server alone registers 15+ tools.
       </div>
         
       <details class="reveal">
-        <summary>Why can&#x27;t we just increase the context window?</summary>
-        <div class="reveal-body"><p>Even if context windows keep growing (and they will), the problem scales too. More tools = more output. And there&#x27;s a subtler issue: <strong>attention degrades with length</strong>. A model with 200K tokens of context doesn&#x27;t attend equally to all of it. The more noise in your context, the worse the signal. Compression isn&#x27;t just about fitting more in — it&#x27;s about keeping the signal-to-noise ratio high so the model actually <em>uses</em> what&#x27;s there.</p></div>
+        <summary>The 72% stat — is it really that bad?</summary>
+        <div class="reveal-body"><p>The article claims 143K tokens (72%) consumed before your first message with 81+ tools active. That&#x27;s an extreme case, but not unrealistic. Each MCP server registers multiple tools, and each tool has a name, description, and input schema. The Cloudflare team showed tool definitions can be compressed 99.9% with their &#x27;Code Mode&#x27; approach — that&#x27;s the <em>input</em> side. Context Mode tackles the <em>output</em> side. They&#x27;re complementary solutions to the same problem: MCP was designed for capability, not context efficiency.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Install Context Mode and See What Changes</h2>
+        <h2>Install Context Mode and Understand the Sandbox Architecture</h2>
       </div>
       <div class="step-body">
-        <p>Alright, let&#x27;s actually get this thing running. There are two install paths:</p>
+        <p>Time to install. Context Mode gives you two options: the full plugin (with auto-routing hooks that intercept tool outputs automatically) or just the MCP server (manual, more control). We&#x27;ll go with the plugin because honestly, the whole point is to <em>not</em> think about it.</p>
+
+<p>But before we blindly install, let&#x27;s understand what&#x27;s actually happening under the hood. The sandbox model is the clever part:</p>
 
 <ol>
-<li><strong>Plugin Marketplace</strong> — gives you auto-routing hooks plus slash commands (recommended)</li>
-<li><strong>MCP-only</strong> — just the raw tools, no auto-routing</li>
+<li><strong>A tool runs</strong> — say, <code>gh issue list</code> returns 59 KB of JSON</li>
+<li><strong>Context Mode intercepts</strong> the output via a PreToolUse hook</li>
+<li><strong>A subprocess spawns</strong> — an isolated process with its own memory boundary</li>
+<li><strong>The subprocess processes the data</strong> — extracts what matters, summarizes, computes stats</li>
+<li><strong>Only stdout from the subprocess</strong> enters your conversation — maybe 1 KB</li>
+<li><strong>The raw 59 KB never touches your context</strong></li>
 </ol>
 
-<p>We&#x27;re going with the Plugin Marketplace route because the auto-routing is the magic part. Without it, you&#x27;d have to manually pipe every tool output through the sandbox yourself.</p>
-
-<p>The install is genuinely simple — but understanding <em>what it installs</em> is where the learning happens.</p>
+<p>Think of it like a mail room. Instead of delivering every package directly to your desk (cluttering your workspace), there&#x27;s a mail room that opens packages, pulls out the important documents, and delivers just those. The boxes stay in the mail room.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to walk you through installing Context Mode via the Claude Code Plugin Marketplace and explain what each piece does
+          Get your agent to install Context Mode as a Claude Code plugin and verify it&#x27;s working
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What&#x27;s the difference between a plugin and a plain MCP server in Claude Code?</li><li>What&#x27;s a PreToolUse hook and why does Context Mode need one?</li><li>After installation, what should you see when you restart Claude Code?</li></ul>
+          <ul><li>The article mentions two install methods — plugin marketplace vs MCP-only. Which gives you auto-routing?</li><li>After installing, how would you verify the MCP server is running and the hooks are active?</li><li>What should change in your Claude Code configuration files?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should explain that you run <code>/install-plugin context-mode</code> (or add it to your MCP config manually). The key thing it installs is three tools — <code>execute</code> (run code in a sandbox), <code>index</code> (store content in a searchable knowledge base), and <code>search</code> (query that knowledge base). But the real magic is the <strong>PreToolUse hook</strong>: a callback that fires <em>before</em> any MCP tool returns its output, automatically routing that output through the sandbox instead of dumping it raw into context. After restarting Claude Code, you shouldn&#x27;t notice anything different in your workflow — that&#x27;s the point. The compression happens invisibly.</p></div>
+        <div class="reveal-body"><p>The agent should walk you through running the plugin install command (it&#x27;s a one-liner via the Claude Code plugin marketplace — <code>/install-plugin context-mode</code> or adding it to your MCP config). After install, you should see a new entry in your MCP settings and a PreToolUse hook registered. The agent should verify by running <code>/mcp</code> to confirm the <code>context-mode</code> server appears with tools like <code>execute</code>, <code>batch_execute</code>, <code>index</code>, <code>search</code>, and <code>fetch_and_index</code>. Restart Claude Code if needed.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        You need to <strong>restart Claude Code</strong> after installation. The MCP server needs to register its tools and hooks fresh. If you skip the restart, the PreToolUse hook won&#x27;t be active and you&#x27;ll still get raw output.
+        Context Mode spawns subprocesses that inherit your environment variables for credential passthrough. This means <code>gh</code>, <code>aws</code>, <code>gcloud</code>, etc. work inside the sandbox — but it also means the sandbox has access to your credentials. This is by design (tools need auth to work), but worth understanding.
       </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        If you just want to experiment without committing, use the MCP-only install. You won&#x27;t get auto-routing, but you can manually test the <code>execute</code> and <code>search</code> tools to see how the sandbox works.
+        Context Mode auto-detects Bun for 3-5x faster JavaScript/TypeScript execution in the sandbox. If you have Bun installed, you&#x27;ll get faster processing for free.
       </div>
         
       <details class="reveal">
-        <summary>What exactly is a PreToolUse hook?</summary>
-        <div class="reveal-body"><p>Think of it like middleware in a web server. When Express gets a request, it passes through middleware functions before hitting your route handler. A PreToolUse hook does the same thing for MCP tool calls — it intercepts the tool&#x27;s output <em>before</em> it enters the conversation context.</p>
-
-<p>Context Mode&#x27;s hook says: &quot;Hey, before you paste that 56KB Playwright snapshot into the chat, let me run it through a sandbox first. I&#x27;ll extract what matters and give you a 299-byte summary instead.&quot;</p>
-
-<p>The beauty is that Claude Code already supports this hook pattern — Context Mode just registers one that does the compression. You don&#x27;t change how you prompt or work. The hook fires automatically on every tool response.</p></div>
+        <summary>How does credential passthrough actually work?</summary>
+        <div class="reveal-body"><p>When Context Mode spawns a subprocess, it inherits the parent process&#x27;s environment variables — things like <code>GITHUB_TOKEN</code>, <code>AWS_ACCESS_KEY_ID</code>, your <code>~/.config/gh</code> directory, <code>~/.kube/config</code>, etc. The subprocess can use these to authenticate CLI calls (like <code>gh issue list</code>), but the credentials themselves never appear in the stdout that enters your conversation. It&#x27;s the same mechanism as running a script in your terminal — the script can use your auth, but it doesn&#x27;t print your tokens. The key security boundary: scripts in the sandbox can&#x27;t access each other&#x27;s memory or state, and only stdout crosses back into the conversation.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What are the 10 supported language runtimes?</summary>
+        <div class="reveal-body"><p>JavaScript, TypeScript, Python, Shell, Ruby, Go, Rust, PHP, Perl, and R. The sandbox detects which runtime to use based on the script you pass to <code>execute</code>. For JS/TS, it prefers Bun if available (significantly faster startup than Node). For Python, it uses whatever <code>python3</code> is on your PATH. Shell scripts run in Bash. The compiled languages (Go, Rust) actually compile and run in the subprocess — which is wild but works because the subprocess lifecycle is managed by Context Mode.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point you should have Context Mode installed and understand the two-part architecture: sandboxed execution for compression, and a PreToolUse hook for automatic routing. If you restarted Claude Code and see the `execute`, `index`, and `search` tools available, you&#x27;re good to go.</div>
+      <div>At this point you should have Context Mode installed as a Claude Code plugin, with the MCP server showing up when you run `/mcp`. You should see tools like `execute`, `batch_execute`, `index`, `search`, and `fetch_and_index` available. If not, try restarting Claude Code — MCP servers sometimes need a fresh start to register.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>The Sandbox: How Raw Data Stays Out of Your Context</h2>
+        <h2>See the Compression in Action: Raw vs. Sandboxed Output</h2>
       </div>
       <div class="step-body">
-        <p>This is the part that honestly confused me at first. How can you <em>process</em> data without it entering your context? Isn&#x27;t the whole point that the model needs to see the data to work with it?</p>
+        <p>Alright, let&#x27;s actually <em>see</em> the difference. This is the part that sold me.</p>
 
-<p>Here&#x27;s the mental model that clicked for me: <strong>think of the sandbox like a kitchen, and your context window like the dining table.</strong></p>
+<p>The best way to internalize what Context Mode does is to run the same operation twice — once letting the raw output flood your context, once with Context Mode intercepting it. We&#x27;ll use a real-world task: looking at GitHub issues.</p>
 
-<p>When you order food at a restaurant, the raw ingredients never come to your table. The chef works with them in the kitchen and delivers a finished plate. The sandbox works the same way:</p>
+<p>Without Context Mode, <code>gh issue list --limit 20</code> dumps the full JSON for 20 issues into your conversation. That&#x27;s titles, bodies, labels, assignees, timestamps, URLs — roughly 59 KB. Your agent reads all 59 KB, but probably only needs a handful of fields.</p>
 
-<ol>
-<li>A tool returns raw data (the ingredients)</li>
-<li>The sandbox runs your processing script (the chef cooks)</li>
-<li>Only <code>stdout</code> — what the script explicitly prints — enters the conversation (the plated dish)</li>
-</ol>
-
-<p>The raw data literally never leaves the subprocess. It&#x27;s allocated in a separate process&#x27;s memory, processed there, and discarded. Only the <code>console.log()</code> or <code>print()</code> output crosses the boundary.</p>
-
-<p>Ten language runtimes are supported (JS, TS, Python, Shell, Ruby, Go, Rust, PHP, Perl, R), and it auto-detects Bun for 3-5x faster JavaScript execution.</p>
-
-<p>The credential passthrough is clever too — if you&#x27;re authenticated with <code>gh</code> or <code>aws</code> CLI, the sandbox inherits those credentials through environment variables. So you can run <code>gh issue list</code> inside the sandbox, process the JSON there, and only print the three fields you care about.</p>
+<p>With Context Mode, the same command runs inside a sandbox. A script processes the output, extracts what&#x27;s relevant (title, status, key labels), and returns maybe 1.1 KB. The agent gets everything it needs to answer your question, and your context window barely notices.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to explain how Context Mode would handle a specific scenario: you ask Claude Code to review the last 20 GitHub issues for a repository. Walk through the data flow step by step.
+          Get your agent to demonstrate the before/after by running a GitHub issue listing (or similar data-heavy command) and comparing the context impact
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What does the raw `gh issue list` output look like? (Hint: full JSON with every field)</li><li>Where does the processing happen — in the model&#x27;s context or somewhere else?</li><li>What&#x27;s the difference between what the sandbox *sees* and what the conversation *sees*?</li><li>How do authenticated CLI tools work inside the sandbox?</li></ul>
+          <ul><li>How would you measure the &#x27;size&#x27; of a tool output in your context? Token count? Character count?</li><li>What&#x27;s a command you run regularly that returns a lot of data? Git log? Test results? API responses?</li><li>Ask the agent to run the same task with and without the sandbox — what should you compare?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should trace the full flow: (1) Claude decides to check GitHub issues, (2) instead of running <code>gh issue list</code> directly (which would dump ~59KB of JSON), the PreToolUse hook intercepts and routes through <code>execute</code>, (3) the sandbox spawns a subprocess that runs <code>gh issue list --json number,title,state,labels</code> — credentials pass through automatically, (4) the script processes the JSON <em>inside the subprocess</em>, maybe grouping by label or filtering by state, (5) only the <code>console.log()</code> output enters the conversation — something like a 1.1KB summary with issue numbers, titles, and a count by category. The 59KB of raw GitHub JSON never touches the context window.</p></div>
+        <div class="reveal-body"><p>The agent should run something like <code>gh issue list</code> or <code>git log --oneline -50</code> both ways. Without Context Mode, it&#x27;ll note the raw output size (e.g., &#x27;59 KB of JSON just entered our conversation&#x27;). With Context Mode&#x27;s <code>execute</code> tool, the same data gets processed in the sandbox and only a compact summary comes back — maybe a clean table of issue titles and statuses in under 2 KB. The agent should explicitly call out the size difference: &#x27;That was 59 KB raw → 1.1 KB processed. Your context window just saved 57.9 KB on a single command.&#x27;</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The sandbox isolation is per-call. Scripts from different <code>execute</code> calls can&#x27;t access each other&#x27;s memory or state. This is a security feature — if one script processes sensitive API responses, another script can&#x27;t peek at them.
+        The auto-routing hook means you don&#x27;t have to manually choose between raw and sandboxed execution. Once installed, Context Mode intercepts tool outputs automatically. But for this demo, it&#x27;s worth seeing both modes to appreciate what&#x27;s happening.
       </div>
         
       <details class="reveal">
-        <summary>How is this different from just asking Claude to summarize the output?</summary>
-        <div class="reveal-body"><p>Great question, and it gets at a fundamental distinction. When Claude summarizes, the raw data <strong>has already entered the context window</strong>. The tokens are spent. Even if Claude writes a tidy summary in its response, the full 59KB of GitHub JSON is sitting in the conversation history, consuming tokens for the rest of the session.</p>
+        <summary>The full compression numbers from the article</summary>
+        <div class="reveal-body"><p>Here&#x27;s the validated data across 11 real-world scenarios:</p>
 
-<p>With the sandbox approach, the raw data is never serialized into the conversation at all. It exists in subprocess memory, gets processed there, and only the output crosses the boundary. It&#x27;s the difference between reading a 500-page book and writing a summary (you still read all 500 pages) versus having someone else read it and tell you the key points (you only heard the summary).</p>
+<ul>
+<li><strong>Playwright snapshot:</strong> 56 KB → 299 bytes (99.5% reduction)</li>
+<li><strong>GitHub issues (20):</strong> 59 KB → 1.1 KB (98.1%)</li>
+<li><strong>Access log (500 requests):</strong> 45 KB → 155 bytes (99.7%)</li>
+<li><strong>Analytics CSV (500 rows):</strong> 85 KB → 222 bytes (99.7%)</li>
+<li><strong>Git log (153 commits):</strong> 11.6 KB → 107 bytes (99.1%)</li>
+<li><strong>Repo research (subagent):</strong> 986 KB → 62 KB with 5 calls vs 37 (93.7%)</li>
+</ul>
 
-<p>This is why the compression is so dramatic — it&#x27;s not summarization, it&#x27;s <strong>data routing</strong>.</p></div>
+<p>The repo research case is interesting — it&#x27;s not just about compressing output, it&#x27;s about reducing the <em>number</em> of tool calls too. The subagent uses <code>batch_execute</code> to do multiple operations in one sandbox call instead of making 37 separate tool invocations.</p></div>
       </details>
       </div>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You&#x27;re debugging a failing test suite that produces 85KB of output. Which approach keeps your context window cleanest?</div>
+      <div class="question">A Playwright browser snapshot is 56 KB of raw HTML/accessibility tree data. Context Mode compresses this to 299 bytes. What&#x27;s the most likely way it achieves this?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt0">
-          <label for="decision_6_opt0">Route the test output through Context Mode&#x27;s sandbox, extract only failing test names and error messages</label>
-          <div class="decision-feedback correct">&#10003; Correct! The sandbox processes the full 85KB of test output in an isolated subprocess. Your script filters for failures, extracts test names and error messages, and prints maybe 200 bytes. The raw output never enters the conversation — you get the signal without the noise.</div>
+          <label for="decision_6_opt0">It runs a script in the sandbox that extracts only the relevant elements (visible text, interactive elements, key structure) and returns a compact summary</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly right. The sandbox runs a processing script that analyzes the 56 KB snapshot, pulls out what the agent actually needs to reason about (page title, main content, button labels, form fields, error messages), and returns just that. The full DOM never enters the context. This is the core insight — your agent doesn&#x27;t need raw data, it needs processed intelligence.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt1">
-          <label for="decision_6_opt1">Run the tests normally and ask Claude to focus only on the failures</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Even if Claude only *discusses* the failures, the full 85KB of test output is already in your context window. Those tokens are spent permanently for the rest of the session. Asking the model to &#x27;focus&#x27; doesn&#x27;t reclaim the tokens — they&#x27;re already consumed.</div>
+          <label for="decision_6_opt1">It uses gzip compression on the raw output before passing it to the context window</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Nope — the context window works with tokens (text), not compressed binary data. You can&#x27;t gzip a string and pass it to an LLM. The compression here is semantic, not algorithmic. A script in the sandbox reads the 56 KB, understands what matters, and produces a 299-byte text summary. It&#x27;s closer to a human reading a report and writing a one-line takeaway than it is to zipping a file.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt2">
-          <label for="decision_6_opt2">Run the tests and pipe through `grep FAIL` before giving to Claude</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This is actually a reasonable workaround! Piping through grep does reduce the output before it hits the context. But Context Mode&#x27;s sandbox is more flexible — you can write richer processing logic (group by test file, extract stack traces, count by category) and it handles credential passthrough for authenticated tools too. The sandbox approach generalizes better.</div>
+          <label for="decision_6_opt2">It truncates the output to the first 299 bytes</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Truncation would give you the first 299 bytes of raw HTML — probably just the DOCTYPE declaration and opening tags. Completely useless. Context Mode is smarter: it processes the *entire* 56 KB in the sandbox, understands the structure, and returns a curated 299-byte summary of what actually matters. The processing happens outside your context; only the result enters it.</div>
         </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>The Knowledge Base: FTS5, BM25, and Why Search Beats Stuffing</h2>
+        <h2>The Knowledge Base: Index Once, Search Forever</h2>
       </div>
       <div class="step-body">
-        <p>The sandbox handles real-time compression. But what about information you need to <em>come back to</em> during a long session? That&#x27;s where the knowledge base comes in.</p>
+        <p>Here&#x27;s the part that goes beyond just compressing outputs — Context Mode has a built-in knowledge base powered by SQLite FTS5.</p>
 
-<p>Context Mode includes <code>index</code> and <code>search</code> tools backed by <strong>SQLite FTS5</strong> — Full-Text Search 5. Here&#x27;s the analogy that helped me: imagine you&#x27;re researching a topic and you have two strategies.</p>
+<p>Let me break this down with an analogy. Imagine you&#x27;re researching a topic and you keep opening browser tabs. Without a system, you re-read the same articles every time you need a fact. With a personal wiki, you read each article once, jot down the key points, and search your wiki later.</p>
 
-<p><strong>Strategy 1: Pile everything on your desk.</strong> Print every article, every doc page, every API reference. Stack them up. When you need something, dig through the pile. This is what happens when raw tool output fills your context.</p>
+<p>Context Mode&#x27;s knowledge base works the same way:</p>
 
-<p><strong>Strategy 2: Build an index.</strong> Read each source, break it into sections, file them by topic with sticky tabs. When you need something, look it up. You only pull out the specific section you need. This is what FTS5 does.</p>
+<ol>
+<li><strong><code>index</code></strong> — Takes markdown content, splits it into chunks by headings (keeping code blocks intact), and stores them in a SQLite FTS5 table</li>
+<li><strong><code>search</code></strong> — Queries the index using BM25 ranking and returns exact matching chunks</li>
+<li><strong><code>fetch_and_index</code></strong> — Fetches a URL, converts HTML to markdown, and indexes it — the raw page never enters your context</li>
+</ol>
 
-<p>The <code>index</code> tool breaks markdown content into chunks by headings (keeping code blocks intact — crucial detail), then stores them in an FTS5 virtual table. When you <code>search</code>, it uses <strong>BM25 ranking</strong> to find the most relevant chunks.</p>
+<p><strong>BM25 ranking</strong> is worth understanding. It&#x27;s the same algorithm that powered early Google. It scores each chunk based on three things: how often your search terms appear in the chunk (term frequency), how rare those terms are across all chunks (inverse document frequency), and how long the chunk is (shorter chunks with your terms score higher). It also uses <strong>Porter stemming</strong>, so searching for &quot;running&quot; also matches &quot;runs&quot; and &quot;ran&quot;.</p>
 
-<p>BM25 is worth understanding because it shows up everywhere in search. It&#x27;s basically asking three questions:</p>
-<ul>
-<li><strong>How often does this term appear in this document?</strong> (term frequency)</li>
-<li><strong>How rare is this term across all documents?</strong> (inverse document frequency — rare terms matter more)</li>
-<li><strong>How long is this document?</strong> (normalization — a term in a short doc is more significant than in a long one)</li>
-</ul>
-
-<p>The <code>fetch_and_index</code> tool extends this to URLs — it fetches a web page, converts HTML to markdown, chunks it, and indexes it. The raw page <em>never enters context</em>. You search it later and get back only the relevant chunks.</p>
+<p>The killer use case: index your project&#x27;s documentation at the start of a session. Every time the agent needs to reference docs, it searches the knowledge base instead of re-fetching and re-reading the full docs. Zero context cost for repeated lookups.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to explain how you&#x27;d use Context Mode&#x27;s knowledge base to research a new library&#x27;s API without burning context tokens
+          Get your agent to index some documentation (a README, API docs, or a wiki page) into Context Mode&#x27;s knowledge base and then search it
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>If you need to reference API docs multiple times during a session, what&#x27;s the cost of fetching them each time?</li><li>What does &#x27;chunking by headings&#x27; mean in practice for API documentation?</li><li>How does BM25 decide which chunk to return when you search for &#x27;authentication&#x27;?</li><li>What&#x27;s the advantage of Porter stemming when searching technical docs?</li></ul>
+          <ul><li>What documentation do you reference repeatedly in your projects? README? API docs? Style guides?</li><li>How would you use `fetch_and_index` for a URL vs. `index` for local content?</li><li>What search queries would test whether the indexing actually works — try something that needs stemming?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should walk through the workflow: (1) use <code>fetch_and_index</code> with the library&#x27;s docs URL — the HTML gets fetched, converted to markdown, and chunked by headings into the SQLite FTS5 table, (2) the raw docs (potentially hundreds of KB) never enter context, (3) later when you need the authentication section, you call <code>search</code> with &#x27;authentication&#x27; — BM25 ranks chunks by relevance and returns the exact section with its heading hierarchy, (4) Porter stemming means searching &#x27;authenticate&#x27; also matches &#x27;authentication&#x27;, &#x27;authenticated&#x27;, etc. The agent should emphasize that you can search the same indexed content repeatedly throughout a 3-hour session without any additional context cost.</p></div>
-      </details>
-      </div>
-        
-        
-        
-      <details class="reveal">
-        <summary>BM25 vs. vector embeddings — when would you use which?</summary>
-        <div class="reveal-body"><p>BM25 is a keyword-based algorithm. It excels when you know the specific terms you&#x27;re looking for — function names, error codes, config keys. It&#x27;s fast, deterministic, and doesn&#x27;t require an embedding model.</p>
-
-<p>Vector embeddings (what you&#x27;d use with a vector database like Pinecone or Chroma) capture <em>semantic</em> similarity. Searching &#x27;how to log in&#x27; would match content about &#x27;authentication flow&#x27; even though they share no keywords.</p>
-
-<p>For code and API documentation, BM25 is often the better choice. You&#x27;re usually searching for specific terms — <code>useEffect</code>, <code>CORS</code>, <code>401 error</code>. The terms are precise and technical. BM25 handles this beautifully and runs locally in SQLite without needing an API call to an embedding service.</p>
-
-<p>Context Mode chose wisely here — for the use case of indexed technical docs and code output, BM25 is fast, free, and accurate.</p></div>
-      </details>
-      </div>
-    </div>
-    <div class="step-section">
-      <div class="step-header">
-        <div class="step-number">5</div>
-        <h2>Real-World Test: The 315KB → 5.4KB Session</h2>
-      </div>
-      <div class="step-body">
-        <p>Let&#x27;s see how all these pieces work together in a real scenario. The Context Mode team validated across 11 real-world workflows. Here are the numbers that jumped out at me:</p>
-
-<p>| Scenario | Raw Size | Compressed | Reduction |</p>
-<p>|----------|----------|------------|----------|</p>
-<p>| Playwright snapshot | 56 KB | 299 B | 99.5% |</p>
-<p>| 20 GitHub issues | 59 KB | 1.1 KB | 98.1% |</p>
-<p>| 500-line access log | 45 KB | 155 B | 99.7% |</p>
-<p>| 500-row CSV analytics | 85 KB | 222 B | 99.7% |</p>
-<p>| 153 git commits | 11.6 KB | 107 B | 99.1% |</p>
-
-<p>The cumulative effect is what matters most: over a full session, 315KB of raw output becomes 5.4KB. Context remaining after 45 minutes: <strong>99%</strong> instead of 60%.</p>
-
-<p>But here&#x27;s the thing that really sold me — it&#x27;s not just about fitting more in. When your context is 60% full of raw JSON and log files, the model&#x27;s attention is diluted. It&#x27;s trying to reason about your code while wading through thousands of lines of GitHub metadata. Compression isn&#x27;t just a space optimization — it&#x27;s an <strong>attention optimization</strong>.</p>
-        
-      <div class="agent-interaction">
-        <div class="agent-goal">
-          <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to design a test you could run yourself: a Claude Code session that would normally burn through context in 30 minutes, then re-run it with Context Mode to measure the difference
-        </div>
-        
-        <div class="agent-hints">
-          <div class="agent-hints-label">Think about it</div>
-          <ul><li>What combination of tool calls would consume the most context in a typical dev session?</li><li>How would you measure &#x27;context remaining&#x27; before and after?</li><li>What&#x27;s a realistic 30-minute workflow — debugging? Code review? Feature research?</li><li>How would you make the comparison fair (same tasks, same prompts)?</li></ul>
-        </div>
-        
-      <details class="reveal">
-        <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should design a reproducible test workflow — something like: (1) Open a medium-sized repo, (2) run <code>gh issue list</code> for the last 20 issues, (3) take 3 Playwright snapshots of the project&#x27;s web UI, (4) read two log files, (5) run the test suite and review failures, (6) do a git log for the last 100 commits. It should suggest measuring context usage by noting when Claude starts &#x27;forgetting&#x27; earlier conversation or when you get a context limit warning. The agent should estimate the raw session would hit ~250KB of tool output (game over in 25 minutes) while Context Mode would keep it under 4KB (barely a dent after 3 hours).</p></div>
+        <div class="reveal-body"><p>The agent should use <code>fetch_and_index</code> with a documentation URL (or <code>index</code> with local markdown content) and confirm the content was chunked and indexed. Then it should run a <code>search</code> query and show that it returns the exact relevant chunk — with its heading hierarchy preserved. For example, searching &#x27;authentication&#x27; in your project docs might return a chunk under &#x27;API Reference &gt; Auth Endpoints&#x27; with the exact code example from the docs. The key thing to notice: the full docs page (maybe 50 KB) was fetched and indexed <em>outside</em> your context, and the search result is maybe 500 bytes of exactly what you needed.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The &#x27;repo research&#x27; scenario is the most dramatic: 986KB → 62KB across a multi-agent subagent flow. That&#x27;s because subagents learn to use <code>batch_execute</code> as their primary tool, compressing across multiple calls at once.
+        The knowledge base persists across the session. Index your most-referenced docs once at the start, then search freely. Think of it as giving your agent a personal reference library that doesn&#x27;t cost context to consult.
       </div>
         
       <details class="reveal">
-        <summary>What about the subagent upgrade?</summary>
-        <div class="reveal-body"><p>One subtle but powerful detail: Context Mode automatically upgrades Bash subagents to <code>general-purpose</code> subagents so they can access MCP tools. This matters because in default Claude Code, when a subagent is spawned to handle a subtask (like &#x27;go research this library&#x27;), it often uses raw Bash commands — <code>curl</code>, <code>gh</code>, <code>cat</code> — and all that output flows straight into context.</p>
+        <summary>BM25 vs. vector/embedding search — why not use embeddings?</summary>
+        <div class="reveal-body"><p>You might be wondering: why BM25 (a keyword algorithm from the &#x27;90s) instead of fancy vector embeddings? A few reasons:</p>
 
-<p>With Context Mode, those subagents get access to the <code>execute</code> and <code>batch_execute</code> tools instead. The repo research scenario dropped from 37 tool calls to just 5, and from 986KB to 62KB. The subagent does the same work but routes everything through sandboxes automatically.</p>
+<ol>
+<li><strong>No external API needed</strong> — BM25 runs entirely in SQLite. No embedding model, no API calls, no latency.</li>
+<li><strong>Exact matching</strong> — When you search for a function name like <code>handleAuthCallback</code>, you want exact matches, not semantically similar results. BM25 excels at this.</li>
+<li><strong>Transparent scoring</strong> — You can understand <em>why</em> a result ranked high (the terms matched, they&#x27;re rare, the chunk is focused). Embedding similarity is a black box.</li>
+<li><strong>Speed</strong> — FTS5 queries are sub-millisecond on typical knowledge bases.</li>
+</ol>
 
-<p>This is the compounding effect of the PreToolUse hook — it doesn&#x27;t just compress your direct tool calls, it compresses everything your subagents do too.</p></div>
+<p>For a context-window optimization tool, these tradeoffs make perfect sense. You&#x27;re not doing open-ended semantic search — you&#x27;re looking up specific documentation chunks. BM25 is the right tool for this job.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does the chunking work?</summary>
+        <div class="reveal-body"><p>The <code>index</code> tool splits markdown by headings (H1, H2, H3, etc.) so each chunk is a logical section of the document. Crucially, code blocks are kept intact — a code example is never split across chunks. Each chunk stores its heading hierarchy (e.g., &#x27;Getting Started &gt; Installation &gt; npm&#x27;) so when you get a search result, you know exactly where in the document it came from. This is way better than naive fixed-size chunking (splitting every 500 characters) because you get semantically coherent results.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You should now understand all three pillars: sandbox execution (the kitchen metaphor — raw data stays in the subprocess), the FTS5 knowledge base (index once, search many times without re-fetching), and the PreToolUse hook (automatic routing so you don&#x27;t change your workflow). The numbers should feel intuitive — of course a 56KB DOM snapshot can be reduced to 299 bytes if you only extract the text content you care about.</div>
+      <div>You&#x27;ve now seen three capabilities: sandboxed execution (compress tool outputs), knowledge base indexing (store docs outside context), and search (retrieve just what you need). Together, these turn your 30-minute agent sessions into 3-hour sessions. The context window that used to be 60% full after 45 minutes is now 99% free.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>The Invisible Part: Auto-Routing and Subagent Upgrades</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s what makes Context Mode practical instead of just cool: you don&#x27;t have to change how you work.</p>
+
+<p>When you install the full plugin (not just the MCP server), it registers a <strong>PreToolUse hook</strong>. This hook intercepts tool outputs <em>before</em> they enter your context and routes them through the sandbox automatically. You don&#x27;t have to remember to use <code>execute</code> instead of <code>bash</code>. You just work normally, and the compression happens behind the scenes.</p>
+
+<p>The subagent upgrade is the other subtle win. Normally, when Claude Code spawns a subagent (like a Bash-only agent for running commands), that subagent can only use bash tools. Context Mode upgrades these to <code>general-purpose</code> agents that can access MCP tools — meaning subagents also get the context compression benefits. They use <code>batch_execute</code> to do multiple operations in a single sandbox call, which is why the repo research scenario dropped from 37 tool calls to 5.</p>
+
+<p>Think of it like installing an ad blocker. After setup, you just browse normally. The blocking happens in the background, and you occasionally notice pages load faster. Same energy here — you just code normally, and your sessions last 6x longer.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain what hooks are registered and do a real task that would normally burn a lot of context — like reviewing a git diff or running a test suite — to see auto-routing in action
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What&#x27;s a task you regularly do that generates lots of output? Test suites? Build logs? Code reviews?</li><li>How would you verify that the output was actually routed through the sandbox vs. dumped raw?</li><li>Ask the agent to compare how much context this task would have cost without Context Mode</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should run a data-heavy task — a test suite, a large git diff review, or a multi-file code analysis — and you&#x27;ll notice the output is compact and focused. The agent should confirm that the PreToolUse hook intercepted the output (you might see it in the tool call metadata or the agent can explain what happened). The key metric: &#x27;This git diff was 23 KB raw. The sandbox extracted the 4 changed functions, summarized the modifications, and returned 800 bytes. Your context saved 22.2 KB on this one operation.&#x27; Over a session with 20-30 tool calls, those savings compound to hundreds of KB.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>batch_execute</code> tool is especially powerful for subagents doing research. Instead of 37 separate tool calls (each adding overhead to the context), a single <code>batch_execute</code> runs all operations in one sandbox and returns one compact result. Fewer calls = less context overhead = longer sessions.
+      </div>
+        
+      <details class="reveal">
+        <summary>What exactly is a PreToolUse hook?</summary>
+        <div class="reveal-body"><p>In Claude Code&#x27;s plugin system, hooks are functions that run at specific points in the tool execution lifecycle. A <strong>PreToolUse</strong> hook runs <em>before</em> a tool&#x27;s output enters the conversation context. It can intercept, modify, or redirect the output. Context Mode&#x27;s hook checks: &#x27;Is this tool output larger than a threshold? If so, route it through the sandbox for compression before it enters context.&#x27; Other hook points exist too (PostToolUse, PreMessage, etc.), but PreToolUse is the critical one for context optimization because it catches the data before it&#x27;s too late.</p></div>
+      </details>
+      </div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Design a prompt that asks your AI agent to create a Context Mode workflow for a specific use case: triaging a production incident using logs, metrics, and GitHub issues</div>
-      <div class="your-turn-context">Imagine it&#x27;s 2 AM and your production service is throwing 500 errors. You need to pull access logs (45KB+), check recent deployments via git log, scan open GitHub issues for related reports, and maybe fetch your monitoring dashboard. Without Context Mode, this investigation alone would consume your entire context window. With it, you can keep investigating for hours.</div>
+      <div class="your-turn-goal">Set up a &#x27;session starter&#x27; prompt that indexes your project&#x27;s key documentation and configures Context Mode for maximum efficiency at the beginning of every coding session</div>
+      <div class="your-turn-context">The biggest win with Context Mode isn&#x27;t any single compressed output — it&#x27;s the compound effect over a full session. If you index your project docs, API references, and style guides at session start, every subsequent lookup is free. Combined with auto-routing, your sessions go from 30 minutes to 3 hours before slowdown. The challenge: create a reusable prompt that sets this up for your specific project.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What data sources does an incident investigation typically involve?</li><li>For each source, what&#x27;s the &#x27;signal&#x27; vs. the &#x27;noise&#x27;? What would you actually print from the sandbox?</li><li>How might you use the knowledge base to index runbook documentation *before* incidents happen?</li><li>What&#x27;s the order of operations — what do you check first, and how does each finding inform the next step?</li></ul>
+        <ul><li>What documentation does your agent reference most often? README? API docs? Contributing guide? Architecture docs?</li><li>Should you index remote URLs (fetch_and_index) or local files (index)? What about both?</li><li>How would you verify the knowledge base is working — what&#x27;s a good test query?</li><li>Could you save this as a Claude Code slash command or custom instruction so it runs automatically?</li></ul>
       </div>
       
       <details class="reveal">
@@ -982,49 +1002,58 @@ body {
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>I need a Context Mode workflow for production incident triage. Here&#x27;s the scenario: I&#x27;m investigating 500 errors on a web service. Walk me through how to use Context Mode&#x27;s execute and index tools to investigate without burning context. Specifically: (1) How to process access logs in the sandbox to extract only error requests, group by endpoint, and show the error timeline, (2) How to check git log for recent deploys and correlate timestamps with when errors started, (3) How to scan GitHub issues for related reports from users, (4) How to pre-index our runbook documentation so I can search it during the incident. For each step, explain what the sandbox script would extract vs. what the raw output would have been, and estimate the context savings.</code></pre>
+            <pre><code>At the start of this session, please set up my knowledge base for efficient context usage:
+
+1. Use fetch_and_index to index our API documentation at [docs-url]
+2. Use index to add the content of our README.md and CONTRIBUTING.md to the knowledge base
+3. Index the architecture decision records in docs/adr/
+4. Run a test search for &#x27;authentication&#x27; to verify the knowledge base is working
+5. Confirm how many chunks were indexed and estimate the context savings vs. re-reading these docs every time
+
+For the rest of this session, whenever I ask about our API or project conventions, search the knowledge base first instead of re-reading the source files.</code></pre>
           </div>
         </div>
       </details>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You need to reference the same API documentation 5 times during a session. What&#x27;s the most context-efficient approach?</div>
+      <div class="question">You&#x27;re about to start a long debugging session. Your project has 50 KB of API docs, a 30 KB changelog, and you&#x27;ll be running test suites that output ~40 KB each. Without Context Mode, roughly how much context would be consumed by tool outputs after 5 test runs and 3 doc lookups?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt0">
-          <label for="decision_11_opt0">Use fetch_and_index once, then search 5 times</label>
-          <div class="decision-feedback correct">&#10003; Correct! Indexing costs almost nothing — the raw docs are fetched and chunked in the sandbox, never entering context. Each search returns only the relevant chunk (a few hundred bytes). Five searches might cost 2KB total. Fetching the same page 5 times through raw MCP would cost 5x the full page size.</div>
+          <label for="decision_11_opt0">~350 KB — likely exceeding your context window</label>
+          <div class="decision-feedback correct">&#10003; Correct! Let&#x27;s do the math: 5 test runs × 40 KB = 200 KB, plus 3 doc lookups × 50 KB = 150 KB (assuming the full docs are re-read each time). That&#x27;s 350 KB of tool output alone — well past the 200K token limit (roughly 150 KB of text). Your session would be crippled long before the 5th test run. With Context Mode, those same operations might cost ~5 KB total. That&#x27;s the difference between a session that dies after 20 minutes and one that lasts all afternoon.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt1">
-          <label for="decision_11_opt1">Fetch the docs once and ask Claude to remember them</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. The full docs still enter context on that first fetch — say 80KB. Even if Claude &#x27;remembers&#x27; them, those 80KB of tokens are permanently consumed. And as the session goes on, the model&#x27;s attention to those docs degrades as newer content pushes them further back in context.</div>
+          <label for="decision_11_opt1">~50 KB — plenty of room left</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This would only be true if each tool call&#x27;s output magically disappeared after use. It doesn&#x27;t — in the context window model, every tool output stays in the conversation for the entire session. Five 40 KB test runs plus repeated doc reads compounds fast. This is exactly the sneaky problem that makes people wonder why their agent &#x27;got dumber&#x27; halfway through a session.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt2">
-          <label for="decision_11_opt2">Use execute to fetch and summarize the docs each time you need them</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This works but is inefficient. Each execute call re-fetches and re-processes the docs. The knowledge base exists precisely to avoid this — index once, search many times. Plus, BM25 search returns the exact relevant section, while a sandbox summary might miss the specific detail you need.</div>
+          <label for="decision_11_opt2">~120 KB — tight but manageable</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. You might get this number if you assumed each doc lookup doesn&#x27;t re-read the full docs, but in practice, without a knowledge base, the agent re-reads the source each time it needs to reference documentation. And test suite outputs are fully dumped into context on every run. The compound effect is worse than most people expect — which is exactly why Context Mode&#x27;s numbers feel so dramatic.</div>
         </div>
     </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>Let&#x27;s zoom out. We started with a concrete problem — MCP tools are flooding context windows with raw data, making long Claude Code sessions impossible. We learned that Context Mode solves this with three interlocking pieces:</p>
+      <div class="recap-body"><p>Let&#x27;s zoom out. We just installed a tool that fundamentally changes the economics of AI-assisted coding sessions.</p>
 
-<p><strong>The Sandbox</strong> processes raw data in isolated subprocesses. Only stdout crosses back into context. Think kitchen → dining table: ingredients stay in the kitchen, you only see the plated dish.</p>
+<p>The core insight isn&#x27;t about compression algorithms or SQLite tricks — it&#x27;s about <strong>where data lives</strong>. Your context window is precious real estate. Every byte of raw tool output that sits there is a byte your agent can&#x27;t use for reasoning about your actual problem. Context Mode introduces a simple but powerful boundary: raw data stays in the sandbox, processed intelligence enters the conversation.</p>
 
-<p><strong>The Knowledge Base</strong> (SQLite FTS5 + BM25) lets you index large documents once and search them repeatedly with zero additional context cost. It&#x27;s your personal search engine that lives alongside your session.</p>
+<p>Three capabilities, one philosophy:</p>
+<ul>
+<li><strong>Sandbox execution</strong> — tool outputs get processed in isolated subprocesses; only compact results enter context</li>
+<li><strong>Knowledge base</strong> — index docs once, search for free forever; no repeated context cost for lookups</li>
+<li><strong>Auto-routing</strong> — hooks intercept outputs automatically so you don&#x27;t change how you work</li>
+</ul>
 
-<p><strong>The PreToolUse Hook</strong> makes all of this automatic. You don&#x27;t change how you prompt or work — the hook intercepts tool outputs and routes them through compression before they can bloat your context.</p>
-
-<p>The result: 315KB → 5.4KB. Sessions that last 3+ hours instead of 30 minutes. And arguably better results, because the model&#x27;s attention isn&#x27;t diluted by thousands of lines of raw JSON.</p>
-
-<p>The bigger lesson here isn&#x27;t about one tool — it&#x27;s about a design pattern. <strong>Every time raw data enters an LLM context, ask: does the model need ALL of this, or just the insight extracted from it?</strong> That question will keep being relevant as context windows grow and tool ecosystems expand.</p></div>
-      <ul class="takeaways-list"><li>MCP tool outputs are the hidden context killer — a single Playwright snapshot eats 56KB (14K tokens), and it adds up fast across a real session</li><li>Sandbox isolation means raw data never enters the conversation — processing happens in a subprocess, only stdout crosses the boundary</li><li>FTS5 + BM25 gives you a persistent, searchable knowledge base with zero context cost — index once, search all session</li><li>The PreToolUse hook makes compression invisible — you don&#x27;t change your workflow, the routing happens automatically</li><li>Context compression isn&#x27;t just about space — it&#x27;s about attention quality. Less noise means the model reasons better about the signal</li></ul>
+<p>The result: sessions that last 6x longer, agents that stay sharp because they&#x27;re not wading through 200 KB of raw git diffs, and a workflow that feels exactly the same from your perspective. That&#x27;s the best kind of infrastructure — invisible until you notice everything just... works better.</p></div>
+      <ul class="takeaways-list"><li>Every MCP tool output stays in your context window for the entire session — they compound, and 30 minutes of tool use can consume 40%+ of your context</li><li>Context Mode&#x27;s sandbox processes raw data in isolated subprocesses and only returns compact results — 315 KB becomes 5.4 KB (98% reduction)</li><li>The SQLite FTS5 knowledge base with BM25 ranking lets you index documentation once and search it for free — no embeddings, no API calls, sub-millisecond queries</li><li>Auto-routing via PreToolUse hooks means you don&#x27;t change how you work — the compression happens invisibly behind every tool call</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Install Context Mode and run your normal workflow for a day — notice where you used to hit context limits and whether those limits disappear</li><li>Experiment with the knowledge base: index your project&#x27;s docs, your team&#x27;s runbooks, or a library&#x27;s API reference and search them throughout a session</li><li>Build a mental checklist: before any long Claude Code session, think about which data sources will generate the most raw output and how you&#x27;d want them compressed</li><li>Explore the batch_execute tool for multi-step subagent workflows where the compression compounds across many tool calls</li></ul>
+        <ul><li>Index your most-referenced project docs at session start and measure how much context you save over a typical session</li><li>Try <code>batch_execute</code> for multi-step research tasks — fewer tool calls means less context overhead and faster results</li><li>Explore combining Context Mode with Cloudflare&#x27;s Code Mode for tool <em>definition</em> compression — together they optimize both sides of the MCP context equation</li><li>Watch the Context Mode GitHub repo for new processing scripts — the community is adding domain-specific compressors for common tool outputs</li></ul>
       </div>
     </div>
     <div class="sources-section">
@@ -1038,104 +1067,178 @@ body {
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">VectifyAI/PageIndex</div>
+            <div class="oa-summary">📑 PageIndex: Document Index for Vectorless, Reasoning-based RAG PageIndex: Vectorless, Reasoning-based RAG...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20VectifyAI/PageIndex&body=vote%3Aup%0Atags%3Aagents%2Ctools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20VectifyAI/PageIndex&body=vote%3Adown%0Atags%3Aagents%2Ctools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">datawhalechina/hello-agents</div>
+            <div class="oa-summary">📚 《从零开始构建智能体》——从零开始的智能体原理与实践教程 English | 中文 Hello-Agents 🤖 《从零开始构建智能体》 从基础理论到实际应用，全面掌握智能体系统的设计与实现 🎯 项目介绍 如果说 2024...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20datawhalechina/hello-agents&body=vote%3Aup%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20datawhalechina/hello-agents&body=vote%3Adown%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">ruvnet/wifi-densepose</div>
+            <div class="oa-summary">Production-ready implementation of InvisPose - a revolutionary WiFi-based dense human pose estimation system that...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20ruvnet/wifi-densepose&body=vote%3Aup%0Atags%3Atools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20ruvnet/wifi-densepose&body=vote%3Adown%0Atags%3Atools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">4thfever/cultivation-world-simulator</div>
+            <div class="oa-summary">基于 AI Agent 工作流的修仙世界模拟器，旨在还原智能、开放的仙侠世界。| An open-source Cultivation World Simulator using Agentic Workflow to create...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%204thfever/cultivation-world-simulator&body=vote%3Aup%0Atags%3Aagents%2Copen-source%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%204thfever/cultivation-world-simulator&body=vote%3Adown%0Atags%3Aagents%2Copen-source%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">muratcankoylan/Agent-Skills-for-Context-Engineering</div>
+            <div class="oa-summary">A comprehensive collection of Agent Skills for context engineering, multi-agent architectures, and production agent...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20muratcankoylan/Agent-Skills-for-Context-Engineering&body=vote%3Aup%0Atags%3Aagents%2Ctools%2Ctechnique%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20muratcankoylan/Agent-Skills-for-Context-Engineering&body=vote%3Adown%0Atags%3Aagents%2Ctools%2Ctechnique%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">anthropics/skills</div>
+            <div class="oa-summary">Public repository for Agent Skills Note: This repository contains Anthropic&#x27;s implementation of skills for Claude....</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20anthropics/skills&body=vote%3Aup%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20anthropics/skills&body=vote%3Adown%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">QwenLM/Qwen-Agent</div>
+            <div class="oa-summary">Agent framework and applications built upon Qwen&gt;=3.0, featuring Function Calling, MCP, Code Interpreter, RAG,...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20QwenLM/Qwen-Agent&body=vote%3Aup%0Atags%3Aagents%2Copen-source%2Ctools%2Ccoding%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20QwenLM/Qwen-Agent&body=vote%3Adown%0Atags%3Aagents%2Copen-source%2Ctools%2Ccoding%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">NevaMind-AI/memU</div>
+            <div class="oa-summary">Memory for 24/7 proactive agents like openclaw (moltbot, clawdbot). memU 24/7 Always-On Proactive Memory for AI...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20NevaMind-AI/memU&body=vote%3Aup%0Atags%3Aagents%2Ctools%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20NevaMind-AI/memU&body=vote%3Adown%0Atags%3Aagents%2Ctools%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">modelscope/ms-swift</div>
+            <div class="oa-summary">Use PEFT or Full-parameter to CPT/SFT/DPO/GRPO 600+ LLMs (Qwen3.5, DeepSeek-R1, GLM4.5, InternLM3, Llama4, ...) and...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20modelscope/ms-swift&body=vote%3Aup%0Atags%3Atools%2Cfine-tuning%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20modelscope/ms-swift&body=vote%3Adown%0Atags%3Atools%2Cfine-tuning%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">agentscope-ai/agentscope</div>
+            <div class="oa-summary">Build and run agents you can see, understand and trust. 中文主页 | Tutorial | Roadmap (Jan 2026 -) | FAQ What is...</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20agentscope-ai/agentscope&body=vote%3Aup%0Atags%3Aagents%2Ctools%2Ctechnique%2Caudio%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
-            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20agentscope-ai/agentscope&body=vote%3Adown%0Atags%3Aagents%2Ctools%2Ctechnique%2Caudio%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x1F44D;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x1F44E;</label>
           </div>
         </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
     </div>
+    <script>
+    (function() {
+      var articles = [{"title": "VectifyAI/PageIndex", "tags": "agents,tools,rag", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "ruvnet/wifi-densepose", "tags": "tools,rag", "source": "GitHub Trending Python"}, {"title": "4thfever/cultivation-world-simulator", "tags": "agents,open-source", "source": "GitHub Trending Python"}, {"title": "muratcankoylan/Agent-Skills-for-Context-Engineering", "tags": "agents,tools,technique", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "QwenLM/Qwen-Agent", "tags": "agents,open-source,tools,coding,rag", "source": "GitHub Trending Python"}, {"title": "NevaMind-AI/memU", "tags": "agents,tools", "source": "GitHub Trending Python"}, {"title": "modelscope/ms-swift", "tags": "tools,fine-tuning", "source": "GitHub Trending Python"}, {"title": "agentscope-ai/agentscope", "tags": "agents,tools,technique,audio,rag", "source": "GitHub Trending Python"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-02-28";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
     <footer class="session-footer">
       <span>Tinker</span> &middot; Build with AI, daily
     </footer>
