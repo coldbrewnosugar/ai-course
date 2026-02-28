@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Daily Courses</title>
-  <meta name="description" content="Interactive AI workshop sessions synthesized daily from the latest research.">
+  <title>Tinker</title>
+  <meta name="description" content="Daily hands-on workshops — build real projects with AI agents.">
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root {
@@ -318,10 +318,10 @@ footer span { color: var(--ink); font-weight: 700; }
 
     <div class="header">
       <div class="header-brand">
-        <div class="header-mark"><span>AI</span></div>
+        <div class="header-mark"><span>T</span></div>
         <div class="header-text">
-          <h1>Daily Courses</h1>
-          <div class="tagline">Interactive workshops from the latest AI research</div>
+          <h1>Tinker</h1>
+          <div class="tagline">Build with AI, daily</div>
         </div>
       </div>
       <div class="header-shapes">
@@ -333,12 +333,17 @@ footer span { color: var(--ink); font-weight: 700; }
 
     <div class="week-nav">
       <button id="prev-week" aria-label="Previous week">&#9664;</button>
-      <div id="week-label" class="week-label">Feb 23 – Mar 1, 2026</div>
+      <div id="week-label" class="week-label">Feb 22 – 28, 2026</div>
       <button id="next-week" aria-label="Next week">&#9654;</button>
       <button id="today-btn" class="today-btn">Today</button>
     </div>
 
     <div class="week-grid" id="week-grid">
+      <div class="day-col empty-day">
+        <div class="day-header">SUN</div>
+        <div class="day-num">22</div>
+        <div class="day-courses"></div>
+      </div>
       <div class="day-col empty-day">
         <div class="day-header">MON</div>
         <div class="day-num">23</div>
@@ -367,12 +372,7 @@ footer span { color: var(--ink); font-weight: 700; }
       <div class="day-col is-today">
         <div class="day-header">SAT</div>
         <div class="day-num">28</div>
-        <div class="day-courses"><a href="general/2026-02-28.html" class="course-pill track-general" title="Build an AI Prompt Energy &amp; Carbon Footprint Calculator"><span class="pill-shape">●</span>Build an AI Prompt Energy &amp; Carbon Footprint Calculator</a></div>
-      </div>
-      <div class="day-col empty-day">
-        <div class="day-header">SUN</div>
-        <div class="day-num">1</div>
-        <div class="day-courses"></div>
+        <div class="day-courses"><a href="general/2026-02-28.html" class="course-pill track-general" title="Build an LLM Prompt Energy-Cost Estimator"><span class="pill-shape">●</span>Build an LLM Prompt Energy-Cost Estimator</a></div>
       </div>
     </div>
 
@@ -381,23 +381,23 @@ footer span { color: var(--ink); font-weight: 700; }
     <div class="stats-bar">
       <div><strong>1</strong> session</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-02-28 21:18 UTC</strong></div>
+      <div>Updated <strong>2026-02-28 21:37 UTC</strong></div>
     </div>
 
     <footer>
-      <span>AI Daily Courses</span> &middot; Auto-generated
+      <span>Tinker</span> &middot; Build with AI, daily
     </footer>
 
   </div>
   <script>
 
-const COURSES = {"2026-02-28":{"general":{"title":"Build an AI Prompt Energy & Carbon Footprint Calculator","url":"general/2026-02-28.html"}}};
+const COURSES = {"2026-02-28":{"general":{"title":"Build an LLM Prompt Energy-Cost Estimator","url":"general/2026-02-28.html"}}};
 const TRACK_ORDER = ["general", "image-gen", "audio"];
 const TRACK_META = {"general":{"shape":"●","css":"track-general"},"image-gen":{"shape":"■","css":"track-image-gen"},"audio":{"shape":"▲","css":"track-audio"}};
-const DAY_NAMES = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+const DAY_NAMES = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 const TODAY = "2026-02-28";
 
-let refDate = new Date("2026-02-23" + "T00:00:00");
+let refDate = new Date("2026-02-22" + "T00:00:00");
 
 function fmt(d) {
   const y = d.getFullYear();
