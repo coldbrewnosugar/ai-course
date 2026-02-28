@@ -8,16 +8,19 @@
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root {
-  --bg: #ffffff;
-  --ink: #0a0a0a;
-  --ink-secondary: #333;
-  --muted: #888;
-  --red: #E63226;
-  --blue: #1B3F8B;
-  --yellow: #F5B731;
+  --bg: #FDFAF6;
+  --ink: #2D2A26;
+  --ink-secondary: #4A4641;
+  --muted: #8C8578;
+  --red: #C4533A;
+  --blue: #3D6B99;
+  --yellow: #D4952B;
+  --green: #3A7D5C;
+  --light-gray: #F5F1EB;
+  --border-gray: #DDD5CA;
   --mono: 'Space Mono', monospace;
   --sans: 'DM Sans', system-ui, sans-serif;
-  --border: 2px solid var(--ink);
+  --border: 1px solid var(--border-gray);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -38,7 +41,7 @@ body {
 .header {
   display: flex;
   align-items: stretch;
-  border-bottom: 3px solid var(--ink);
+  border-bottom: 1px solid var(--border-gray);
   margin-top: 2rem;
 }
 .header-brand {
@@ -46,7 +49,7 @@ body {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem 1.5rem 1.5rem 0;
-  border-right: 3px solid var(--ink);
+  border-right: 1px solid var(--border-gray);
   flex-shrink: 0;
 }
 .header-mark {
@@ -119,6 +122,7 @@ body {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background 0.15s;
+  border-radius: 8px;
 }
 .week-nav button:hover { background: var(--red); }
 .week-nav .week-label {
@@ -142,6 +146,7 @@ body {
   padding: 0.3rem 0.7rem;
   cursor: pointer;
   transition: all 0.15s;
+  border-radius: 6px;
 }
 .week-nav .today-btn:hover {
   color: var(--ink);
@@ -171,7 +176,7 @@ body {
   text-align: center;
   padding: 0.6rem 0.4rem 0.15rem;
   color: var(--muted);
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-gray);
 }
 .day-num {
   font-family: var(--mono);
@@ -186,10 +191,10 @@ body {
   color: #fff;
 }
 .day-col.is-today {
-  box-shadow: inset 0 0 0 3px var(--red);
+  box-shadow: inset 0 0 0 2px var(--red);
 }
 .day-col.empty-day {
-  background: #fafafa;
+  background: #F8F4EE;
 }
 .day-courses {
   flex: 1;
@@ -207,14 +212,15 @@ body {
   font-size: 0.68rem;
   font-weight: 500;
   color: var(--ink);
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-gray);
   transition: all 0.15s;
   line-height: 1.25;
   word-break: break-word;
+  border-radius: 8px;
 }
 .course-pill:hover {
   border-color: var(--ink);
-  background: #f5f5f5;
+  background: var(--light-gray);
 }
 .course-pill .pill-shape {
   flex-shrink: 0;
@@ -224,9 +230,9 @@ body {
 .course-pill.track-general  { border-left: 3px solid var(--red); }
 .course-pill.track-image-gen { border-left: 3px solid var(--blue); }
 .course-pill.track-audio    { border-left: 3px solid var(--yellow); }
-.course-pill.track-general:hover  { background: rgba(230,50,38,0.06); }
-.course-pill.track-image-gen:hover { background: rgba(27,63,139,0.06); }
-.course-pill.track-audio:hover    { background: rgba(245,183,49,0.06); }
+.course-pill.track-general:hover  { background: rgba(196,83,58,0.08); }
+.course-pill.track-image-gen:hover { background: rgba(61,107,153,0.08); }
+.course-pill.track-audio:hover    { background: rgba(212,149,43,0.08); }
 
 /* ── Legend ── */
 .legend {
@@ -288,14 +294,14 @@ footer {
   text-transform: uppercase;
   margin-top: 3rem;
   padding: 1.5rem 0 2.5rem;
-  border-top: 3px solid var(--ink);
+  border-top: 1px solid var(--border-gray);
 }
 footer span { color: var(--ink); font-weight: 700; }
 
 /* ── Responsive ── */
 @media (max-width: 700px) {
   .header { flex-direction: column; }
-  .header-brand { border-right: none; border-bottom: 3px solid var(--ink); padding: 1rem; }
+  .header-brand { border-right: none; border-bottom: 1px solid var(--border-gray); padding: 1rem; }
   .header-shapes { padding: 0.75rem 1rem; justify-content: flex-start; }
   .week-grid {
     grid-template-columns: repeat(7, minmax(80px, 1fr));
@@ -381,7 +387,7 @@ footer span { color: var(--ink); font-weight: 700; }
     <div class="stats-bar">
       <div><strong>1</strong> session</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-02-28 23:15 UTC</strong></div>
+      <div>Updated <strong>2026-02-28 23:46 UTC</strong></div>
     </div>
 
     <footer>
