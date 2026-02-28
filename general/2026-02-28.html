@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Build an LLM Prompt Energy-Cost Estimator — Tinker</title>
+  <title>Context Mode: Shrink MCP Output by 98% in Claude Code — Tinker</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root {
@@ -539,6 +539,87 @@ body {
   margin-left: 0.5rem;
 }
 
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-gray);
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  border: 1px solid var(--border-gray);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.other-article-card:hover {
+  border-color: var(--ink);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.15rem;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.oa-vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  border: 1px solid var(--border-gray);
+  color: var(--ink);
+  background: var(--light-gray);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.oa-vote-btn:hover {
+  border-color: var(--ink);
+  background: #fff;
+}
+.oa-vote-btn.vote-up:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+.oa-vote-btn.vote-down:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
 /* ── Footer ── */
 .session-footer {
   text-align: center;
@@ -569,736 +650,330 @@ body {
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>What&#x27;s the Real Cost of &quot;Hey ChatGPT&quot;?</h1>
-      <div class="hero-subtitle">We&#x27;re building a CLI that turns token counts into watts, water, and carbon — so you can see the invisible footprint of every prompt you send.</div>
+      <h1>Your Context Window Is Leaking</h1>
+      <div class="hero-subtitle">One Playwright snapshot costs 56KB. Twenty GitHub issues cost 59KB. After 30 minutes, 40% of your context is gone. Let&#x27;s fix that.</div>
       <div class="hero-meta">
-        <span>40 min</span>
-        <span> <span class="tag">sustainability</span> <span class="tag">LLM-ops</span> <span class="tag">python</span> <span class="tag">CLI</span></span>
+        <span>30 min</span>
+        <span> <span class="tag">MCP</span> <span class="tag">context-window</span> <span class="tag">claude-code</span> <span class="tag">developer-tools</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>MIT Technology Review just got nominated for a National Magazine Award for their <em>Power Hungry</em> investigation into AI&#x27;s energy footprint. The TL;DR? AI companies have kept energy numbers under wraps for years, and when journalists finally did the math, the results were eye-opening.</p>
+      <p>Here&#x27;s a pattern that&#x27;s been quietly killing long Claude Code sessions: <strong>MCP tool outputs are enormous</strong>.</p>
 
-<p>A single ChatGPT query burns roughly <strong>10x the energy</strong> of a Google search. Scale that to hundreds of millions of daily users and you&#x27;re talking about power consumption rivaling small countries. After the investigation dropped, OpenAI, Mistral, and Google actually started publishing energy and water figures for their models — which tells you how much pressure good reporting can create.</p>
+<p>MCP (Model Context Protocol) is how Claude Code talks to the outside world — GitHub, Playwright, your file system, databases. Every time a tool returns data, that raw response gets dumped straight into your context window. The 200K token limit sounds generous until you realize a single browser snapshot eats 56KB and a <code>gh issue list</code> burns 59KB.</p>
 
-<p>But here&#x27;s what&#x27;s cool for us: the math behind estimating a prompt&#x27;s energy cost isn&#x27;t magic. It&#x27;s GPU power draw × time × overhead factors. Today we&#x27;re going to build a tool that does exactly that calculation — and we&#x27;re going to let an AI agent write most of it for us. Meta, right? Using AI to build a tool that measures AI&#x27;s environmental cost.</p>
+<p>A project called <strong>Context Mode</strong> just hit Hacker News with 174 points and a wild claim: they can compress MCP output by 98%. That means 315KB of raw tool output becomes 5.4KB. Sessions that used to slow down after 30 minutes now run for 3+ hours.</p>
+
+<p>The trick? Instead of letting raw data flood your conversation, Context Mode routes tool outputs through <strong>isolated sandboxes</strong>. Your code processes the data, extracts what matters, and only the summary enters the context. Think of it like having an assistant who reads the entire report and hands you a sticky note with the three things that matter.</p>
+
+<p>Today we&#x27;re going to install it, understand <em>why</em> it works (the mental model matters more than the config), and test it against real scenarios. Along the way, we&#x27;ll learn about FTS5 search, BM25 ranking, and how sandboxed execution actually keeps your context clean.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>The Core Energy Model — From Tokens to Watts</h2>
+        <h2>Understanding the Problem: Where Do Your Tokens Go?</h2>
       </div>
       <div class="step-body">
-        <p>Before we touch any code, let&#x27;s get the mental model straight. Every token an LLM processes requires floating-point operations (FLOPs). Those FLOPs run on GPUs that have a known power draw (TDP — thermal design power). If we know the model size, we can estimate FLOPs per token, and from there estimate energy.</p>
+        <p>Before we install anything, let&#x27;s build intuition for <em>why</em> this problem exists.</p>
 
-<p>The formula chain looks like this:</p>
+<p>Imagine your context window is a whiteboard in a meeting room. Every time someone references a document, they don&#x27;t just say &quot;see page 3&quot; — they photocopy the <em>entire document</em> and tape it to the whiteboard. After five references, you can&#x27;t see the whiteboard anymore.</p>
 
-<p><strong>Tokens → FLOPs → GPU-seconds → Watt-hours</strong></p>
+<p>That&#x27;s exactly what happens with MCP tools. When Claude Code calls <code>gh issue list</code>, GitHub doesn&#x27;t return a tidy summary. It returns every issue with full metadata — labels, assignees, timestamps, URLs, body text. All of it gets pasted into your conversation.</p>
 
-<p>A rough rule of thumb: for a forward pass, FLOPs per token ≈ 2 × model parameters. An H100 GPU does about 990 TFLOPS at FP16. So a 70B parameter model needs ~140 billion FLOPs per token, which takes a fraction of a millisecond on modern hardware.</p>
+<p>The key insight is that there are <strong>two directions</strong> of context consumption:</p>
+<ol>
+<li><strong>Tool definitions</strong> coming in (Cloudflare already solved this with Code Mode — 99.9% compression)</li>
+<li><strong>Tool outputs</strong> coming back (this is what Context Mode tackles)</li>
+</ol>
 
-<p>Let&#x27;s get our agent to build the foundational data structures and energy calculation.</p>
+<p>With 81+ tools active, you can lose 72% of your context to definitions alone <em>before your first message</em>. Then every tool response chips away at what&#x27;s left.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to create a Python module with GPU specs, model profiles, and a function that estimates watt-hours from a token count and model name.
+          Ask your agent to calculate how quickly a typical Claude Code session burns through context with common MCP tools
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What data does the function need? Think: model size (parameters), which GPU runs it, and how efficiently that GPU is utilized...</li><li>GPUs have a theoretical max throughput (TFLOPS) but real utilization is usually 30-60%. How should we model that?</li><li>Should GPU specs and model profiles be hardcoded or configurable? What&#x27;s easier to extend later?</li><li>What&#x27;s the output unit? Watt-hours makes sense for a single prompt — why not kilowatt-hours?</li></ul>
+          <ul><li>What&#x27;s the total context window size in tokens? (200K)</li><li>How would you convert KB to approximate token counts?</li><li>If someone runs 5 Playwright snapshots, 2 GitHub queries, and reads 3 log files in 30 minutes, what&#x27;s the total?</li><li>What percentage of the window is gone before any actual coding conversation?</li></ul>
         </div>
         
       <details class="reveal">
-        <summary>See what the agent gives back</summary>
-        <div class="reveal-body">
-      <div class="code-block">
-        <span class="code-caption">Your agent should give back something like this — a clean module with dataclasses for GPU/model profiles and an energy estimation function that shows its math.</span>
-        <button class="copy-btn">COPY</button>
-        <pre><code class="language-python">&quot;&quot;&quot;energy_model.py — core energy estimation from tokens to watt-hours.&quot;&quot;&quot;
-from dataclasses import dataclass
-
-
-@dataclass
-class GPUProfile:
-    name: str
-    tdp_watts: float            # thermal design power
-    fp16_tflops: float          # peak FP16 throughput
-    typical_utilization: float  # real-world utilization factor (0-1)
-
-
-@dataclass
-class ModelProfile:
-    name: str
-    params_billion: float
-    gpu: GPUProfile
-    num_gpus: int = 1  # how many GPUs serve this model
-
-
-# --- GPU catalog ---
-GPUS = {
-    &quot;H100&quot;: GPUProfile(&quot;NVIDIA H100 SXM&quot;, tdp_watts=700, fp16_tflops=990, typical_utilization=0.40),
-    &quot;A100&quot;: GPUProfile(&quot;NVIDIA A100 80GB&quot;, tdp_watts=400, fp16_tflops=312, typical_utilization=0.35),
-    &quot;H200&quot;: GPUProfile(&quot;NVIDIA H200&quot;,      tdp_watts=700, fp16_tflops=990, typical_utilization=0.42),
-}
-
-# --- Model catalog (best-guess public configurations) ---
-MODELS = {
-    &quot;gpt-4o&quot;:        ModelProfile(&quot;GPT-4o&quot;,        params_billion=200, gpu=GPUS[&quot;H100&quot;], num_gpus=8),
-    &quot;gpt-4o-mini&quot;:   ModelProfile(&quot;GPT-4o mini&quot;,   params_billion=8,   gpu=GPUS[&quot;H100&quot;], num_gpus=1),
-    &quot;claude-sonnet&quot;: ModelProfile(&quot;Claude Sonnet&quot;,  params_billion=70,  gpu=GPUS[&quot;H100&quot;], num_gpus=4),
-    &quot;llama-70b&quot;:     ModelProfile(&quot;Llama 3 70B&quot;,    params_billion=70,  gpu=GPUS[&quot;A100&quot;], num_gpus=4),
-    &quot;llama-8b&quot;:      ModelProfile(&quot;Llama 3 8B&quot;,     params_billion=8,   gpu=GPUS[&quot;A100&quot;], num_gpus=1),
-    &quot;mistral-large&quot;: ModelProfile(&quot;Mistral Large&quot;,  params_billion=123, gpu=GPUS[&quot;H100&quot;], num_gpus=4),
-}
-
-
-def estimate_energy_wh(
-    model_name: str,
-    prompt_tokens: int,
-    completion_tokens: int,
-    pue: float = 1.2,  # power usage effectiveness (data-center overhead)
-) -&gt; dict:
-    &quot;&quot;&quot;Estimate energy in watt-hours for a single LLM API call.
-
-    Returns a dict with intermediate values so callers can inspect the math.
-    &quot;&quot;&quot;
-    model = MODELS[model_name]
-    gpu = model.gpu
-    total_tokens = prompt_tokens + completion_tokens
-
-    # Step 1: FLOPs estimate  (forward pass ≈ 2 * params per token)
-    flops_per_token = 2 * model.params_billion * 1e9
-    total_flops = flops_per_token * total_tokens
-
-    # Step 2: GPU-seconds  (using effective throughput)
-    effective_tflops = gpu.fp16_tflops * gpu.typical_utilization
-    effective_flops_per_sec = effective_tflops * 1e12
-    # Spread across all GPUs serving the model
-    gpu_seconds = total_flops / (effective_flops_per_sec * model.num_gpus)
-
-    # Step 3: Energy  (all GPUs drawing power for that duration)
-    total_gpu_watts = gpu.tdp_watts * model.num_gpus
-    energy_joules = total_gpu_watts * gpu_seconds
-    energy_wh = (energy_joules / 3600) * pue  # apply data-center overhead
-
-    return {
-        &quot;model&quot;: model.name,
-        &quot;total_tokens&quot;: total_tokens,
-        &quot;total_flops&quot;: total_flops,
-        &quot;gpu_seconds&quot;: round(gpu_seconds, 6),
-        &quot;energy_wh&quot;: round(energy_wh, 6),
-        &quot;pue&quot;: pue,
-    }</code></pre>
-      </div></div>
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should do some back-of-napkin math for you. Roughly: 1KB ≈ 250 tokens. So 56KB (Playwright) = ~14K tokens per snapshot. Five snapshots = 70K tokens. Two GitHub queries at 59KB each = ~30K tokens. Three log files at 45KB = ~34K tokens. That&#x27;s 134K tokens — <strong>67% of your entire context</strong> — consumed by raw tool output alone. Add the 143K for tool definitions and you&#x27;ve overflowed before writing a single line of code. The agent should present this as a simple breakdown table.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The parameter counts for proprietary models (GPT-4o, Claude) are estimates based on public reporting and leaks. That&#x27;s fine — we&#x27;re building an <em>estimator</em>, not an audit tool. The point is order-of-magnitude awareness.
-      </div>
-      <div class="callout callout-warning">
-        <div class="callout-label">Warning</div>
-        Don&#x27;t confuse training energy with inference energy. Training GPT-4 reportedly consumed ~50 GWh. But inference — the per-prompt cost — is what matters for day-to-day impact. Our tool focuses on inference.
+        A rough rule of thumb: 1KB of text ≈ 250 tokens. So a 56KB Playwright snapshot eats about 14,000 tokens. That&#x27;s the size of a solid conversation about architecture decisions — gone in one tool call.
       </div>
         
       <details class="reveal">
-        <summary>Why 2× parameters for FLOPs per token?</summary>
-        <div class="reveal-body"><p>In a transformer forward pass, each parameter participates in roughly one multiply and one add per token — that&#x27;s 2 floating-point operations per parameter. For a 70B model, that&#x27;s ~140 billion FLOPs per token. This is a simplification (attention is slightly more complex), but it&#x27;s the standard back-of-envelope estimate used by researchers at DeepMind, Meta, and Epoch AI.</p></div>
+        <summary>Why can&#x27;t we just increase the context window?</summary>
+        <div class="reveal-body"><p>Even if context windows keep growing (and they will), the problem scales too. More tools = more output. And there&#x27;s a subtler issue: <strong>attention degrades with length</strong>. A model with 200K tokens of context doesn&#x27;t attend equally to all of it. The more noise in your context, the worse the signal. Compression isn&#x27;t just about fitting more in — it&#x27;s about keeping the signal-to-noise ratio high so the model actually <em>uses</em> what&#x27;s there.</p></div>
       </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Install Context Mode and See What Changes</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, let&#x27;s actually get this thing running. There are two install paths:</p>
+
+<ol>
+<li><strong>Plugin Marketplace</strong> — gives you auto-routing hooks plus slash commands (recommended)</li>
+<li><strong>MCP-only</strong> — just the raw tools, no auto-routing</li>
+</ol>
+
+<p>We&#x27;re going with the Plugin Marketplace route because the auto-routing is the magic part. Without it, you&#x27;d have to manually pipe every tool output through the sandbox yourself.</p>
+
+<p>The install is genuinely simple — but understanding <em>what it installs</em> is where the learning happens.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to walk you through installing Context Mode via the Claude Code Plugin Marketplace and explain what each piece does
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What&#x27;s the difference between a plugin and a plain MCP server in Claude Code?</li><li>What&#x27;s a PreToolUse hook and why does Context Mode need one?</li><li>After installation, what should you see when you restart Claude Code?</li></ul>
+        </div>
+        
       <details class="reveal">
-        <summary>What&#x27;s PUE and why 1.2?</summary>
-        <div class="reveal-body"><p>Power Usage Effectiveness measures how much <em>extra</em> energy a data center uses beyond just the compute hardware — cooling, lighting, networking, storage. A PUE of 1.2 means for every 1 watt of GPU power, the facility uses 1.2 watts total. Google reports PUE of ~1.1, while the industry average is closer to 1.3-1.6. We use 1.2 as a reasonable middle ground for hyperscaler facilities.</p></div>
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain that you run <code>/install-plugin context-mode</code> (or add it to your MCP config manually). The key thing it installs is three tools — <code>execute</code> (run code in a sandbox), <code>index</code> (store content in a searchable knowledge base), and <code>search</code> (query that knowledge base). But the real magic is the <strong>PreToolUse hook</strong>: a callback that fires <em>before</em> any MCP tool returns its output, automatically routing that output through the sandbox instead of dumping it raw into context. After restarting Claude Code, you shouldn&#x27;t notice anything different in your workflow — that&#x27;s the point. The compression happens invisibly.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        You need to <strong>restart Claude Code</strong> after installation. The MCP server needs to register its tools and hooks fresh. If you skip the restart, the PreToolUse hook won&#x27;t be active and you&#x27;ll still get raw output.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        If you just want to experiment without committing, use the MCP-only install. You won&#x27;t get auto-routing, but you can manually test the <code>execute</code> and <code>search</code> tools to see how the sandbox works.
+      </div>
+        
+      <details class="reveal">
+        <summary>What exactly is a PreToolUse hook?</summary>
+        <div class="reveal-body"><p>Think of it like middleware in a web server. When Express gets a request, it passes through middleware functions before hitting your route handler. A PreToolUse hook does the same thing for MCP tool calls — it intercepts the tool&#x27;s output <em>before</em> it enters the conversation context.</p>
+
+<p>Context Mode&#x27;s hook says: &quot;Hey, before you paste that 56KB Playwright snapshot into the chat, let me run it through a sandbox first. I&#x27;ll extract what matters and give you a 299-byte summary instead.&quot;</p>
+
+<p>The beauty is that Claude Code already supports this hook pattern — Context Mode just registers one that does the compression. You don&#x27;t change how you prompt or work. The hook fires automatically on every tool response.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You should now have an `energy_model.py` file with GPU profiles, model profiles, and an `estimate_energy_wh()` function. Try running it mentally: 1000 tokens on GPT-4o should give you something in the range of 0.001–0.01 Wh. If your agent gave you numbers way outside that, ask it to double-check the unit conversions.</div>
-    </div>
-    <div class="step-section">
-      <div class="step-header">
-        <div class="step-number">2</div>
-        <h2>Adding Water and Carbon — The Environmental Layer</h2>
-      </div>
-      <div class="step-body">
-        <p>Energy is only part of the story. Data centers use enormous amounts of water for cooling, and the carbon impact depends entirely on <em>where</em> the electricity comes from. A prompt served from a data center in Iowa (wind-heavy grid) has a very different carbon footprint than one served from West Virginia (coal-heavy grid).</p>
-
-<p>We need two more calculations:</p>
-
-<ul>
-<li><strong>Water</strong>: roughly 0.5–1 liter per kWh of data center energy (varies by cooling method)</li>
-<li><strong>Carbon</strong>: grams of CO₂ per kWh, which varies from ~20 (Norway hydro) to ~800+ (coal-heavy regions)</li>
-</ul>
-
-<p>The electricityMap API gives real-time carbon intensity by region. Let&#x27;s get our agent to add environmental impact calculations on top of our energy model.</p>
-        
-      <div class="agent-interaction">
-        <div class="agent-goal">
-          <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to create an environmental impact module that takes watt-hours and returns water consumption (liters) and carbon emissions (grams CO₂), with support for different grid regions.
-        </div>
-        
-        <div class="agent-hints">
-          <div class="agent-hints-label">Think about it</div>
-          <ul><li>What data structure makes sense for representing different regions and their carbon intensity?</li><li>Should we call the electricityMap API live, or start with a static lookup table? What are the trade-offs?</li><li>Water usage depends on the cooling method (evaporative vs. air-cooled). How might we model that simply?</li><li>What&#x27;s a good default region for someone who doesn&#x27;t know where their API provider&#x27;s data center is?</li></ul>
-        </div>
-        
-      <details class="reveal">
-        <summary>See what the agent gives back</summary>
-        <div class="reveal-body">
-      <div class="code-block">
-        <span class="code-caption">A clean environmental module with region-aware carbon intensity and cooling-method-aware water estimates. Notice we start static and can plug in the live API later.</span>
-        <button class="copy-btn">COPY</button>
-        <pre><code class="language-python">&quot;&quot;&quot;environmental.py — water and carbon impact calculations.&quot;&quot;&quot;
-from dataclasses import dataclass
-from enum import Enum
-
-
-class CoolingMethod(Enum):
-    EVAPORATIVE = &quot;evaporative&quot;   # wet cooling — common in hot/dry climates
-    AIR_COOLED = &quot;air_cooled&quot;     # less water, more energy
-    HYBRID = &quot;hybrid&quot;             # mix of both
-
-
-# Liters of water per kWh of data-center energy
-WATER_INTENSITY = {
-    CoolingMethod.EVAPORATIVE: 1.8,
-    CoolingMethod.AIR_COOLED: 0.1,
-    CoolingMethod.HYBRID: 0.75,
-}
-
-
-@dataclass
-class GridRegion:
-    code: str
-    name: str
-    carbon_intensity_gco2_kwh: float  # grams CO₂ per kWh
-    default_cooling: CoolingMethod = CoolingMethod.HYBRID
-
-
-# Static lookup — a curated subset from electricityMap averages
-GRID_REGIONS = {
-    &quot;US-CAL&quot;:  GridRegion(&quot;US-CAL&quot;,  &quot;California&quot;,           220, CoolingMethod.AIR_COOLED),
-    &quot;US-VA&quot;:   GridRegion(&quot;US-VA&quot;,   &quot;Virginia (us-east-1)&quot;, 310, CoolingMethod.HYBRID),
-    &quot;US-IA&quot;:   GridRegion(&quot;US-IA&quot;,   &quot;Iowa (us-east-2)&quot;,     380, CoolingMethod.EVAPORATIVE),
-    &quot;US-OR&quot;:   GridRegion(&quot;US-OR&quot;,   &quot;Oregon (us-west-2)&quot;,    90, CoolingMethod.AIR_COOLED),
-    &quot;EU-IE&quot;:   GridRegion(&quot;EU-IE&quot;,   &quot;Ireland (eu-west-1)&quot;,  300, CoolingMethod.HYBRID),
-    &quot;EU-SE&quot;:   GridRegion(&quot;EU-SE&quot;,   &quot;Sweden&quot;,                25, CoolingMethod.AIR_COOLED),
-    &quot;EU-DE&quot;:   GridRegion(&quot;EU-DE&quot;,   &quot;Germany&quot;,              350, CoolingMethod.HYBRID),
-    &quot;EU-FR&quot;:   GridRegion(&quot;EU-FR&quot;,   &quot;France&quot;,                55, CoolingMethod.AIR_COOLED),
-    &quot;AP-SG&quot;:   GridRegion(&quot;AP-SG&quot;,   &quot;Singapore&quot;,            410, CoolingMethod.EVAPORATIVE),
-    &quot;AP-JP&quot;:   GridRegion(&quot;AP-JP&quot;,   &quot;Japan (Tokyo)&quot;,        460, CoolingMethod.HYBRID),
-    &quot;WORLD&quot;:   GridRegion(&quot;WORLD&quot;,   &quot;Global Average&quot;,       436, CoolingMethod.HYBRID),
-}
-
-
-def estimate_environmental_impact(
-    energy_wh: float,
-    region_code: str = &quot;WORLD&quot;,
-) -&gt; dict:
-    &quot;&quot;&quot;Convert watt-hours into water (liters) and carbon (gCO₂).&quot;&quot;&quot;
-    region = GRID_REGIONS.get(region_code, GRID_REGIONS[&quot;WORLD&quot;])
-    energy_kwh = energy_wh / 1000
-
-    water_liters = energy_kwh * WATER_INTENSITY[region.default_cooling]
-    carbon_grams = energy_kwh * region.carbon_intensity_gco2_kwh
-
-    return {
-        &quot;region&quot;: region.name,
-        &quot;energy_wh&quot;: round(energy_wh, 6),
-        &quot;energy_kwh&quot;: round(energy_kwh, 8),
-        &quot;water_liters&quot;: round(water_liters, 6),
-        &quot;carbon_grams_co2&quot;: round(carbon_grams, 6),
-        &quot;carbon_intensity_source&quot;: &quot;static (electricityMap averages)&quot;,
-    }</code></pre>
-      </div></div>
-      </details>
-      </div>
-        
-        
-      <div class="callout callout-tip">
-        <div class="callout-label">Tip</div>
-        Starting with a static lookup table instead of a live API call is a great pattern. It means your tool works offline, tests are deterministic, and you can add the live API as an <em>enhancement</em> later — not a hard dependency.
-      </div>
-      <div class="callout callout-api-key-note">
-        <div class="callout-label">API Key Note</div>
-        If you want to add live electricityMap data later, you&#x27;ll need a free API key from app.electricitymap.org. Their free tier gives 100 requests/month — plenty for personal use.
-      </div>
-        
-      <details class="reveal">
-        <summary>Why does Virginia matter so much?</summary>
-        <div class="reveal-body"><p>Northern Virginia (the us-east-1 AWS region) hosts the largest concentration of data centers on Earth — roughly 70% of the world&#x27;s internet traffic passes through &quot;Data Center Alley&quot; in Loudoun County. When you call the OpenAI or Anthropic API from the eastern US, there&#x27;s a decent chance your prompt is processed there. Virginia&#x27;s grid is a mix of natural gas, nuclear, and some renewables — landing around 300-350 gCO₂/kWh.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>How accurate are these water numbers?</summary>
-        <div class="reveal-body"><p>Honestly? They&#x27;re rough. Microsoft disclosed that their global water consumption rose 34% in 2022 largely due to AI training. A 2024 UC Riverside study estimated ChatGPT &quot;drinks&quot; about 500ml of water per 20-50 responses. Our per-kWh multipliers are simplifications — real water usage depends on ambient temperature, humidity, time of year, and the specific cooling system. But for awareness purposes, they&#x27;re in the right ballpark.</p></div>
-      </details>
-      </div>
+      <div>At this point you should have Context Mode installed and understand the two-part architecture: sandboxed execution for compression, and a PreToolUse hook for automatic routing. If you restarted Claude Code and see the `execute`, `index`, and `search` tools available, you&#x27;re good to go.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>The CLI — Bringing It All Together</h2>
+        <h2>The Sandbox: How Raw Data Stays Out of Your Context</h2>
       </div>
       <div class="step-body">
-        <p>Now let&#x27;s wire everything into a command-line tool. We want something you can actually <em>use</em> — pipe it into your workflow, run it after an API call, maybe even integrate it as middleware later.</p>
+        <p>This is the part that honestly confused me at first. How can you <em>process</em> data without it entering your context? Isn&#x27;t the whole point that the model needs to see the data to work with it?</p>
 
-<p>The UX we&#x27;re going for:</p>
+<p>Here&#x27;s the mental model that clicked for me: <strong>think of the sandbox like a kitchen, and your context window like the dining table.</strong></p>
 
-<p>```</p>
-<p>$ python estimator.py --model gpt-4o --prompt-tokens 500 --completion-tokens 1500 --region US-VA</p>
-<p>```</p>
+<p>When you order food at a restaurant, the raw ingredients never come to your table. The chef works with them in the kitchen and delivers a finished plate. The sandbox works the same way:</p>
 
-<p>And it should spit out a nicely formatted summary of energy, water, and carbon. Honestly, this is the kind of thing where AI agents shine — CLIs with argument parsing and formatted output are well-trodden ground.</p>
+<ol>
+<li>A tool returns raw data (the ingredients)</li>
+<li>The sandbox runs your processing script (the chef cooks)</li>
+<li>Only <code>stdout</code> — what the script explicitly prints — enters the conversation (the plated dish)</li>
+</ol>
+
+<p>The raw data literally never leaves the subprocess. It&#x27;s allocated in a separate process&#x27;s memory, processed there, and discarded. Only the <code>console.log()</code> or <code>print()</code> output crosses the boundary.</p>
+
+<p>Ten language runtimes are supported (JS, TS, Python, Shell, Ruby, Go, Rust, PHP, Perl, R), and it auto-detects Bun for 3-5x faster JavaScript execution.</p>
+
+<p>The credential passthrough is clever too — if you&#x27;re authenticated with <code>gh</code> or <code>aws</code> CLI, the sandbox inherits those credentials through environment variables. So you can run <code>gh issue list</code> inside the sandbox, process the JSON there, and only print the three fields you care about.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to build a CLI entry point that uses argparse, calls both our modules, and prints a clean, readable summary.
+          Ask your agent to explain how Context Mode would handle a specific scenario: you ask Claude Code to review the last 20 GitHub issues for a repository. Walk through the data flow step by step.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What arguments does the CLI need? Think about required vs optional, and what sensible defaults look like.</li><li>How should the output look? Table format? Key-value pairs? Should there be a --json flag for machine-readable output?</li><li>What happens if someone passes a model name we don&#x27;t recognize? How should we handle that gracefully?</li><li>Should we list available models and regions if someone passes --help?</li></ul>
+          <ul><li>What does the raw `gh issue list` output look like? (Hint: full JSON with every field)</li><li>Where does the processing happen — in the model&#x27;s context or somewhere else?</li><li>What&#x27;s the difference between what the sandbox *sees* and what the conversation *sees*?</li><li>How do authenticated CLI tools work inside the sandbox?</li></ul>
         </div>
         
       <details class="reveal">
-        <summary>See what the agent gives back</summary>
-        <div class="reveal-body">
-      <div class="code-block">
-        <span class="code-caption">A polished CLI with argparse, emoji-decorated output, and a --json flag for piping into other tools. The --help even lists available models and regions.</span>
-        <button class="copy-btn">COPY</button>
-        <pre><code class="language-python">#!/usr/bin/env python3
-&quot;&quot;&quot;estimator.py — CLI entry point for the LLM energy-cost estimator.&quot;&quot;&quot;
-import argparse
-import json
-import sys
-
-from energy_model import MODELS, estimate_energy_wh
-from environmental import GRID_REGIONS, estimate_environmental_impact
-
-
-def format_number(value: float, unit: str) -&gt; str:
-    &quot;&quot;&quot;Human-friendly number formatting.&quot;&quot;&quot;
-    if value &lt; 0.001:
-        return f&quot;{value:.2e} {unit}&quot;
-    elif value &lt; 1:
-        return f&quot;{value:.4f} {unit}&quot;
-    else:
-        return f&quot;{value:.2f} {unit}&quot;
-
-
-def print_report(energy: dict, env: dict) -&gt; None:
-    &quot;&quot;&quot;Print a formatted human-readable report.&quot;&quot;&quot;
-    bar = &quot;═&quot; * 52
-    print(f&quot;\n{bar}&quot;)
-    print(f&quot;  ⚡ LLM Prompt Energy Estimate&quot;)
-    print(f&quot;{bar}&quot;)
-    print(f&quot;  Model:            {energy[&#x27;model&#x27;]}&quot;)
-    print(f&quot;  Tokens:           {energy[&#x27;total_tokens&#x27;]:,} &quot;
-          f&quot;(prompt + completion)&quot;)
-    print(f&quot;  GPU time:         {format_number(energy[&#x27;gpu_seconds&#x27;], &#x27;sec&#x27;)}&quot;)
-    print(f&quot;  PUE:              {energy[&#x27;pue&#x27;]}&quot;)
-    print(f&quot;{&#x27;─&#x27; * 52}&quot;)
-    print(f&quot;  🔋 Energy:         {format_number(energy[&#x27;energy_wh&#x27;], &#x27;Wh&#x27;)}&quot;)
-    print(f&quot;  💧 Water:          {format_number(env[&#x27;water_liters&#x27;], &#x27;liters&#x27;)}&quot;)
-    print(f&quot;  🌍 Carbon:         {format_number(env[&#x27;carbon_grams_co2&#x27;], &#x27;g CO₂&#x27;)}&quot;)
-    print(f&quot;{&#x27;─&#x27; * 52}&quot;)
-    print(f&quot;  Grid region:      {env[&#x27;region&#x27;]}&quot;)
-    print(f&quot;  Carbon source:    {env[&#x27;carbon_intensity_source&#x27;]}&quot;)
-    print(f&quot;{bar}\n&quot;)
-
-
-def main() -&gt; None:
-    parser = argparse.ArgumentParser(
-        description=&quot;Estimate the energy, water, and carbon cost of an LLM prompt.&quot;,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            &quot;Available models:\n  &quot;
-            + &quot;\n  &quot;.join(sorted(MODELS.keys()))
-            + &quot;\n\nAvailable regions:\n  &quot;
-            + &quot;\n  &quot;.join(
-                f&quot;{k:8s} — {v.name}&quot; for k, v in sorted(GRID_REGIONS.items())
-            )
-        ),
-    )
-    parser.add_argument(
-        &quot;--model&quot;, &quot;-m&quot;, required=True, choices=sorted(MODELS.keys()),
-        help=&quot;LLM model name&quot;,
-    )
-    parser.add_argument(
-        &quot;--prompt-tokens&quot;, &quot;-p&quot;, type=int, required=True,
-        help=&quot;Number of prompt (input) tokens&quot;,
-    )
-    parser.add_argument(
-        &quot;--completion-tokens&quot;, &quot;-c&quot;, type=int, required=True,
-        help=&quot;Number of completion (output) tokens&quot;,
-    )
-    parser.add_argument(
-        &quot;--region&quot;, &quot;-r&quot;, default=&quot;WORLD&quot;,
-        choices=sorted(GRID_REGIONS.keys()),
-        help=&quot;Grid region for carbon intensity (default: WORLD)&quot;,
-    )
-    parser.add_argument(
-        &quot;--pue&quot;, type=float, default=1.2,
-        help=&quot;Power Usage Effectiveness (default: 1.2)&quot;,
-    )
-    parser.add_argument(
-        &quot;--json&quot;, dest=&quot;output_json&quot;, action=&quot;store_true&quot;,
-        help=&quot;Output raw JSON instead of formatted report&quot;,
-    )
-
-    args = parser.parse_args()
-
-    energy = estimate_energy_wh(
-        model_name=args.model,
-        prompt_tokens=args.prompt_tokens,
-        completion_tokens=args.completion_tokens,
-        pue=args.pue,
-    )
-    env = estimate_environmental_impact(
-        energy_wh=energy[&quot;energy_wh&quot;],
-        region_code=args.region,
-    )
-
-    if args.output_json:
-        combined = {**energy, **env}
-        print(json.dumps(combined, indent=2))
-    else:
-        print_report(energy, env)
-
-
-if __name__ == &quot;__main__&quot;:
-    main()</code></pre>
-      </div></div>
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should trace the full flow: (1) Claude decides to check GitHub issues, (2) instead of running <code>gh issue list</code> directly (which would dump ~59KB of JSON), the PreToolUse hook intercepts and routes through <code>execute</code>, (3) the sandbox spawns a subprocess that runs <code>gh issue list --json number,title,state,labels</code> — credentials pass through automatically, (4) the script processes the JSON <em>inside the subprocess</em>, maybe grouping by label or filtering by state, (5) only the <code>console.log()</code> output enters the conversation — something like a 1.1KB summary with issue numbers, titles, and a count by category. The 59KB of raw GitHub JSON never touches the context window.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The --json flag is a small detail that makes a huge difference. It means you can do <code>python estimator.py --model gpt-4o -p 500 -c 1500 --json | jq .carbon_grams_co2</code> and pipe the output into dashboards, logging systems, or middleware.
+        The sandbox isolation is per-call. Scripts from different <code>execute</code> calls can&#x27;t access each other&#x27;s memory or state. This is a security feature — if one script processes sensitive API responses, another script can&#x27;t peek at them.
       </div>
         
       <details class="reveal">
-        <summary>What would middleware integration look like?</summary>
-        <div class="reveal-body"><p>Imagine wrapping your OpenAI API calls with a decorator that automatically logs energy estimates:</p>
+        <summary>How is this different from just asking Claude to summarize the output?</summary>
+        <div class="reveal-body"><p>Great question, and it gets at a fundamental distinction. When Claude summarizes, the raw data <strong>has already entered the context window</strong>. The tokens are spent. Even if Claude writes a tidy summary in its response, the full 59KB of GitHub JSON is sitting in the conversation history, consuming tokens for the rest of the session.</p>
 
-<p>```python</p>
-<p>@track_energy(model=&quot;gpt-4o&quot;, region=&quot;US-VA&quot;)</p>
-<p>def ask_gpt(prompt):</p>
-<p>return openai.chat.completions.create(...)</p>
-<p>```</p>
+<p>With the sandbox approach, the raw data is never serialized into the conversation at all. It exists in subprocess memory, gets processed there, and only the output crosses the boundary. It&#x27;s the difference between reading a 500-page book and writing a summary (you still read all 500 pages) versus having someone else read it and tell you the key points (you only heard the summary).</p>
 
-<p>The decorator would read the token counts from the API response and call our estimator behind the scenes. You could aggregate this into a daily/weekly energy report for your team. Some companies are already building this kind of observability into their LLM platforms.</p></div>
+<p>This is why the compression is so dramatic — it&#x27;s not summarization, it&#x27;s <strong>data routing</strong>.</p></div>
       </details>
       </div>
     </div>
-    <div class="checkpoint">
-      <div class="checkpoint-icon">&#10003;</div>
-      <div>You should now have three files: `energy_model.py`, `environmental.py`, and `estimator.py`. Try running: `python estimator.py --model gpt-4o -p 500 -c 1500 --region US-VA`. You should see a formatted report showing energy in the range of 0.001–0.01 Wh, a tiny fraction of a liter of water, and a small number of milligrams of CO₂. Those numbers look small per-prompt — but multiply by millions of daily requests and you start to see the MIT Tech Review headline.</div>
-    </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">Your estimator currently uses a static table for carbon intensity. A teammate suggests calling the electricityMap API for every single estimation. What&#x27;s the right approach?</div>
+      <div class="question">You&#x27;re debugging a failing test suite that produces 85KB of output. Which approach keeps your context window cleanest?</div>
       
         <div class="decision-option">
-          <input type="radio" name="decision_7" id="decision_7_opt0">
-          <label for="decision_7_opt0">Static table as default, with an optional --live flag that hits the API</label>
-          <div class="decision-feedback correct">&#10003; Correct! This is the best of both worlds. The tool works offline and fast by default (great for CI/CD, testing, and places without internet). When someone wants real-time data, they opt in with --live. This follows the principle of progressive enhancement — start simple, add complexity as an option.</div>
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">Route the test output through Context Mode&#x27;s sandbox, extract only failing test names and error messages</label>
+          <div class="decision-feedback correct">&#10003; Correct! The sandbox processes the full 85KB of test output in an isolated subprocess. Your script filters for failures, extracts test names and error messages, and prints maybe 200 bytes. The raw output never enters the conversation — you get the signal without the noise.</div>
         </div>
         <div class="decision-option">
-          <input type="radio" name="decision_7" id="decision_7_opt1">
-          <label for="decision_7_opt1">Always call the API for accurate data</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This makes your tool dependent on network access, slower (API latency on every call), and ironically — uses more energy itself. Plus you&#x27;d burn through the free API tier quickly. Real-time data is nice but shouldn&#x27;t be a hard requirement.</div>
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Run the tests normally and ask Claude to focus only on the failures</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Even if Claude only *discusses* the failures, the full 85KB of test output is already in your context window. Those tokens are spent permanently for the rest of the session. Asking the model to &#x27;focus&#x27; doesn&#x27;t reclaim the tokens — they&#x27;re already consumed.</div>
         </div>
         <div class="decision-option">
-          <input type="radio" name="decision_7" id="decision_7_opt2">
-          <label for="decision_7_opt2">Just use the static table forever, APIs are overkill</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Carbon intensity actually varies significantly by time of day (solar peaks during daytime, wind varies with weather). A static annual average misses these swings. Having the *option* for live data is genuinely valuable — you just shouldn&#x27;t force it.</div>
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Run the tests and pipe through `grep FAIL` before giving to Claude</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This is actually a reasonable workaround! Piping through grep does reduce the output before it hits the context. But Context Mode&#x27;s sandbox is more flexible — you can write richer processing logic (group by test file, extract stack traces, count by category) and it handles credential passthrough for authenticated tools too. The sandbox approach generalizes better.</div>
         </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>Batch Mode — Estimating a Full Conversation</h2>
+        <h2>The Knowledge Base: FTS5, BM25, and Why Search Beats Stuffing</h2>
       </div>
       <div class="step-body">
-        <p>A single prompt is interesting, but real workloads involve multi-turn conversations, RAG pipelines, or batch processing. Let&#x27;s add a mode where you can feed in a JSON file of API calls and get a cumulative report.</p>
+        <p>The sandbox handles real-time compression. But what about information you need to <em>come back to</em> during a long session? That&#x27;s where the knowledge base comes in.</p>
 
-<p>This is the kind of feature that separates a toy script from a tool people actually use. Imagine running this against your API logs at the end of the month: &quot;Your team&#x27;s LLM usage this February consumed an estimated 4.2 kWh, 3 liters of water, and 1.4 kg of CO₂ — equivalent to driving 5.6 km in a gas car.&quot;</p>
+<p>Context Mode includes <code>index</code> and <code>search</code> tools backed by <strong>SQLite FTS5</strong> — Full-Text Search 5. Here&#x27;s the analogy that helped me: imagine you&#x27;re researching a topic and you have two strategies.</p>
+
+<p><strong>Strategy 1: Pile everything on your desk.</strong> Print every article, every doc page, every API reference. Stack them up. When you need something, dig through the pile. This is what happens when raw tool output fills your context.</p>
+
+<p><strong>Strategy 2: Build an index.</strong> Read each source, break it into sections, file them by topic with sticky tabs. When you need something, look it up. You only pull out the specific section you need. This is what FTS5 does.</p>
+
+<p>The <code>index</code> tool breaks markdown content into chunks by headings (keeping code blocks intact — crucial detail), then stores them in an FTS5 virtual table. When you <code>search</code>, it uses <strong>BM25 ranking</strong> to find the most relevant chunks.</p>
+
+<p>BM25 is worth understanding because it shows up everywhere in search. It&#x27;s basically asking three questions:</p>
+<ul>
+<li><strong>How often does this term appear in this document?</strong> (term frequency)</li>
+<li><strong>How rare is this term across all documents?</strong> (inverse document frequency — rare terms matter more)</li>
+<li><strong>How long is this document?</strong> (normalization — a term in a short doc is more significant than in a long one)</li>
+</ul>
+
+<p>The <code>fetch_and_index</code> tool extends this to URLs — it fetches a web page, converts HTML to markdown, chunks it, and indexes it. The raw page <em>never enters context</em>. You search it later and get back only the relevant chunks.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to add a batch estimation mode that reads a JSON array of API calls and outputs an aggregated summary with per-call breakdown and totals, including relatable comparisons.
+          Ask your agent to explain how you&#x27;d use Context Mode&#x27;s knowledge base to research a new library&#x27;s API without burning context tokens
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What should the input JSON format look like? Think about what fields each entry needs.</li><li>What makes the output *memorable*? Raw numbers are forgettable — comparisons to everyday things (driving a car, charging a phone) stick in people&#x27;s minds.</li><li>Should the batch mode be a separate command, a flag on the existing CLI, or a subcommand?</li><li>How do you handle a batch where different calls use different models or regions?</li></ul>
+          <ul><li>If you need to reference API docs multiple times during a session, what&#x27;s the cost of fetching them each time?</li><li>What does &#x27;chunking by headings&#x27; mean in practice for API documentation?</li><li>How does BM25 decide which chunk to return when you search for &#x27;authentication&#x27;?</li><li>What&#x27;s the advantage of Porter stemming when searching technical docs?</li></ul>
         </div>
         
       <details class="reveal">
-        <summary>See what the agent gives back</summary>
-        <div class="reveal-body">
-      <div class="code-block">
-        <span class="code-caption">Batch mode with relatable comparisons — because &#x27;0.034 Wh&#x27; means nothing to most people, but &#x27;11 Google searches&#x27; clicks instantly.</span>
-        <button class="copy-btn">COPY</button>
-        <pre><code class="language-python">&quot;&quot;&quot;batch.py — batch estimation mode for multiple API calls.&quot;&quot;&quot;
-import json
-import sys
-from pathlib import Path
-
-from energy_model import MODELS, estimate_energy_wh
-from environmental import GRID_REGIONS, estimate_environmental_impact
-
-
-# Relatable comparisons
-COMPARISONS = {
-    &quot;phone_charges&quot;: {&quot;kwh&quot;: 0.015, &quot;label&quot;: &quot;smartphone charges&quot;},
-    &quot;led_bulb_hours&quot;: {&quot;kwh&quot;: 0.01, &quot;label&quot;: &quot;hours of LED bulb&quot;},
-    &quot;km_driven&quot;: {&quot;gco2&quot;: 121, &quot;label&quot;: &quot;km driven (avg gas car)&quot;},
-    &quot;google_searches&quot;: {&quot;wh&quot;: 0.3, &quot;label&quot;: &quot;Google searches equivalent&quot;},
-}
-
-
-def make_comparisons(total_wh: float, total_co2_g: float) -&gt; list[str]:
-    &quot;&quot;&quot;Generate relatable comparisons for the totals.&quot;&quot;&quot;
-    results = []
-    kwh = total_wh / 1000
-
-    charges = kwh / COMPARISONS[&quot;phone_charges&quot;][&quot;kwh&quot;]
-    if charges &gt;= 0.01:
-        results.append(f&quot;📱 {charges:.1f} smartphone charges&quot;)
-
-    led_hours = kwh / COMPARISONS[&quot;led_bulb_hours&quot;][&quot;kwh&quot;]
-    if led_hours &gt;= 0.1:
-        results.append(f&quot;💡 {led_hours:.1f} hours of an LED bulb&quot;)
-
-    km = total_co2_g / COMPARISONS[&quot;km_driven&quot;][&quot;gco2&quot;]
-    if km &gt;= 0.001:
-        results.append(f&quot;🚗 {km:.2f} km driven in a gas car&quot;)
-
-    searches = total_wh / COMPARISONS[&quot;google_searches&quot;][&quot;wh&quot;]
-    results.append(f&quot;🔍 {searches:.0f} Google searches&quot;)
-
-    return results
-
-
-def run_batch(input_path: str, default_region: str = &quot;WORLD&quot;) -&gt; dict:
-    &quot;&quot;&quot;Process a JSON batch file and return aggregated results.&quot;&quot;&quot;
-    data = json.loads(Path(input_path).read_text())
-
-    calls = []
-    total_wh = 0.0
-    total_water = 0.0
-    total_co2 = 0.0
-
-    for i, entry in enumerate(data):
-        model = entry[&quot;model&quot;]
-        prompt_tokens = entry[&quot;prompt_tokens&quot;]
-        completion_tokens = entry[&quot;completion_tokens&quot;]
-        region = entry.get(&quot;region&quot;, default_region)
-
-        if model not in MODELS:
-            print(f&quot;⚠ Skipping entry {i}: unknown model &#x27;{model}&#x27;&quot;,
-                  file=sys.stderr)
-            continue
-
-        energy = estimate_energy_wh(model, prompt_tokens, completion_tokens)
-        env = estimate_environmental_impact(energy[&quot;energy_wh&quot;], region)
-
-        call_summary = {
-            &quot;index&quot;: i,
-            &quot;model&quot;: model,
-            &quot;tokens&quot;: energy[&quot;total_tokens&quot;],
-            &quot;energy_wh&quot;: energy[&quot;energy_wh&quot;],
-            &quot;water_liters&quot;: env[&quot;water_liters&quot;],
-            &quot;carbon_g&quot;: env[&quot;carbon_grams_co2&quot;],
-            &quot;region&quot;: region,
-        }
-        calls.append(call_summary)
-
-        total_wh += energy[&quot;energy_wh&quot;]
-        total_water += env[&quot;water_liters&quot;]
-        total_co2 += env[&quot;carbon_grams_co2&quot;]
-
-    comparisons = make_comparisons(total_wh, total_co2)
-
-    return {
-        &quot;total_calls&quot;: len(calls),
-        &quot;total_energy_wh&quot;: round(total_wh, 4),
-        &quot;total_water_liters&quot;: round(total_water, 6),
-        &quot;total_carbon_grams_co2&quot;: round(total_co2, 4),
-        &quot;comparisons&quot;: comparisons,
-        &quot;calls&quot;: calls,
-    }
-
-
-if __name__ == &quot;__main__&quot;:
-    if len(sys.argv) &lt; 2:
-        print(&quot;Usage: python batch.py &lt;input.json&gt; [region]&quot;)
-        sys.exit(1)
-
-    region = sys.argv[2] if len(sys.argv) &gt; 2 else &quot;WORLD&quot;
-    result = run_batch(sys.argv[1], region)
-
-    print(f&quot;\n{&#x27;═&#x27; * 52}&quot;)
-    print(f&quot;  📊 Batch Energy Report — {result[&#x27;total_calls&#x27;]} API calls&quot;)
-    print(f&quot;{&#x27;═&#x27; * 52}&quot;)
-    print(f&quot;  🔋 Total energy:    {result[&#x27;total_energy_wh&#x27;]:.4f} Wh&quot;)
-    print(f&quot;  💧 Total water:     {result[&#x27;total_water_liters&#x27;]:.4f} liters&quot;)
-    print(f&quot;  🌍 Total carbon:    {result[&#x27;total_carbon_grams_co2&#x27;]:.4f} g CO₂&quot;)
-    print(f&quot;{&#x27;─&#x27; * 52}&quot;)
-    print(f&quot;  That&#x27;s roughly:&quot;)
-    for comp in result[&quot;comparisons&quot;]:
-        print(f&quot;    {comp}&quot;)
-    print(f&quot;{&#x27;═&#x27; * 52}\n&quot;)</code></pre>
-      </div></div>
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should walk through the workflow: (1) use <code>fetch_and_index</code> with the library&#x27;s docs URL — the HTML gets fetched, converted to markdown, and chunked by headings into the SQLite FTS5 table, (2) the raw docs (potentially hundreds of KB) never enter context, (3) later when you need the authentication section, you call <code>search</code> with &#x27;authentication&#x27; — BM25 ranks chunks by relevance and returns the exact section with its heading hierarchy, (4) Porter stemming means searching &#x27;authenticate&#x27; also matches &#x27;authentication&#x27;, &#x27;authenticated&#x27;, etc. The agent should emphasize that you can search the same indexed content repeatedly throughout a 3-hour session without any additional context cost.</p></div>
       </details>
       </div>
         
         
-      <div class="callout callout-tip">
-        <div class="callout-label">Tip</div>
-        Want real data to test with? Ask your agent: &#x27;Generate a sample JSON batch file with 20 realistic API calls across different models, varying prompt and completion token counts.&#x27; Agents are great at generating test data.
-      </div>
         
       <details class="reveal">
-        <summary>Making the comparisons more accurate</summary>
-        <div class="reveal-body"><p>Our comparison numbers (121 gCO₂/km for a car, 0.3 Wh per Google search) are widely-cited averages but they come with asterisks. The car figure is the EU fleet average — a Tesla in Norway is basically zero, a pickup in Texas is much higher. The Google search figure is from 2009 and Google&#x27;s efficiency has improved. For a production tool, you might want to cite your sources in the output and let users configure their own comparison baselines.</p></div>
+        <summary>BM25 vs. vector embeddings — when would you use which?</summary>
+        <div class="reveal-body"><p>BM25 is a keyword-based algorithm. It excels when you know the specific terms you&#x27;re looking for — function names, error codes, config keys. It&#x27;s fast, deterministic, and doesn&#x27;t require an embedding model.</p>
+
+<p>Vector embeddings (what you&#x27;d use with a vector database like Pinecone or Chroma) capture <em>semantic</em> similarity. Searching &#x27;how to log in&#x27; would match content about &#x27;authentication flow&#x27; even though they share no keywords.</p>
+
+<p>For code and API documentation, BM25 is often the better choice. You&#x27;re usually searching for specific terms — <code>useEffect</code>, <code>CORS</code>, <code>401 error</code>. The terms are precise and technical. BM25 handles this beautifully and runs locally in SQLite without needing an API call to an embedding service.</p>
+
+<p>Context Mode chose wisely here — for the use case of indexed technical docs and code output, BM25 is fast, free, and accurate.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">5</div>
-        <h2>Quick Test Suite — Trusting the Numbers</h2>
+        <h2>Real-World Test: The 315KB → 5.4KB Session</h2>
       </div>
       <div class="step-body">
-        <p>We&#x27;ve got a working tool, but how do we know the numbers are reasonable? This is actually a really interesting testing challenge — we can&#x27;t easily verify against ground truth (the real energy numbers are proprietary). But we <em>can</em> test:</p>
+        <p>Let&#x27;s see how all these pieces work together in a real scenario. The Context Mode team validated across 11 real-world workflows. Here are the numbers that jumped out at me:</p>
 
-<ol>
-<li><strong>Sanity bounds</strong>: A single GPT-4o prompt should not estimate more than 1 Wh</li>
-<li><strong>Proportionality</strong>: More tokens should always mean more energy</li>
-<li><strong>Region ordering</strong>: Sweden should always be lower-carbon than Germany</li>
-<li><strong>Unit consistency</strong>: The math chain from FLOPs → Joules → Wh should be dimensionally correct</li>
-</ol>
+<p>| Scenario | Raw Size | Compressed | Reduction |</p>
+<p>|----------|----------|------------|----------|</p>
+<p>| Playwright snapshot | 56 KB | 299 B | 99.5% |</p>
+<p>| 20 GitHub issues | 59 KB | 1.1 KB | 98.1% |</p>
+<p>| 500-line access log | 45 KB | 155 B | 99.7% |</p>
+<p>| 500-row CSV analytics | 85 KB | 222 B | 99.7% |</p>
+<p>| 153 git commits | 11.6 KB | 107 B | 99.1% |</p>
 
-<p>Let&#x27;s get our agent to write tests that validate the <em>reasonableness</em> of our estimates.</p>
+<p>The cumulative effect is what matters most: over a full session, 315KB of raw output becomes 5.4KB. Context remaining after 45 minutes: <strong>99%</strong> instead of 60%.</p>
+
+<p>But here&#x27;s the thing that really sold me — it&#x27;s not just about fitting more in. When your context is 60% full of raw JSON and log files, the model&#x27;s attention is diluted. It&#x27;s trying to reason about your code while wading through thousands of lines of GitHub metadata. Compression isn&#x27;t just a space optimization — it&#x27;s an <strong>attention optimization</strong>.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to create a pytest test suite that validates sanity bounds, proportionality, and region comparisons — not exact values, but reasonable ranges.
+          Ask your agent to design a test you could run yourself: a Claude Code session that would normally burn through context in 30 minutes, then re-run it with Context Mode to measure the difference
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>How do you test something when you don&#x27;t know the exact right answer? Think about bounds and relationships...</li><li>What invariants should ALWAYS hold? (e.g., more tokens = more energy, carbon in Sweden &lt; carbon in Germany)</li><li>What&#x27;s a reasonable upper bound for energy per prompt? Think about what would be obviously wrong.</li></ul>
+          <ul><li>What combination of tool calls would consume the most context in a typical dev session?</li><li>How would you measure &#x27;context remaining&#x27; before and after?</li><li>What&#x27;s a realistic 30-minute workflow — debugging? Code review? Feature research?</li><li>How would you make the comparison fair (same tasks, same prompts)?</li></ul>
         </div>
         
       <details class="reveal">
-        <summary>See what the agent gives back</summary>
-        <div class="reveal-body">
-      <div class="code-block">
-        <span class="code-caption">Tests that validate reasonableness rather than exact values. The double-tokens test is particularly clever — it checks that our math is truly linear.</span>
-        <button class="copy-btn">COPY</button>
-        <pre><code class="language-python">&quot;&quot;&quot;test_estimator.py — sanity and proportionality tests.&quot;&quot;&quot;
-import pytest
-from energy_model import MODELS, estimate_energy_wh
-from environmental import estimate_environmental_impact, GRID_REGIONS
-
-
-class TestEnergySanity:
-    &quot;&quot;&quot;Verify estimates fall within reasonable bounds.&quot;&quot;&quot;
-
-    def test_single_prompt_under_1wh(self):
-        &quot;&quot;&quot;A single prompt should never exceed 1 Wh.&quot;&quot;&quot;
-        for model_name in MODELS:
-            result = estimate_energy_wh(model_name, 1000, 500)
-            assert result[&quot;energy_wh&quot;] &lt; 1.0, (
-                f&quot;{model_name}: {result[&#x27;energy_wh&#x27;]} Wh exceeds 1 Wh sanity bound&quot;
-            )
-
-    def test_single_prompt_above_zero(self):
-        &quot;&quot;&quot;Every prompt should consume *some* energy.&quot;&quot;&quot;
-        for model_name in MODELS:
-            result = estimate_energy_wh(model_name, 1, 1)
-            assert result[&quot;energy_wh&quot;] &gt; 0
-
-    def test_small_model_cheaper_than_large(self):
-        &quot;&quot;&quot;An 8B model should use less energy than a 70B model.&quot;&quot;&quot;
-        small = estimate_energy_wh(&quot;llama-8b&quot;, 500, 500)
-        large = estimate_energy_wh(&quot;llama-70b&quot;, 500, 500)
-        assert small[&quot;energy_wh&quot;] &lt; large[&quot;energy_wh&quot;]
-
-
-class TestProportionality:
-    &quot;&quot;&quot;More tokens should always mean more energy.&quot;&quot;&quot;
-
-    @pytest.mark.parametrize(&quot;model&quot;, list(MODELS.keys()))
-    def test_more_tokens_more_energy(self, model):
-        small = estimate_energy_wh(model, 100, 100)
-        large = estimate_energy_wh(model, 1000, 1000)
-        assert large[&quot;energy_wh&quot;] &gt; small[&quot;energy_wh&quot;]
-
-    def test_double_tokens_double_energy(self):
-        &quot;&quot;&quot;Energy should scale linearly with token count.&quot;&quot;&quot;
-        base = estimate_energy_wh(&quot;gpt-4o&quot;, 500, 500)
-        double = estimate_energy_wh(&quot;gpt-4o&quot;, 1000, 1000)
-        ratio = double[&quot;energy_wh&quot;] / base[&quot;energy_wh&quot;]
-        assert 1.9 &lt; ratio &lt; 2.1, f&quot;Expected ~2x scaling, got {ratio:.2f}x&quot;
-
-
-class TestEnvironmental:
-    &quot;&quot;&quot;Carbon and water should vary by region as expected.&quot;&quot;&quot;
-
-    def test_sweden_lower_carbon_than_germany(self):
-        env_se = estimate_environmental_impact(1.0, &quot;EU-SE&quot;)
-        env_de = estimate_environmental_impact(1.0, &quot;EU-DE&quot;)
-        assert env_se[&quot;carbon_grams_co2&quot;] &lt; env_de[&quot;carbon_grams_co2&quot;]
-
-    def test_oregon_lower_carbon_than_virginia(self):
-        env_or = estimate_environmental_impact(1.0, &quot;US-OR&quot;)
-        env_va = estimate_environmental_impact(1.0, &quot;US-VA&quot;)
-        assert env_or[&quot;carbon_grams_co2&quot;] &lt; env_va[&quot;carbon_grams_co2&quot;]
-
-    def test_water_always_positive(self):
-        for region_code in GRID_REGIONS:
-            env = estimate_environmental_impact(1.0, region_code)
-            assert env[&quot;water_liters&quot;] &gt; 0
-
-    def test_zero_energy_zero_impact(self):
-        env = estimate_environmental_impact(0.0, &quot;WORLD&quot;)
-        assert env[&quot;water_liters&quot;] == 0
-        assert env[&quot;carbon_grams_co2&quot;] == 0</code></pre>
-      </div></div>
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should design a reproducible test workflow — something like: (1) Open a medium-sized repo, (2) run <code>gh issue list</code> for the last 20 issues, (3) take 3 Playwright snapshots of the project&#x27;s web UI, (4) read two log files, (5) run the test suite and review failures, (6) do a git log for the last 100 commits. It should suggest measuring context usage by noting when Claude starts &#x27;forgetting&#x27; earlier conversation or when you get a context limit warning. The agent should estimate the raw session would hit ~250KB of tool output (game over in 25 minutes) while Context Mode would keep it under 4KB (barely a dent after 3 hours).</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        This &quot;property-based&quot; testing style — checking invariants and relationships instead of exact values — is incredibly useful when building estimation tools. You&#x27;re testing the <em>shape</em> of the math, not specific numbers that might change as you refine your model.
+        The &#x27;repo research&#x27; scenario is the most dramatic: 986KB → 62KB across a multi-agent subagent flow. That&#x27;s because subagents learn to use <code>batch_execute</code> as their primary tool, compressing across multiple calls at once.
       </div>
         
+      <details class="reveal">
+        <summary>What about the subagent upgrade?</summary>
+        <div class="reveal-body"><p>One subtle but powerful detail: Context Mode automatically upgrades Bash subagents to <code>general-purpose</code> subagents so they can access MCP tools. This matters because in default Claude Code, when a subagent is spawned to handle a subtask (like &#x27;go research this library&#x27;), it often uses raw Bash commands — <code>curl</code>, <code>gh</code>, <code>cat</code> — and all that output flows straight into context.</p>
+
+<p>With Context Mode, those subagents get access to the <code>execute</code> and <code>batch_execute</code> tools instead. The repo research scenario dropped from 37 tool calls to just 5, and from 986KB to 62KB. The subagent does the same work but routes everything through sandboxes automatically.</p>
+
+<p>This is the compounding effect of the PreToolUse hook — it doesn&#x27;t just compress your direct tool calls, it compresses everything your subagents do too.</p></div>
+      </details>
       </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now understand all three pillars: sandbox execution (the kitchen metaphor — raw data stays in the subprocess), the FTS5 knowledge base (index once, search many times without re-fetching), and the PreToolUse hook (automatic routing so you don&#x27;t change your workflow). The numbers should feel intuitive — of course a 56KB DOM snapshot can be reduced to 299 bytes if you only extract the text content you care about.</div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Add a comparison mode to the CLI that lets users compare the energy cost of the same prompt across different models. Something like: `python estimator.py compare -p 500 -c 1500 --models gpt-4o llama-8b claude-sonnet --region US-VA` that outputs a side-by-side table showing which model is most energy-efficient for that workload.</div>
-      <div class="your-turn-context">This is a practical feature: if you&#x27;re choosing between models for a project and sustainability matters to your team, you want to see the energy trade-offs at a glance. Smaller models are almost always more energy-efficient, but by how much? The comparison table makes that tangible.</div>
+      <div class="your-turn-goal">Design a prompt that asks your AI agent to create a Context Mode workflow for a specific use case: triaging a production incident using logs, metrics, and GitHub issues</div>
+      <div class="your-turn-context">Imagine it&#x27;s 2 AM and your production service is throwing 500 errors. You need to pull access logs (45KB+), check recent deployments via git log, scan open GitHub issues for related reports, and maybe fetch your monitoring dashboard. Without Context Mode, this investigation alone would consume your entire context window. With it, you can keep investigating for hours.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What should the columns be in the comparison table? Model name, tokens, energy, water, carbon — anything else useful like a relative percentage?</li><li>How should the models be sorted in the output? By energy consumption? Alphabetically?</li><li>What if someone passes a model name that doesn&#x27;t exist in our catalog? Should we skip it, error out, or warn and continue?</li><li>Could you add a &#x27;winner&#x27; indicator that highlights the most efficient option?</li></ul>
+        <ul><li>What data sources does an incident investigation typically involve?</li><li>For each source, what&#x27;s the &#x27;signal&#x27; vs. the &#x27;noise&#x27;? What would you actually print from the sandbox?</li><li>How might you use the knowledge base to index runbook documentation *before* incidents happen?</li><li>What&#x27;s the order of operations — what do you check first, and how does each finding inform the next step?</li></ul>
       </div>
       
       <details class="reveal">
@@ -1307,28 +982,159 @@ class TestEnvironmental:
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>Add a &#x27;compare&#x27; subcommand to my estimator CLI. It should accept --models (a list of 2+ model names), --prompt-tokens, --completion-tokens, and --region. Output a side-by-side table sorted by energy consumption (lowest first), with columns for: model name, energy (Wh), water (liters), carbon (g CO₂), and a relative efficiency column showing percentage vs the most expensive model. Mark the most efficient model with a green checkmark. If a model name isn&#x27;t in our catalog, print a warning to stderr and skip it. Support both human-readable table and --json output.</code></pre>
+            <pre><code>I need a Context Mode workflow for production incident triage. Here&#x27;s the scenario: I&#x27;m investigating 500 errors on a web service. Walk me through how to use Context Mode&#x27;s execute and index tools to investigate without burning context. Specifically: (1) How to process access logs in the sandbox to extract only error requests, group by endpoint, and show the error timeline, (2) How to check git log for recent deploys and correlate timestamps with when errors started, (3) How to scan GitHub issues for related reports from users, (4) How to pre-index our runbook documentation so I can search it during the incident. For each step, explain what the sandbox script would extract vs. what the raw output would have been, and estimate the context savings.</code></pre>
           </div>
         </div>
       </details>
     </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You need to reference the same API documentation 5 times during a session. What&#x27;s the most context-efficient approach?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Use fetch_and_index once, then search 5 times</label>
+          <div class="decision-feedback correct">&#10003; Correct! Indexing costs almost nothing — the raw docs are fetched and chunked in the sandbox, never entering context. Each search returns only the relevant chunk (a few hundred bytes). Five searches might cost 2KB total. Fetching the same page 5 times through raw MCP would cost 5x the full page size.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Fetch the docs once and ask Claude to remember them</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. The full docs still enter context on that first fetch — say 80KB. Even if Claude &#x27;remembers&#x27; them, those 80KB of tokens are permanently consumed. And as the session goes on, the model&#x27;s attention to those docs degrades as newer content pushes them further back in context.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Use execute to fetch and summarize the docs each time you need them</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This works but is inefficient. Each execute call re-fetches and re-processes the docs. The knowledge base exists precisely to avoid this — index once, search many times. Plus, BM25 search returns the exact relevant section, while a sandbox summary might miss the specific detail you need.</div>
+        </div>
+    </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>Look at what we just built — a real, working CLI tool that turns invisible LLM costs into visible numbers. And we did it by <em>directing</em> an AI agent, not by writing every line ourselves. That&#x27;s the meta-skill here: knowing what to ask for, evaluating what you get back, and iterating.</p>
+      <div class="recap-body"><p>Let&#x27;s zoom out. We started with a concrete problem — MCP tools are flooding context windows with raw data, making long Claude Code sessions impossible. We learned that Context Mode solves this with three interlocking pieces:</p>
 
-<p>Our estimator does the full chain: <strong>tokens → FLOPs → GPU-seconds → watt-hours → water and carbon</strong>, with region-aware carbon intensity and relatable real-world comparisons. It supports single prompts, batch files, JSON output for pipelines, and it&#x27;s tested with property-based sanity checks.</p>
+<p><strong>The Sandbox</strong> processes raw data in isolated subprocesses. Only stdout crosses back into context. Think kitchen → dining table: ingredients stay in the kitchen, you only see the plated dish.</p>
 
-<p>Is it perfectly accurate? No — and it can&#x27;t be, because the real numbers are proprietary. But it&#x27;s <em>reasonably</em> accurate, and more importantly, it makes the invisible <em>visible</em>. That&#x27;s exactly what the MIT Tech Review investigation was about: shining a light on hidden costs so we can make informed decisions.</p></div>
-      <ul class="takeaways-list"><li>Every LLM prompt has a physical cost — energy, water, and carbon — that scales with model size and token count. A rough formula: FLOPs per token ≈ 2 × model parameters, then divide by GPU throughput to get time, multiply by power draw to get energy.</li><li>Where your prompt is processed matters enormously for carbon impact. The same API call can be 10x cleaner in Sweden (hydro) vs Singapore (gas). Region-aware estimation isn&#x27;t a nice-to-have — it&#x27;s essential for honest accounting.</li><li>When building estimation tools, test <em>properties and relationships</em> (more tokens = more energy, smaller models &lt; bigger models) rather than exact values. You&#x27;re validating the shape of your math, not memorizing answers.</li><li>The agent-first workflow — goal → hints → prompt → evaluate → iterate — is how professional developers increasingly work. The skill isn&#x27;t writing Python; it&#x27;s knowing what to ask for and spotting when something&#x27;s wrong.</li></ul>
+<p><strong>The Knowledge Base</strong> (SQLite FTS5 + BM25) lets you index large documents once and search them repeatedly with zero additional context cost. It&#x27;s your personal search engine that lives alongside your session.</p>
+
+<p><strong>The PreToolUse Hook</strong> makes all of this automatic. You don&#x27;t change how you prompt or work — the hook intercepts tool outputs and routes them through compression before they can bloat your context.</p>
+
+<p>The result: 315KB → 5.4KB. Sessions that last 3+ hours instead of 30 minutes. And arguably better results, because the model&#x27;s attention isn&#x27;t diluted by thousands of lines of raw JSON.</p>
+
+<p>The bigger lesson here isn&#x27;t about one tool — it&#x27;s about a design pattern. <strong>Every time raw data enters an LLM context, ask: does the model need ALL of this, or just the insight extracted from it?</strong> That question will keep being relevant as context windows grow and tool ecosystems expand.</p></div>
+      <ul class="takeaways-list"><li>MCP tool outputs are the hidden context killer — a single Playwright snapshot eats 56KB (14K tokens), and it adds up fast across a real session</li><li>Sandbox isolation means raw data never enters the conversation — processing happens in a subprocess, only stdout crosses the boundary</li><li>FTS5 + BM25 gives you a persistent, searchable knowledge base with zero context cost — index once, search all session</li><li>The PreToolUse hook makes compression invisible — you don&#x27;t change your workflow, the routing happens automatically</li><li>Context compression isn&#x27;t just about space — it&#x27;s about attention quality. Less noise means the model reasons better about the signal</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Wire the estimator into a real API pipeline as middleware — intercept OpenAI/Anthropic responses and automatically log energy estimates alongside your existing observability</li><li>Add the live electricityMap API behind a --live flag for real-time carbon intensity that changes by time of day</li><li>Build a simple web dashboard (ask your agent for a Flask or Streamlit app) that visualizes your team&#x27;s cumulative LLM energy usage over time</li><li>Extend the model catalog with newer architectures (Mixture of Experts models like Mixtral are interesting — they activate fewer parameters per token, so energy per token can be lower despite a large total parameter count)</li></ul>
+        <ul><li>Install Context Mode and run your normal workflow for a day — notice where you used to hit context limits and whether those limits disappear</li><li>Experiment with the knowledge base: index your project&#x27;s docs, your team&#x27;s runbooks, or a library&#x27;s API reference and search them throughout a session</li><li>Build a mental checklist: before any long Claude Code session, think about which data sources will generate the most raw output and how you&#x27;d want them compressed</li><li>Explore the batch_execute tool for multi-step subagent workflows where the compression compounds across many tool calls</li></ul>
       </div>
     </div>
     <div class="sources-section">
       <h3>Sources</h3>
-      <ul class="sources-list"><li><a href="https://www.technologyreview.com/2026/02/27/1133769/asme-finalist-reporting/" target="_blank" rel="noopener">MIT Technology Review is a 2026 ASME finalist in reporting</a> <span class="source-name">(MIT Tech Review)</span></li></ul>
+      <ul class="sources-list"><li><a href="https://mksg.lu/blog/context-mode" target="_blank" rel="noopener">Stop Burning Your Context Window – How We Cut MCP Output by 98% in Claude Code</a> <span class="source-name">(Hacker News AI)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">VectifyAI/PageIndex</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20VectifyAI/PageIndex&body=vote%3Aup%0Atags%3Aagents%2Ctools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20VectifyAI/PageIndex&body=vote%3Adown%0Atags%3Aagents%2Ctools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">datawhalechina/hello-agents</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20datawhalechina/hello-agents&body=vote%3Aup%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20datawhalechina/hello-agents&body=vote%3Adown%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">ruvnet/wifi-densepose</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20ruvnet/wifi-densepose&body=vote%3Aup%0Atags%3Atools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20ruvnet/wifi-densepose&body=vote%3Adown%0Atags%3Atools%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">4thfever/cultivation-world-simulator</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%204thfever/cultivation-world-simulator&body=vote%3Aup%0Atags%3Aagents%2Copen-source%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%204thfever/cultivation-world-simulator&body=vote%3Adown%0Atags%3Aagents%2Copen-source%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">muratcankoylan/Agent-Skills-for-Context-Engineering</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20muratcankoylan/Agent-Skills-for-Context-Engineering&body=vote%3Aup%0Atags%3Aagents%2Ctools%2Ctechnique%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20muratcankoylan/Agent-Skills-for-Context-Engineering&body=vote%3Adown%0Atags%3Aagents%2Ctools%2Ctechnique%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">anthropics/skills</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20anthropics/skills&body=vote%3Aup%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20anthropics/skills&body=vote%3Adown%0Atags%3Aagents%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">QwenLM/Qwen-Agent</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20QwenLM/Qwen-Agent&body=vote%3Aup%0Atags%3Aagents%2Copen-source%2Ctools%2Ccoding%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20QwenLM/Qwen-Agent&body=vote%3Adown%0Atags%3Aagents%2Copen-source%2Ctools%2Ccoding%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">NevaMind-AI/memU</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20NevaMind-AI/memU&body=vote%3Aup%0Atags%3Aagents%2Ctools%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20NevaMind-AI/memU&body=vote%3Adown%0Atags%3Aagents%2Ctools%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">modelscope/ms-swift</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20modelscope/ms-swift&body=vote%3Aup%0Atags%3Atools%2Cfine-tuning%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20modelscope/ms-swift&body=vote%3Adown%0Atags%3Atools%2Cfine-tuning%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">agentscope-ai/agentscope</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8D%20agentscope-ai/agentscope&body=vote%3Aup%0Atags%3Aagents%2Ctools%2Ctechnique%2Caudio%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-up">&#x1F44D; More like this</a>
+            <a href="https://github.com/coldbrewnosugar/ai-course/issues/new?labels=vote&title=%F0%9F%91%8E%20agentscope-ai/agentscope&body=vote%3Adown%0Atags%3Aagents%2Ctools%2Ctechnique%2Caudio%2Crag%0Asource%3AGitHub%20Trending%20Python%0Adate%3A2026-02-28%0Atrack%3Ageneral" target="_blank" rel="noopener" class="oa-vote-btn vote-down">&#x1F44E; Not interested</a>
+          </div>
+        </div>
     </div>
     <footer class="session-footer">
       <span>Tinker</span> &middot; Build with AI, daily
