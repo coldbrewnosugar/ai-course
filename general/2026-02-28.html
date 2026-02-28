@@ -7796,21 +7796,33 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=596f1714">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=15cbf873">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="General-AI-%E2%80%94-2026-02-28">General AI — 2026-02-28<a class="anchor-link" href="#General-AI-%E2%80%94-2026-02-28">¶</a></h1><blockquote>
-<p><strong>Note:</strong> Today's course could not be fully generated.</p>
-</blockquote>
-<p><strong>Reason:</strong> Claude CLI call failed.</p>
-<p>Please check back tomorrow or run the pipeline manually.</p>
+<h1 id="AI-at-Scale:-Safety-Constraints,-Compute-Costs,-and-Real-World-Deployment">AI at Scale: Safety Constraints, Compute Costs, and Real-World Deployment<a class="anchor-link" href="#AI-at-Scale:-Safety-Constraints,-Compute-Costs,-and-Real-World-Deployment">¶</a></h1><p><strong>General AI</strong> — 2026-02-28</p>
+<p><em>Auto-generated hands-on course from the latest AI research.</em></p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=957c910e">
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=215f39d6">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Section-1:-Measuring-AI-Energy-&amp;-Compute-Cost-Per-Inference">Section 1: Measuring AI Energy &amp; Compute Cost Per Inference<a class="anchor-link" href="#Section-1:-Measuring-AI-Energy-&amp;-Compute-Cost-Per-Inference">¶</a></h2><p>Every time you send a prompt to an LLM, you're triggering billions of floating-point operations across thousands of GPU cores — drawing real watts, generating real heat, and emitting real CO₂. Yet most practitioners treat inference as a free lunch.</p>
+<p>In this section you'll instrument token generation end-to-end: counting FLOPs, estimating GPU power draw, converting to joules, and ultimately expressing your prompt's climate impact in grams of CO₂. By the end you'll have a reusable <code>InferenceCostProfiler</code> you can drop into any project.</p>
+<p><strong>Prerequisites:</strong> <code>transformers</code>, <code>torch</code>, <code>pynvml</code> (optional for live GPU power), <code>numpy</code>, <code>time</code></p>
+<div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>transformers<span class="w"> </span>torch<span class="w"> </span>pynvml<span class="w"> </span>--quiet
+</pre></div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e0bbd42e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7818,10 +7830,473 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-python"><pre><span></span><span class="c1"># Placeholder — no articles were available today</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'No content today.'</span><span class="p">)</span>
+<div class="highlight hl-python"><pre><span></span><span class="c1"># ============================================================</span>
+<span class="c1"># HOOK: What does one ChatGPT-style prompt actually cost?</span>
+<span class="c1"># ============================================================</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span><span class="o">,</span><span class="w"> </span><span class="nn">math</span><span class="o">,</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># ── Approximate published figures (2025-2026 estimates) ──────────────────────</span>
+<span class="n">GPT4_PARAMS</span>        <span class="o">=</span> <span class="mf">1.8e12</span>   <span class="c1"># ~1.8 trillion parameters (estimated MoE)</span>
+<span class="n">GPT4_ACTIVE_PARAMS</span> <span class="o">=</span> <span class="mf">2.2e11</span>   <span class="c1"># ~220 B active per forward pass (MoE routing)</span>
+<span class="n">A100_TDP_WATTS</span>     <span class="o">=</span> <span class="mi">400</span>      <span class="c1"># Thermal Design Power of one A100 SXM4</span>
+<span class="n">GPT4_GPU_CLUSTER</span>   <span class="o">=</span> <span class="mi">128</span>      <span class="c1"># estimated GPUs serving a single request</span>
+<span class="n">TOKENS_PER_PROMPT</span>  <span class="o">=</span> <span class="mi">512</span>      <span class="c1"># input + output tokens for a typical prompt</span>
+
+<span class="c1"># ── Carbon intensity (US average grid, 2024) ────────────────────────────────</span>
+<span class="n">CARBON_G_PER_KWH</span>   <span class="o">=</span> <span class="mi">386</span>      <span class="c1"># grams CO₂-equivalent per kWh  (EPA 2024)</span>
+
+<span class="c1"># ── FLOPs per token (simplified transformer estimate) ───────────────────────</span>
+<span class="c1"># Rule of thumb: ~2 * active_params FLOPs per token per forward pass</span>
+<span class="n">flops_per_token</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">GPT4_ACTIVE_PARAMS</span>
+<span class="n">total_flops</span>     <span class="o">=</span> <span class="n">flops_per_token</span> <span class="o">*</span> <span class="n">TOKENS_PER_PROMPT</span>
+
+<span class="c1"># ── Energy estimate ─────────────────────────────────────────────────────────</span>
+<span class="c1"># Assume A100 at ~312 TFLOPS (FP16 non-tensor-core peak for conservative est.)</span>
+<span class="n">A100_TFLOPS</span>      <span class="o">=</span> <span class="mf">312e12</span>     <span class="c1"># FP16</span>
+<span class="n">cluster_tflops</span>   <span class="o">=</span> <span class="n">A100_TFLOPS</span> <span class="o">*</span> <span class="n">GPT4_GPU_CLUSTER</span>
+<span class="n">compute_seconds</span>  <span class="o">=</span> <span class="n">total_flops</span> <span class="o">/</span> <span class="n">cluster_tflops</span>
+<span class="n">total_watts</span>      <span class="o">=</span> <span class="n">A100_TDP_WATTS</span> <span class="o">*</span> <span class="n">GPT4_GPU_CLUSTER</span> <span class="o">*</span> <span class="mf">1.2</span>  <span class="c1"># +20% overhead</span>
+<span class="n">energy_joules</span>    <span class="o">=</span> <span class="n">total_watts</span> <span class="o">*</span> <span class="n">compute_seconds</span>
+<span class="n">energy_wh</span>        <span class="o">=</span> <span class="n">energy_joules</span> <span class="o">/</span> <span class="mi">3600</span>
+<span class="n">energy_kwh</span>       <span class="o">=</span> <span class="n">energy_wh</span> <span class="o">/</span> <span class="mi">1000</span>
+
+<span class="c1"># ── Carbon ──────────────────────────────────────────────────────────────────</span>
+<span class="n">carbon_grams</span> <span class="o">=</span> <span class="n">energy_kwh</span> <span class="o">*</span> <span class="n">CARBON_G_PER_KWH</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"━"</span> <span class="o">*</span> <span class="mi">55</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">" 💡  ONE GPT-4-SCALE PROMPT — COST BREAKDOWN"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"━"</span> <span class="o">*</span> <span class="mi">55</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Active parameters per token : </span><span class="si">{</span><span class="n">GPT4_ACTIVE_PARAMS</span><span class="o">/</span><span class="mf">1e9</span><span class="si">:</span><span class="s2">&gt;8.1f</span><span class="si">}</span><span class="s2"> B"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  FLOPs per token             : </span><span class="si">{</span><span class="n">flops_per_token</span><span class="o">/</span><span class="mf">1e12</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2"> TFLOPs"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Total FLOPs (</span><span class="si">{</span><span class="n">TOKENS_PER_PROMPT</span><span class="si">}</span><span class="s2"> tokens)    : </span><span class="si">{</span><span class="n">total_flops</span><span class="o">/</span><span class="mf">1e15</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2"> PFLOPs"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Est. compute time           : </span><span class="si">{</span><span class="n">compute_seconds</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Cluster power draw          : </span><span class="si">{</span><span class="n">total_watts</span><span class="o">/</span><span class="mi">1000</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2"> kW"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Energy consumed             : </span><span class="si">{</span><span class="n">energy_joules</span><span class="si">:</span><span class="s2">&gt;8.4f</span><span class="si">}</span><span class="s2"> J  (</span><span class="si">{</span><span class="n">energy_wh</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> mWh)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Carbon footprint            : </span><span class="si">{</span><span class="n">carbon_grams</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> g CO₂e"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"━"</span> <span class="o">*</span> <span class="mi">55</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  📊 Context: boiling 1 cup of water ≈ 150,000 J"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"             one GPT-4 prompt        ≈ </span><span class="si">{</span><span class="n">energy_joules</span><span class="si">:</span><span class="s2">,.0f</span><span class="si">}</span><span class="s2"> J"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"             ratio                  ≈ 1 : </span><span class="si">{</span><span class="mi">150000</span><span class="o">/</span><span class="n">energy_joules</span><span class="si">:</span><span class="s2">,.0f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  🌍 At 10M prompts/day → </span><span class="si">{</span><span class="n">carbon_grams</span><span class="o">*</span><span class="mf">10e6</span><span class="o">/</span><span class="mf">1e6</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> tonnes CO₂e/day"</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=60552be1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Concept:-The-Physics-of-LLM-Inference">Concept: The Physics of LLM Inference<a class="anchor-link" href="#Concept:-The-Physics-of-LLM-Inference">¶</a></h2><h3 id="1.-FLOPs-%E2%80%94-The-Fundamental-Currency">1. FLOPs — The Fundamental Currency<a class="anchor-link" href="#1.-FLOPs-%E2%80%94-The-Fundamental-Currency">¶</a></h3><p>A <strong>FLOP</strong> (floating-point operation) is the atomic unit of neural-network compute. For a transformer with $N$ active parameters, each autoregressive forward pass costs approximately:</p>
+<p>$$\text{FLOPs}_{\text{token}} \approx 2N$$</p>
+<p>The factor of 2 comes from each weight being used in one multiply-accumulate (MAC) — one multiply + one add = 2 FLOPs. For a full sequence of $T$ tokens:</p>
+<p>$$\text{FLOPs}_{\text{total}} = 2NT$$</p>
+<blockquote>
+<p>⚠️ This is a <em>lower-bound</em> estimate. Attention's $O(T^2 d)$ cost and MoE routing overhead are additive. Full formula:
+$$\text{FLOPs} = 2NT + 2 \cdot n_{\text{layers}} \cdot T^2 \cdot d_{\text{model}}$$</p>
+</blockquote>
+<h3 id="2.-From-FLOPs-%E2%86%92-Seconds-%E2%86%92-Joules">2. From FLOPs → Seconds → Joules<a class="anchor-link" href="#2.-From-FLOPs-%E2%86%92-Seconds-%E2%86%92-Joules">¶</a></h3><p>Given a GPU cluster delivering $F_{\text{peak}}$ FLOPs/s at efficiency $\eta$ (typically 0.3–0.6 for LLM inference due to memory-bandwidth bottlenecks):</p>
+<p>$$t_{\text{compute}} = \frac{\text{FLOPs}_{\text{total}}}{F_{\text{peak}} \cdot \eta}$$</p>
+<p>With total cluster power $P$ (watts):</p>
+<p>$$E_{\text{joules}} = P \cdot t_{\text{compute}}$$</p>
+<h3 id="3.-Memory-Bandwidth:-The-Real-Bottleneck">3. Memory Bandwidth: The Real Bottleneck<a class="anchor-link" href="#3.-Memory-Bandwidth:-The-Real-Bottleneck">¶</a></h3><p>LLM inference is almost always <strong>memory-bandwidth bound</strong>, not compute bound. Loading a single FP16 weight costs 2 bytes of bandwidth. For $N$ parameters on a cluster with bandwidth $B$ (bytes/s):</p>
+<p>$$t_{\text{memory}} = \frac{2N}{B}$$</p>
+<p>The actual latency is $\max(t_{\text{compute}}, t_{\text{memory}})$, and for typical batch size = 1, memory dominates. This is why quantization (INT8/INT4) cuts latency nearly linearly — it halves or quarters the bytes moved.</p>
+<h3 id="4.-Energy-%E2%86%92-Carbon">4. Energy → Carbon<a class="anchor-link" href="#4.-Energy-%E2%86%92-Carbon">¶</a></h3><p>$$\text{CO}_2\text{e} = E_{\text{kWh}} \times \underbrace{I_{\text{carbon}}}_{\text{g CO}_2\text{e/kWh}}$$</p>
+<p>Carbon intensity $I$ varies enormously: Norway (hydro) ≈ 18 g/kWh; Poland (coal) ≈ 750 g/kWh; US average ≈ 386 g/kWh. <strong>Where</strong> your inference runs matters as much as <em>how efficiently</em> it runs.</p>
+<h3 id="5.-The-Tokenization-Tax">5. The Tokenization Tax<a class="anchor-link" href="#5.-The-Tokenization-Tax">¶</a></h3><p>Tokenization is not free. A <code>tiktoken</code> BPE encode/decode call adds ~0.1–2 ms of CPU latency per request, and token count (not character count) is the billing unit. A space before a word often creates a separate token. Code and non-English text tokenize less efficiently — the same semantic content may require 2–4× more tokens.</p>
+<h3 id="Key-Numbers-to-Internalize">Key Numbers to Internalize<a class="anchor-link" href="#Key-Numbers-to-Internalize">¶</a></h3><table>
+<thead>
+<tr>
+<th>Model tier</th>
+<th>Active params</th>
+<th>FLOPs/token</th>
+<th>Energy/1K tokens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Small (7B)</td>
+<td>7 B</td>
+<td>14 TFLOPs</td>
+<td>~0.001 Wh</td>
+</tr>
+<tr>
+<td>Mid (70B)</td>
+<td>70 B</td>
+<td>140 TFLOPs</td>
+<td>~0.01 Wh</td>
+</tr>
+<tr>
+<td>Large (405B)</td>
+<td>405 B</td>
+<td>810 TFLOPs</td>
+<td>~0.06 Wh</td>
+</tr>
+<tr>
+<td>GPT-4 scale (est.)</td>
+<td>220 B active</td>
+<td>440 TFLOPs</td>
+<td>~0.03 Wh</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=d45c3817">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-python"><pre><span></span><span class="c1"># ============================================================</span>
+<span class="c1"># EXERCISE: Build an InferenceCostProfiler</span>
+<span class="c1"># ============================================================</span>
+<span class="c1"># Your task: complete the TODOs to create a profiler that</span>
+<span class="c1"># measures real token generation and estimates energy cost.</span>
+<span class="c1">#</span>
+<span class="c1"># Run: pip install transformers torch --quiet</span>
+<span class="c1"># (Uses GPT-2 as a small local stand-in for any causal LM)</span>
+<span class="c1"># ============================================================</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">HardwareProfile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Describes the inference hardware."""</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">peak_tflops_fp16</span><span class="p">:</span> <span class="nb">float</span>      <span class="c1"># e.g. 312 for A100</span>
+    <span class="n">tdp_watts</span><span class="p">:</span> <span class="nb">float</span>             <span class="c1"># e.g. 400 for A100</span>
+    <span class="n">memory_bandwidth_gbs</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># e.g. 2000 for A100</span>
+    <span class="n">gpu_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">utilization_efficiency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.40</span>  <span class="c1"># typical for LLM decode</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">effective_tflops</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 1: Return effective FLOPs/s accounting for efficiency and gpu_count</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">total_power_watts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 2: Return total cluster power (TDP * count * 1.2 overhead factor)</span>
+        <span class="k">pass</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">InferenceProfile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Results from one profiled inference call."""</span>
+    <span class="n">prompt_tokens</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">generated_tokens</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">wall_time_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">hardware</span><span class="p">:</span> <span class="n">HardwareProfile</span>
+    <span class="n">carbon_intensity_g_per_kwh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">386.0</span>  <span class="c1"># US average</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">total_tokens</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_tokens</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">generated_tokens</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_flops</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">active_params</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 3: Implement the 2N*T FLOPs formula</span>
+        <span class="c1"># active_params: number of active parameters (e.g. 7e9 for a 7B model)</span>
+        <span class="c1"># Use total_tokens for T</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_energy_joules</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 4: Use wall_time_s and total_power_watts to estimate energy</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_carbon_g</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 5: Convert joules → kWh → grams CO₂e</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">tokens_per_second</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 6: Compute throughput (generated tokens / wall time)</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">active_params</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">7e9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># TODO 7: Print a formatted summary table using the methods above</span>
+        <span class="c1"># Include: tokens, throughput, FLOPs, energy, carbon</span>
+        <span class="k">pass</span>
+
+
+<span class="c1"># ── Convenience: profile a HuggingFace model call ───────────────────────────</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">profile_hf_generation</span><span class="p">(</span>
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">prompt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">max_new_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="n">hardware</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HardwareProfile</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InferenceProfile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    TODO 8: Load a HuggingFace causal LM + tokenizer, run generation,</span>
+<span class="sd">    measure wall-clock time, and return an InferenceProfile.</span>
+
+<span class="sd">    Hints:</span>
+<span class="sd">    - Use AutoTokenizer and AutoModelForCausalLM</span>
+<span class="sd">    - Wrap model.generate() with time.perf_counter()</span>
+<span class="sd">    - Count prompt tokens from tokenizer output</span>
+<span class="sd">    - Count generated tokens from output shape minus prompt length</span>
+<span class="sd">    """</span>
+    <span class="k">pass</span>
+
+
+<span class="c1"># ── Default hardware profiles ────────────────────────────────────────────────</span>
+<span class="n">A100_SINGLE</span> <span class="o">=</span> <span class="n">HardwareProfile</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"A100 SXM4 (single)"</span><span class="p">,</span>
+    <span class="n">peak_tflops_fp16</span><span class="o">=</span><span class="mi">312</span><span class="p">,</span>
+    <span class="n">tdp_watts</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+    <span class="n">memory_bandwidth_gbs</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
+    <span class="n">gpu_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">M2_MACBOOK</span> <span class="o">=</span> <span class="n">HardwareProfile</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Apple M2 Max (laptop)"</span><span class="p">,</span>
+    <span class="n">peak_tflops_fp16</span><span class="o">=</span><span class="mf">13.6</span><span class="p">,</span>
+    <span class="n">tdp_watts</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">memory_bandwidth_gbs</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+    <span class="n">gpu_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">utilization_efficiency</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"✅ Skeleton loaded — complete the TODOs above, then run the solution cell."</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=70866855">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-python"><pre><span></span><span class="c1"># ============================================================</span>
+<span class="c1"># SOLUTION: InferenceCostProfiler — fully implemented</span>
+<span class="c1"># ============================================================</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">HardwareProfile</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">peak_tflops_fp16</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">tdp_watts</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">memory_bandwidth_gbs</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">gpu_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">utilization_efficiency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.40</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">effective_tflops</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 1 ✅: scale peak TFLOPS by efficiency and number of GPUs</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">peak_tflops_fp16</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">utilization_efficiency</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_count</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">total_power_watts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 2 ✅: 20% system overhead on top of GPU TDP</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tdp_watts</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_count</span> <span class="o">*</span> <span class="mf">1.2</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">InferenceProfile</span><span class="p">:</span>
+    <span class="n">prompt_tokens</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">generated_tokens</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">wall_time_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">hardware</span><span class="p">:</span> <span class="n">HardwareProfile</span>
+    <span class="n">carbon_intensity_g_per_kwh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">386.0</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">total_tokens</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_tokens</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">generated_tokens</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_flops</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">active_params</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 3 ✅: 2 * active_params * total_tokens (MACs → FLOPs)</span>
+        <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">active_params</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_tokens</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_energy_joules</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 4 ✅: Power (W) × time (s) = Energy (J)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hardware</span><span class="o">.</span><span class="n">total_power_watts</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">wall_time_s</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_carbon_g</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 5 ✅: J → Wh → kWh → g CO₂e</span>
+        <span class="n">energy_kwh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_energy_joules</span><span class="p">()</span> <span class="o">/</span> <span class="mi">3_600_000</span>
+        <span class="k">return</span> <span class="n">energy_kwh</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">carbon_intensity_g_per_kwh</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">tokens_per_second</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="c1"># TODO 6 ✅: throughput for the generated (decode) phase</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">generated_tokens</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wall_time_s</span><span class="p">,</span> <span class="mf">1e-9</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">active_params</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">7e9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># TODO 7 ✅: formatted summary</span>
+        <span class="n">flops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_flops</span><span class="p">(</span><span class="n">active_params</span><span class="p">)</span>
+        <span class="n">energy_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_energy_joules</span><span class="p">()</span>
+        <span class="n">carbon</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_carbon_g</span><span class="p">()</span>
+        <span class="n">tps</span>      <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokens_per_second</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"━"</span> <span class="o">*</span> <span class="mi">56</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  🔬 Inference Cost Report  [</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hardware</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"━"</span> <span class="o">*</span> <span class="mi">56</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Prompt tokens          : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="si">:</span><span class="s2">&gt;10,</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Generated tokens       : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_tokens</span><span class="si">:</span><span class="s2">&gt;10,</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Wall-clock time        : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">wall_time_s</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">&gt;10.1f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Throughput             : </span><span class="si">{</span><span class="n">tps</span><span class="si">:</span><span class="s2">&gt;10.1f</span><span class="si">}</span><span class="s2"> tok/s"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ── Compute ──"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Active params assumed  : </span><span class="si">{</span><span class="n">active_params</span><span class="o">/</span><span class="mf">1e9</span><span class="si">:</span><span class="s2">&gt;10.1f</span><span class="si">}</span><span class="s2"> B"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Estimated FLOPs        : </span><span class="si">{</span><span class="n">flops</span><span class="o">/</span><span class="mf">1e12</span><span class="si">:</span><span class="s2">&gt;10.2f</span><span class="si">}</span><span class="s2"> TFLOPs"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Effective cluster TFLOPS:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hardware</span><span class="o">.</span><span class="n">effective_tflops</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ── Energy &amp; Carbon ──"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Cluster power draw     : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hardware</span><span class="o">.</span><span class="n">total_power_watts</span><span class="si">:</span><span class="s2">&gt;10.1f</span><span class="si">}</span><span class="s2"> W"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Energy (this request)  : </span><span class="si">{</span><span class="n">energy_j</span><span class="si">:</span><span class="s2">&gt;10.4f</span><span class="si">}</span><span class="s2"> J"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Energy (this request)  : </span><span class="si">{</span><span class="n">energy_j</span><span class="o">/</span><span class="mi">3600</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">&gt;10.4f</span><span class="si">}</span><span class="s2"> mWh"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Carbon footprint       : </span><span class="si">{</span><span class="n">carbon</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">&gt;10.4f</span><span class="si">}</span><span class="s2"> mg CO₂e"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ── Scaling ──"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  @ 1M req/day → carbon  : </span><span class="si">{</span><span class="n">carbon</span><span class="o">*</span><span class="mf">1e6</span><span class="o">/</span><span class="mf">1e3</span><span class="si">:</span><span class="s2">&gt;9.2f</span><span class="si">}</span><span class="s2"> kg CO₂e/day"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"━"</span> <span class="o">*</span> <span class="mi">56</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">profile_hf_generation</span><span class="p">(</span>
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"gpt2"</span><span class="p">,</span>
+    <span class="n">prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"The future of AI energy consumption is"</span><span class="p">,</span>
+    <span class="n">max_new_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="n">hardware</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HardwareProfile</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InferenceProfile</span><span class="p">:</span>
+    <span class="c1"># TODO 8 ✅</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoTokenizer</span><span class="p">,</span> <span class="n">AutoModelForCausalLM</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+    <span class="k">if</span> <span class="n">hardware</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">hardware</span> <span class="o">=</span> <span class="n">HardwareProfile</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">"CPU (dev machine)"</span><span class="p">,</span>
+            <span class="n">peak_tflops_fp16</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+            <span class="n">tdp_watts</span><span class="o">=</span><span class="mi">65</span><span class="p">,</span>
+            <span class="n">memory_bandwidth_gbs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+            <span class="n">utilization_efficiency</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"⏳ Loading </span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2"> ..."</span><span class="p">)</span>
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+    <span class="n">model</span>     <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span>
+    <span class="n">prompt_len</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">"input_ids"</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"🚀 Generating up to </span><span class="si">{</span><span class="n">max_new_tokens</span><span class="si">}</span><span class="s2"> tokens ..."</span><span class="p">)</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">output_ids</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+            <span class="o">**</span><span class="n">inputs</span><span class="p">,</span>
+            <span class="n">max_new_tokens</span><span class="o">=</span><span class="n">max_new_tokens</span><span class="p">,</span>
+            <span class="n">do_sample</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>        <span class="c1"># greedy for reproducibility</span>
+            <span class="n">pad_token_id</span><span class="o">=</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token_id</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+    <span class="n">generated_len</span> <span class="o">=</span> <span class="n">output_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">prompt_len</span>
+    <span class="n">generated_text</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">output_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">prompt_len</span><span class="p">:],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"💬 Output: </span><span class="se">\"</span><span class="si">{</span><span class="n">generated_text</span><span class="p">[:</span><span class="mi">120</span><span class="p">]</span><span class="si">}</span><span class="s2">...</span><span class="se">\"</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">InferenceProfile</span><span class="p">(</span>
+        <span class="n">prompt_tokens</span><span class="o">=</span><span class="n">prompt_len</span><span class="p">,</span>
+        <span class="n">generated_tokens</span><span class="o">=</span><span class="n">generated_len</span><span class="p">,</span>
+        <span class="n">wall_time_s</span><span class="o">=</span><span class="n">t1</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span>
+        <span class="n">hardware</span><span class="o">=</span><span class="n">hardware</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># ── Hardware profiles ────────────────────────────────────────────────────────</span>
+<span class="n">A100_SINGLE</span> <span class="o">=</span> <span class="n">HardwareProfile</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"A100 SXM4 (single)"</span><span class="p">,</span>
+    <span class="n">peak_tflops_fp16</span><span class="o">=</span><span class="mi">312</span><span class="p">,</span> <span class="n">tdp_watts</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+    <span class="n">memory_bandwidth_gbs</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">gpu_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">M2_MACBOOK</span> <span class="o">=</span> <span class="n">HardwareProfile</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Apple M2 Max (laptop)"</span><span class="p">,</span>
+    <span class="n">peak_tflops_fp16</span><span class="o">=</span><span class="mf">13.6</span><span class="p">,</span> <span class="n">tdp_watts</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">memory_bandwidth_gbs</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">gpu_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">utilization_efficiency</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># ── Demo: synthetic profile (no GPU required) ────────────────────────────────</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"=== Synthetic Profile: simulating a 7B model call ==="</span><span class="p">)</span>
+<span class="n">synthetic</span> <span class="o">=</span> <span class="n">InferenceProfile</span><span class="p">(</span>
+    <span class="n">prompt_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+    <span class="n">generated_tokens</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+    <span class="n">wall_time_s</span><span class="o">=</span><span class="mf">4.1</span><span class="p">,</span>          <span class="c1"># typical CPU latency for GPT-2 scale</span>
+    <span class="n">hardware</span><span class="o">=</span><span class="n">A100_SINGLE</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">synthetic</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">active_params</span><span class="o">=</span><span class="mf">7e9</span><span class="p">)</span>
+
+<span class="c1"># ── Live demo: run real GPT-2 inference (downloads ~500 MB once) ─────────────</span>
+<span class="n">RUN_LIVE</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># ← Set True to run actual HuggingFace inference</span>
+<span class="k">if</span> <span class="n">RUN_LIVE</span><span class="p">:</span>
+    <span class="n">cpu_hw</span> <span class="o">=</span> <span class="n">HardwareProfile</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">"Local CPU"</span><span class="p">,</span> <span class="n">peak_tflops_fp16</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">tdp_watts</span><span class="o">=</span><span class="mi">65</span><span class="p">,</span>
+        <span class="n">memory_bandwidth_gbs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">utilization_efficiency</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">profile_hf_generation</span><span class="p">(</span>
+        <span class="n">model_name</span><span class="o">=</span><span class="s2">"gpt2"</span><span class="p">,</span>
+        <span class="n">prompt</span><span class="o">=</span><span class="s2">"The energy cost of running large language models at scale is"</span><span class="p">,</span>
+        <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+        <span class="n">hardware</span><span class="o">=</span><span class="n">cpu_hw</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">profile</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">active_params</span><span class="o">=</span><span class="mf">0.117e9</span><span class="p">)</span>  <span class="c1"># GPT-2 has 117M params</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">💡 Set RUN_LIVE = True to profile real GPT-2 inference locally."</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7bc4bdc1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Quiz:-Check-Your-Understanding">Quiz: Check Your Understanding<a class="anchor-link" href="#Quiz:-Check-Your-Understanding">¶</a></h2><details>
+<summary><strong>Question 1.</strong> A 70B-parameter dense model uses greedy decoding to generate 100 tokens. Using the simplified formula FLOPs ≈ 2NT, approximately how many total FLOPs does this require?</summary>
+<p><strong>A)</strong> 1.4 × 10¹² (1.4 TFLOPs)<br/>
+<strong>B)</strong> 1.4 × 10¹³ (14 TFLOPs)<br/>
+<strong>C)</strong> 1.4 × 10¹⁵ (1.4 PFLOPs)<br/>
+<strong>D)</strong> 1.4 × 10¹⁶ (14 PFLOPs)</p>
+<p>✅ <strong>Answer: B — 14 TFLOPs</strong><br/>
+FLOPs = 2 × 70×10⁹ × 100 = 1.4×10¹³ = <strong>14 TFLOPs</strong>.<br/>
+Note: a single A100 delivers ~312 TFLOPS at peak FP16, so this takes ~14/312,000 ≈ <strong>0.045 ms</strong> of peak compute — but memory bandwidth will dominate at batch size 1.</p>
+</details>
+<hr/>
+<details>
+<summary><strong>Question 2.</strong> Why is LLM *inference* (decode phase) typically memory-bandwidth-bound rather than compute-bound, especially at batch size 1?</summary>
+<p><strong>A)</strong> GPUs have insufficient FP16 tensor cores for attention<br/>
+<strong>B)</strong> Each decode step requires loading all model weights from HBM, but performs very few arithmetic ops per byte fetched<br/>
+<strong>C)</strong> Tokenization overhead saturates the CPU before the GPU can be utilized<br/>
+<strong>D)</strong> The KV-cache causes L2 cache thrashing</p>
+<p>✅ <strong>Answer: B</strong><br/>
+At batch size 1, each autoregressive step does ~2N FLOPs but must <em>load</em> all N weights (2N bytes in FP16). An A100 has 312 TFLOPS but only 2 TB/s bandwidth, giving an arithmetic intensity ceiling of 312e12/2e12 = <strong>156 FLOPs/byte</strong>. But a single decode step provides only ~1 FLOP/byte — 156× below the roofline. Larger batches amortize the weight loads and shift work toward compute-bound.</p>
+</details>
+<hr/>
+<details>
+<summary><strong>Question 3.</strong> Two data centers run identical LLM workloads. Data center A is in Norway (carbon intensity: 18 g CO₂e/kWh) and B is in Poland (750 g CO₂e/kWh). Everything else being equal, by approximately what factor does location alone change the carbon footprint per prompt?</summary>
+<p><strong>A)</strong> ~2×<br/>
+<strong>B)</strong> ~10×<br/>
+<strong>C)</strong> ~42×<br/>
+<strong>D)</strong> ~100×</p>
+<p>✅ <strong>Answer: C — ~42×</strong><br/>
+750 / 18 ≈ 41.7. This is why <strong>geographic placement of inference infrastructure</strong> can matter more than hardware efficiency gains (e.g., INT8 quantization gives only ~2× energy reduction). Renewable-powered regions dramatically reduce the carbon cost per prompt without any model changes.</p>
+</details>
 </div>
 </div>
 </div>
