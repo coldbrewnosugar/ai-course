@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Context Mode: Slash Your MCP Context Window Burn by 98% — Tinker</title>
+  <title>Context Mode: Slash Your MCP Context Burn by 98% — Tinker</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root {
@@ -683,317 +683,311 @@ body {
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>Your Context Window Has a Silent Leak</h1>
-      <div class="hero-subtitle">Every MCP tool call dumps raw data into your conversation. A single Playwright snapshot costs 56 KB. Twenty GitHub issues cost 59 KB. After 30 minutes, 40% of your context is just... tool output. Let&#x27;s fix that.</div>
+      <h1>Your AI Agent Has a Memory Leak</h1>
+      <div class="hero-subtitle">Every MCP tool call silently eats your context window. After 30 minutes, 40% is gone. Let&#x27;s fix that.</div>
       <div class="hero-meta">
         <span>35 min</span>
-        <span> <span class="tag">MCP</span> <span class="tag">context-window</span> <span class="tag">claude-code</span> <span class="tag">productivity</span></span>
+        <span> <span class="tag">MCP</span> <span class="tag">context-window</span> <span class="tag">claude-code</span> <span class="tag">developer-tools</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>Here&#x27;s what hit Hacker News today (180 points, 46 comments, people are <em>feeling</em> this one): a team built an MCP server called <strong>Context Mode</strong> that intercepts tool outputs before they flood your conversation. The numbers are wild — 315 KB of raw output compressed to 5.4 KB. That&#x27;s a 98% reduction.</p>
+      <p>Here&#x27;s what dropped today: a team published <a href="https://mksg.lu/blog/context-mode">Context Mode</a>, an MCP server that sits between Claude Code and your tool outputs, compressing them by up to 98%. It hit 185 points on Hacker News with 46 comments, and the numbers are honestly wild — a single Playwright snapshot goes from 56 KB down to 299 <em>bytes</em>.</p>
 
-<p>Why should you care? If you&#x27;ve ever had a Claude Code session start getting sluggish after 30 minutes, or watched your agent lose track of earlier context because the window filled up with raw git diffs and API responses — this is exactly that problem. Your agent doesn&#x27;t <em>need</em> the full 56 KB Playwright snapshot sitting in the conversation. It needs a compact summary of what matters.</p>
+<p>But the real story isn&#x27;t about one tool. It&#x27;s about a fundamental tension in how AI agents work right now: <strong>every time your agent uses a tool, the raw output gets dumped straight into the context window.</strong> That&#x27;s like copying an entire book into your notepad just to remember one paragraph. MCP made tool use standardized and beautiful, but nobody optimized the return trip.</p>
 
-<p>The clever bit: Context Mode doesn&#x27;t just truncate things. It runs your tool outputs through isolated subprocesses (sandboxes), processes the data there, and only sends back the distilled result. The raw data never enters your context window. It&#x27;s like having a research assistant who reads the whole report and hands you a one-page brief instead of dropping the full PDF on your desk.</p>
+<p>Cloudflare already showed you can compress tool <em>definitions</em> by 99.9% (that&#x27;s the outbound side). Context Mode tackles the inbound side — the data coming back. And it does it with two surprisingly elegant ideas: sandboxed execution and a local search index. Let&#x27;s dig in.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>Understand the Problem: Where Your Context Actually Goes</h2>
+        <h2>Understand the Problem: Where Your Tokens Actually Go</h2>
       </div>
       <div class="step-body">
-        <p>Before we install anything, let&#x27;s build an intuition for <em>why</em> this matters. Most people think their context window is spent on their messages and the agent&#x27;s responses. That&#x27;s like thinking your phone battery drains from phone calls — technically true, but background apps are the real culprit.</p>
+        <p>Before we install anything, let&#x27;s make sure we actually <em>feel</em> this problem. Most people have no idea how fast their context window drains.</p>
 
-<p>Here&#x27;s the mental model: imagine your 200K context window is a 200-page notebook. Before you even write your first message, MCP tool <em>definitions</em> have already filled 70+ pages (if you have 80+ tools active). Then every time a tool runs — fetching GitHub issues, reading a log file, taking a browser snapshot — the raw output gets copied into more pages. After 30 minutes of active tool use, you&#x27;re writing on the last 20 pages and the agent has forgotten what was on page 1.</p>
+<p>Think of your context window like a whiteboard in a meeting room. You&#x27;ve got 200K tokens of space — sounds huge, right? But here&#x27;s the catch: every tool your agent has access to needs its definition written on the board <em>before the meeting starts</em>. With 81+ MCP tools active, that&#x27;s 143K tokens consumed before you even say hello. You&#x27;re starting the meeting with 72% of the whiteboard already full.</p>
 
-<p>Let&#x27;s get your agent to help you visualize this problem with your own setup.</p>
+<p>Then your agent starts <em>using</em> those tools. Each response gets written on the whiteboard too. A GitHub issue list? 59 KB scribbled across the board. A log file? 45 KB. A Playwright snapshot of a webpage? 56 KB — that&#x27;s like taping a poster over the remaining space.</p>
+
+<p>After 30 minutes, you&#x27;ve got maybe 10% of the whiteboard left. Your agent starts forgetting earlier instructions, losing context, and giving worse answers. Not because it got dumber — because it literally ran out of room to think.</p>
+
+<p>Let&#x27;s get your agent to help you see this concretely.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to estimate how much context your current MCP tools consume before you even start working
+          Ask your agent to calculate how fast a typical Claude Code session burns through context with common MCP tools
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What MCP servers do you currently have configured? Where does Claude Code store that config?</li><li>How would you estimate the token cost of tool definitions vs. tool outputs?</li><li>What&#x27;s the biggest tool output you&#x27;ve seen in a session — a test suite? A git diff? An API response?</li></ul>
+          <ul><li>What&#x27;s the total context window size, and how much do tool definitions consume upfront?</li><li>If each tool call returns 40-60 KB on average, how many calls until you&#x27;re out?</li><li>What does &#x27;session degradation&#x27; actually look like to the user?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should look at your <code>~/.claude/settings.json</code> or <code>.mcp.json</code> files and list your active MCP servers. It&#x27;ll estimate that each tool definition costs roughly 200-500 tokens, so 80 tools = ~16K-40K tokens just in definitions. Then it&#x27;ll point out that typical tool outputs range from 1 KB (simple commands) to 85 KB (CSV data or browser snapshots). The key insight it should surface: tool definitions are a fixed tax, but tool outputs are the variable cost that kills your session over time.</p></div>
+        <div class="reveal-body"><p>Your agent should walk you through the math: 200K tokens total, minus ~143K for tool definitions = ~57K remaining. At ~50 KB per tool response, you&#x27;re looking at maybe 1-2 raw tool calls before things get tight. It should explain that the agent doesn&#x27;t crash — it just starts dropping earlier context, which means it forgets your instructions, repeats questions, and gives inconsistent answers. Think of it like a goldfish whose bowl keeps shrinking.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Run <code>/mcp</code> in Claude Code to see your active MCP servers. Count the tools — you might be surprised. The Playwright MCP server alone registers 15+ tools.
+        Token counts aren&#x27;t the same as byte counts — a token is roughly ¾ of a word, or about 4 characters. But for back-of-napkin math, the proportions are what matter.
       </div>
         
       <details class="reveal">
-        <summary>The 72% stat — is it really that bad?</summary>
-        <div class="reveal-body"><p>The article claims 143K tokens (72%) consumed before your first message with 81+ tools active. That&#x27;s an extreme case, but not unrealistic. Each MCP server registers multiple tools, and each tool has a name, description, and input schema. The Cloudflare team showed tool definitions can be compressed 99.9% with their &#x27;Code Mode&#x27; approach — that&#x27;s the <em>input</em> side. Context Mode tackles the <em>output</em> side. They&#x27;re complementary solutions to the same problem: MCP was designed for capability, not context efficiency.</p></div>
+        <summary>Why don&#x27;t MCP servers just send less data?</summary>
+        <div class="reveal-body"><p>Great question! Most MCP servers are designed to be <strong>general-purpose</strong> — they don&#x27;t know what you&#x27;ll need from the data, so they send everything. A GitHub MCP server returns the full issue body, all labels, all comments, timestamps, user objects... because <em>some</em> user <em>might</em> need any of those fields. The compression has to happen at a layer above the individual tool — which is exactly where Context Mode sits.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Install Context Mode and Understand the Sandbox Architecture</h2>
+        <h2>Install Context Mode and See the Difference</h2>
       </div>
       <div class="step-body">
-        <p>Time to install. Context Mode gives you two options: the full plugin (with auto-routing hooks that intercept tool outputs automatically) or just the MCP server (manual, more control). We&#x27;ll go with the plugin because honestly, the whole point is to <em>not</em> think about it.</p>
+        <p>Alright, let&#x27;s actually set this up. Context Mode can be installed two ways: as a full plugin (with auto-routing hooks and slash commands) or as a standalone MCP server. We&#x27;ll go with MCP-only since it&#x27;s simpler and shows us exactly what&#x27;s happening.</p>
 
-<p>But before we blindly install, let&#x27;s understand what&#x27;s actually happening under the hood. The sandbox model is the clever part:</p>
-
-<ol>
-<li><strong>A tool runs</strong> — say, <code>gh issue list</code> returns 59 KB of JSON</li>
-<li><strong>Context Mode intercepts</strong> the output via a PreToolUse hook</li>
-<li><strong>A subprocess spawns</strong> — an isolated process with its own memory boundary</li>
-<li><strong>The subprocess processes the data</strong> — extracts what matters, summarizes, computes stats</li>
-<li><strong>Only stdout from the subprocess</strong> enters your conversation — maybe 1 KB</li>
-<li><strong>The raw 59 KB never touches your context</strong></li>
-</ol>
-
-<p>Think of it like a mail room. Instead of delivering every package directly to your desk (cluttering your workspace), there&#x27;s a mail room that opens packages, pulls out the important documents, and delivers just those. The boxes stay in the mail room.</p>
+<p>The install is refreshingly boring — which is exactly what you want from infrastructure tooling. No build steps, no config files to hand-edit, no dependency nightmares.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to install Context Mode as a Claude Code plugin and verify it&#x27;s working
+          Ask your agent to walk you through installing Context Mode as an MCP server in Claude Code
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>The article mentions two install methods — plugin marketplace vs MCP-only. Which gives you auto-routing?</li><li>After installing, how would you verify the MCP server is running and the hooks are active?</li><li>What should change in your Claude Code configuration files?</li></ul>
+          <ul><li>Where does Claude Code store its MCP server configuration?</li><li>What&#x27;s the difference between the plugin install and the MCP-only install?</li><li>How will you verify it&#x27;s actually running after installation?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should walk you through running the plugin install command (it&#x27;s a one-liner via the Claude Code plugin marketplace — <code>/install-plugin context-mode</code> or adding it to your MCP config). After install, you should see a new entry in your MCP settings and a PreToolUse hook registered. The agent should verify by running <code>/mcp</code> to confirm the <code>context-mode</code> server appears with tools like <code>execute</code>, <code>batch_execute</code>, <code>index</code>, <code>search</code>, and <code>fetch_and_index</code>. Restart Claude Code if needed.</p></div>
+        <div class="reveal-body"><p>The agent should tell you to install the npm package and add it to your Claude Code MCP config. The key command is just <code>npx context-mode</code> as the MCP server command in your settings. After restarting Claude Code, you should see new tools available: <code>execute</code>, <code>index</code>, <code>search</code>, <code>fetch_and_index</code>, and <code>batch_execute</code>. The agent might also mention the plugin marketplace as an alternative one-click install.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        Context Mode spawns subprocesses that inherit your environment variables for credential passthrough. This means <code>gh</code>, <code>aws</code>, <code>gcloud</code>, etc. work inside the sandbox — but it also means the sandbox has access to your credentials. This is by design (tools need auth to work), but worth understanding.
+        After adding the MCP server config, you MUST restart Claude Code for it to pick up the new tools. This trips up almost everyone the first time.
       </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Context Mode auto-detects Bun for 3-5x faster JavaScript/TypeScript execution in the sandbox. If you have Bun installed, you&#x27;ll get faster processing for free.
+        Context Mode auto-detects Bun for 3-5x faster JavaScript/TypeScript execution. If you have Bun installed, you get the speed boost for free.
       </div>
         
       <details class="reveal">
-        <summary>How does credential passthrough actually work?</summary>
-        <div class="reveal-body"><p>When Context Mode spawns a subprocess, it inherits the parent process&#x27;s environment variables — things like <code>GITHUB_TOKEN</code>, <code>AWS_ACCESS_KEY_ID</code>, your <code>~/.config/gh</code> directory, <code>~/.kube/config</code>, etc. The subprocess can use these to authenticate CLI calls (like <code>gh issue list</code>), but the credentials themselves never appear in the stdout that enters your conversation. It&#x27;s the same mechanism as running a script in your terminal — the script can use your auth, but it doesn&#x27;t print your tokens. The key security boundary: scripts in the sandbox can&#x27;t access each other&#x27;s memory or state, and only stdout crosses back into the conversation.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>What are the 10 supported language runtimes?</summary>
-        <div class="reveal-body"><p>JavaScript, TypeScript, Python, Shell, Ruby, Go, Rust, PHP, Perl, and R. The sandbox detects which runtime to use based on the script you pass to <code>execute</code>. For JS/TS, it prefers Bun if available (significantly faster startup than Node). For Python, it uses whatever <code>python3</code> is on your PATH. Shell scripts run in Bash. The compiled languages (Go, Rust) actually compile and run in the subprocess — which is wild but works because the subprocess lifecycle is managed by Context Mode.</p></div>
+        <summary>What does credential passthrough mean?</summary>
+        <div class="reveal-body"><p>When Context Mode spawns a sandbox to run your code, it inherits your environment variables and config paths. So if you&#x27;re logged into <code>gh</code> (GitHub CLI), <code>aws</code>, <code>gcloud</code>, or <code>kubectl</code>, the sandbox can use those credentials too — without ever exposing the actual tokens or keys to the conversation context. The credentials stay in the process environment, never written to the whiteboard. This is critical for real-world usage: you want to query your prod Kubernetes cluster without your API key becoming part of the chat history.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point you should have Context Mode installed as a Claude Code plugin, with the MCP server showing up when you run `/mcp`. You should see tools like `execute`, `batch_execute`, `index`, `search`, and `fetch_and_index` available. If not, try restarting Claude Code — MCP servers sometimes need a fresh start to register.</div>
+      <div>At this point, you should have Context Mode installed as an MCP server in Claude Code, and after a restart, you should see its tools (execute, index, search, etc.) available. If you don&#x27;t see them, check your MCP config path and restart again.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>See the Compression in Action: Raw vs. Sandboxed Output</h2>
+        <h2>The Sandbox: How Raw Data Stays Off the Whiteboard</h2>
       </div>
       <div class="step-body">
-        <p>Alright, let&#x27;s actually <em>see</em> the difference. This is the part that sold me.</p>
+        <p>Here&#x27;s where Context Mode gets clever. Remember our whiteboard analogy? Instead of scribbling raw tool output directly onto the whiteboard, Context Mode does something different: it hands the data to an assistant in a <strong>separate room</strong> (the sandbox), who processes it and slides a sticky note with just the key findings back under the door.</p>
 
-<p>The best way to internalize what Context Mode does is to run the same operation twice — once letting the raw output flood your context, once with Context Mode intercepting it. We&#x27;ll use a real-world task: looking at GitHub issues.</p>
+<p>Each <code>execute</code> call spawns an isolated subprocess — its own little bubble with its own process boundary. Your script runs inside that bubble, crunches whatever data it needs, and only what it <code>print</code>s to stdout comes back into the conversation. The raw data — the 56 KB Playwright snapshot, the 59 KB of GitHub issues — never leaves the sandbox.</p>
 
-<p>Without Context Mode, <code>gh issue list --limit 20</code> dumps the full JSON for 20 issues into your conversation. That&#x27;s titles, bodies, labels, assignees, timestamps, URLs — roughly 59 KB. Your agent reads all 59 KB, but probably only needs a handful of fields.</p>
+<p>Ten language runtimes are supported: JavaScript, TypeScript, Python, Shell, Ruby, Go, Rust, PHP, Perl, and R. So you&#x27;re not locked into one ecosystem.</p>
 
-<p>With Context Mode, the same command runs inside a sandbox. A script processes the output, extracts what&#x27;s relevant (title, status, key labels), and returns maybe 1.1 KB. The agent gets everything it needs to answer your question, and your context window barely notices.</p>
+<p>Let&#x27;s see this in action with a concrete example.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to demonstrate the before/after by running a GitHub issue listing (or similar data-heavy command) and comparing the context impact
+          Ask your agent to demonstrate Context Mode&#x27;s sandbox by fetching 20 GitHub issues from any popular repo and comparing the raw output size vs. the sandboxed output size
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>How would you measure the &#x27;size&#x27; of a tool output in your context? Token count? Character count?</li><li>What&#x27;s a command you run regularly that returns a lot of data? Git log? Test results? API responses?</li><li>Ask the agent to run the same task with and without the sandbox — what should you compare?</li></ul>
+          <ul><li>What repo would give us meaty issues with lots of text? (Think popular open-source projects)</li><li>What information do you actually NEED from 20 issues vs. what `gh issue list` dumps?</li><li>How would you measure the &#x27;before and after&#x27; to see the compression?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should run something like <code>gh issue list</code> or <code>git log --oneline -50</code> both ways. Without Context Mode, it&#x27;ll note the raw output size (e.g., &#x27;59 KB of JSON just entered our conversation&#x27;). With Context Mode&#x27;s <code>execute</code> tool, the same data gets processed in the sandbox and only a compact summary comes back — maybe a clean table of issue titles and statuses in under 2 KB. The agent should explicitly call out the size difference: &#x27;That was 59 KB raw → 1.1 KB processed. Your context window just saved 57.9 KB on a single command.&#x27;</p></div>
+        <div class="reveal-body"><p>The agent should use Context Mode&#x27;s <code>execute</code> tool to run a shell script that calls <code>gh issue list</code> inside the sandbox, then extracts just the issue numbers, titles, labels, and maybe dates — printing a compact summary to stdout. The raw <code>gh</code> output would be ~59 KB, but the sandbox output should be around 1.1 KB. The key insight: the agent wrote a tiny script that runs inside the sandbox, and only the printed summary enters the context. The full API response with all those nested JSON objects, user avatars, and timeline events stayed in the sandbox and got garbage collected.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The auto-routing hook means you don&#x27;t have to manually choose between raw and sandboxed execution. Once installed, Context Mode intercepts tool outputs automatically. But for this demo, it&#x27;s worth seeing both modes to appreciate what&#x27;s happening.
+        The sandbox isn&#x27;t doing magic summarization — it&#x27;s running YOUR code (or code the agent writes) that extracts what matters. The intelligence is in deciding what to keep, and that decision is made by the agent, not by a compression algorithm.
       </div>
         
       <details class="reveal">
-        <summary>The full compression numbers from the article</summary>
-        <div class="reveal-body"><p>Here&#x27;s the validated data across 11 real-world scenarios:</p>
+        <summary>How is this different from just asking the agent to summarize?</summary>
+        <div class="reveal-body"><p>If you ask the agent to summarize raw output, the damage is already done — the full 59 KB is already in your context window. The agent reads it, summarizes it, and now you have 59 KB of raw data <em>plus</em> the summary taking up space. The raw data doesn&#x27;t disappear from context just because the agent summarized it.</p>
 
-<ul>
-<li><strong>Playwright snapshot:</strong> 56 KB → 299 bytes (99.5% reduction)</li>
-<li><strong>GitHub issues (20):</strong> 59 KB → 1.1 KB (98.1%)</li>
-<li><strong>Access log (500 requests):</strong> 45 KB → 155 bytes (99.7%)</li>
-<li><strong>Analytics CSV (500 rows):</strong> 85 KB → 222 bytes (99.7%)</li>
-<li><strong>Git log (153 commits):</strong> 11.6 KB → 107 bytes (99.1%)</li>
-<li><strong>Repo research (subagent):</strong> 986 KB → 62 KB with 5 calls vs 37 (93.7%)</li>
-</ul>
-
-<p>The repo research case is interesting — it&#x27;s not just about compressing output, it&#x27;s about reducing the <em>number</em> of tool calls too. The subagent uses <code>batch_execute</code> to do multiple operations in one sandbox call instead of making 37 separate tool invocations.</p></div>
+<p>The sandbox approach is fundamentally different: the raw data <strong>never enters the context at all</strong>. It exists only inside an ephemeral subprocess. The subprocess does the filtering/extraction, and only the compact result (the stdout) makes it into the conversation. It&#x27;s the difference between photocopying an entire book into your notebook and then highlighting the good parts... vs. having someone read the book in another room and hand you just the highlights.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What about scripts that need to share state?</summary>
+        <div class="reveal-body"><p>Each sandbox is isolated — scripts can&#x27;t access each other&#x27;s memory. This is a feature, not a bug. It means one runaway script can&#x27;t corrupt another&#x27;s data. If you need to share results between steps, you pass data through the conversation context (the sticky notes) or use the knowledge base (which we&#x27;ll cover next). Think of it like microservices vs. a monolith — isolation keeps things clean.</p></div>
       </details>
       </div>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">A Playwright browser snapshot is 56 KB of raw HTML/accessibility tree data. Context Mode compresses this to 299 bytes. What&#x27;s the most likely way it achieves this?</div>
+      <div class="question">You have a 500-line access log file and need to find the top 10 IPs by request count. Which approach burns less context?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt0">
-          <label for="decision_6_opt0">It runs a script in the sandbox that extracts only the relevant elements (visible text, interactive elements, key structure) and returns a compact summary</label>
-          <div class="decision-feedback correct">&#10003; Correct! Exactly right. The sandbox runs a processing script that analyzes the 56 KB snapshot, pulls out what the agent actually needs to reason about (page title, main content, button labels, form fields, error messages), and returns just that. The full DOM never enters the context. This is the core insight — your agent doesn&#x27;t need raw data, it needs processed intelligence.</div>
+          <label for="decision_6_opt0">Use Context Mode&#x27;s execute tool to run an awk/Python script in the sandbox that counts IPs and prints only the top 10</label>
+          <div class="decision-feedback correct">&#10003; Correct! The raw log never enters context — only the 10-line summary does. The article showed 45 KB → 155 bytes for exactly this kind of task. The processing happens entirely inside the sandbox.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt1">
-          <label for="decision_6_opt1">It uses gzip compression on the raw output before passing it to the context window</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Nope — the context window works with tokens (text), not compressed binary data. You can&#x27;t gzip a string and pass it to an LLM. The compression here is semantic, not algorithmic. A script in the sandbox reads the 56 KB, understands what matters, and produces a 299-byte text summary. It&#x27;s closer to a human reading a report and writing a one-line takeaway than it is to zipping a file.</div>
+          <label for="decision_6_opt1">Have the agent read the log file directly, then ask it to identify the top 10 IPs</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This dumps the entire 45 KB log into context first. Even though the agent CAN find the answer, you&#x27;ve burned 45 KB of your whiteboard space to get a result that could fit in 155 bytes. And that 45 KB stays in context for the rest of the session.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt2">
-          <label for="decision_6_opt2">It truncates the output to the first 299 bytes</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Truncation would give you the first 299 bytes of raw HTML — probably just the DOCTYPE declaration and opening tags. Completely useless. Context Mode is smarter: it processes the *entire* 56 KB in the sandbox, understands the structure, and returns a curated 299-byte summary of what actually matters. The processing happens outside your context; only the result enters it.</div>
+          <label for="decision_6_opt2">Pipe the log through grep and wc outside of Context Mode, then paste the result</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Better than reading the raw file, but any bash command output in Claude Code still enters the context window. Context Mode&#x27;s sandbox is the only path where the raw data truly stays out of the conversation.</div>
         </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>The Knowledge Base: Index Once, Search Forever</h2>
+        <h2>The Knowledge Base: Your Agent&#x27;s Personal Search Engine</h2>
       </div>
       <div class="step-body">
-        <p>Here&#x27;s the part that goes beyond just compressing outputs — Context Mode has a built-in knowledge base powered by SQLite FTS5.</p>
+        <p>The sandbox handles ephemeral data — stuff you process once and move on. But what about reference material you need to come back to? Documentation, API specs, long guides?</p>
 
-<p>Let me break this down with an analogy. Imagine you&#x27;re researching a topic and you keep opening browser tabs. Without a system, you re-read the same articles every time you need a fact. With a personal wiki, you read each article once, jot down the key points, and search your wiki later.</p>
+<p>Context Mode&#x27;s second trick is a <strong>local knowledge base</strong> built on SQLite FTS5 (Full-Text Search 5). Think of it like building your agent a personal search engine that lives on your machine.</p>
 
-<p>Context Mode&#x27;s knowledge base works the same way:</p>
+<p>Here&#x27;s the mental model: instead of pasting an entire API doc into the conversation (killing your context), you feed it into the knowledge base once. It gets chunked by headings — each section becomes a searchable unit, with code blocks kept intact. Then when you need something specific, your agent searches the index and pulls back just the relevant chunks.</p>
 
-<ol>
-<li><strong><code>index</code></strong> — Takes markdown content, splits it into chunks by headings (keeping code blocks intact), and stores them in a SQLite FTS5 table</li>
-<li><strong><code>search</code></strong> — Queries the index using BM25 ranking and returns exact matching chunks</li>
-<li><strong><code>fetch_and_index</code></strong> — Fetches a URL, converts HTML to markdown, and indexes it — the raw page never enters your context</li>
-</ol>
+<p>The search uses <strong>BM25 ranking</strong> — this is the same algorithm that powered search engines before neural retrieval took over. It scores results based on three things: how often your search terms appear in a chunk (term frequency), how rare those terms are across all chunks (inverse document frequency), and how long the chunk is (shorter chunks with your terms get boosted). It also applies <strong>Porter stemming</strong>, so searching for &quot;running&quot; also matches &quot;runs&quot; and &quot;ran&quot;.</p>
 
-<p><strong>BM25 ranking</strong> is worth understanding. It&#x27;s the same algorithm that powered early Google. It scores each chunk based on three things: how often your search terms appear in the chunk (term frequency), how rare those terms are across all chunks (inverse document frequency), and how long the chunk is (shorter chunks with your terms score higher). It also uses <strong>Porter stemming</strong>, so searching for &quot;running&quot; also matches &quot;runs&quot; and &quot;ran&quot;.</p>
-
-<p>The killer use case: index your project&#x27;s documentation at the start of a session. Every time the agent needs to reference docs, it searches the knowledge base instead of re-fetching and re-reading the full docs. Zero context cost for repeated lookups.</p>
+<p>The key thing: you get back the <strong>actual indexed content</strong>, not a summary or approximation. Real code blocks, real text, with their heading hierarchy preserved.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to index some documentation (a README, API docs, or a wiki page) into Context Mode&#x27;s knowledge base and then search it
+          Ask your agent to index a documentation page from a library you use frequently, then search it to answer a specific question
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What documentation do you reference repeatedly in your projects? README? API docs? Style guides?</li><li>How would you use `fetch_and_index` for a URL vs. `index` for local content?</li><li>What search queries would test whether the indexing actually works — try something that needs stemming?</li></ul>
+          <ul><li>What documentation do you find yourself re-reading most often? (React hooks? Express middleware? A specific API?)</li><li>What&#x27;s a specific question you&#x27;d normally Ctrl+F for in those docs?</li><li>How does `fetch_and_index` differ from just reading the page?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should use <code>fetch_and_index</code> with a documentation URL (or <code>index</code> with local markdown content) and confirm the content was chunked and indexed. Then it should run a <code>search</code> query and show that it returns the exact relevant chunk — with its heading hierarchy preserved. For example, searching &#x27;authentication&#x27; in your project docs might return a chunk under &#x27;API Reference &gt; Auth Endpoints&#x27; with the exact code example from the docs. The key thing to notice: the full docs page (maybe 50 KB) was fetched and indexed <em>outside</em> your context, and the search result is maybe 500 bytes of exactly what you needed.</p></div>
+        <div class="reveal-body"><p>The agent should use <code>fetch_and_index</code> with a URL to pull a docs page, convert it to markdown, chunk it, and store it in the FTS5 index. Then when you search, it returns just the relevant section(s) — maybe 200-500 bytes instead of the full page&#x27;s 50+ KB. The crucial detail: the raw HTML page never enters context. It goes straight from fetch → markdown → chunks → SQLite. Only your search results touch the conversation.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The knowledge base persists across the session. Index your most-referenced docs once at the start, then search freely. Think of it as giving your agent a personal reference library that doesn&#x27;t cost context to consult.
+        The knowledge base persists across your session. Index something once at the start, and your agent can search it throughout the entire conversation without re-fetching or re-reading.
       </div>
         
       <details class="reveal">
-        <summary>BM25 vs. vector/embedding search — why not use embeddings?</summary>
-        <div class="reveal-body"><p>You might be wondering: why BM25 (a keyword algorithm from the &#x27;90s) instead of fancy vector embeddings? A few reasons:</p>
+        <summary>Why BM25 instead of vector embeddings?</summary>
+        <div class="reveal-body"><p>You might be thinking — wait, isn&#x27;t everyone using embeddings and vector databases for search now? Why is Context Mode using BM25, an algorithm from the &#x27;90s?</p>
+
+<p>A few reasons:</p>
 
 <ol>
-<li><strong>No external API needed</strong> — BM25 runs entirely in SQLite. No embedding model, no API calls, no latency.</li>
-<li><strong>Exact matching</strong> — When you search for a function name like <code>handleAuthCallback</code>, you want exact matches, not semantically similar results. BM25 excels at this.</li>
-<li><strong>Transparent scoring</strong> — You can understand <em>why</em> a result ranked high (the terms matched, they&#x27;re rare, the chunk is focused). Embedding similarity is a black box.</li>
-<li><strong>Speed</strong> — FTS5 queries are sub-millisecond on typical knowledge bases.</li>
+<li><strong>Zero dependencies.</strong> BM25 with FTS5 runs in SQLite — no embedding model to download, no vector DB to spin up, no API calls to OpenAI. It&#x27;s instant and local.</li>
 </ol>
 
-<p>For a context-window optimization tool, these tradeoffs make perfect sense. You&#x27;re not doing open-ended semantic search — you&#x27;re looking up specific documentation chunks. BM25 is the right tool for this job.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>How does the chunking work?</summary>
-        <div class="reveal-body"><p>The <code>index</code> tool splits markdown by headings (H1, H2, H3, etc.) so each chunk is a logical section of the document. Crucially, code blocks are kept intact — a code example is never split across chunks. Each chunk stores its heading hierarchy (e.g., &#x27;Getting Started &gt; Installation &gt; npm&#x27;) so when you get a search result, you know exactly where in the document it came from. This is way better than naive fixed-size chunking (splitting every 500 characters) because you get semantically coherent results.</p></div>
+<ol>
+<li><strong>Exact matching matters here.</strong> When you&#x27;re searching docs for <code>useEffect cleanup</code> or <code>kubectl rollout</code>, you want exact term matching, not semantic similarity. BM25 is excellent at this.</li>
+</ol>
+
+<ol>
+<li><strong>Speed.</strong> BM25 scoring is just arithmetic on precomputed indexes. Embedding-based search requires running a neural network. For a local dev tool, the speed difference matters.</li>
+</ol>
+
+<ol>
+<li><strong>Transparency.</strong> You can reason about why BM25 returned a result (the terms matched!). Embedding similarity is harder to debug when it gives you weird results.</li>
+</ol>
+
+<p>That said, for truly semantic queries (&quot;how do I handle errors gracefully?&quot;), embeddings would win. It&#x27;s a trade-off, and for the code/docs use case, BM25 is the pragmatic choice.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You&#x27;ve now seen three capabilities: sandboxed execution (compress tool outputs), knowledge base indexing (store docs outside context), and search (retrieve just what you need). Together, these turn your 30-minute agent sessions into 3-hour sessions. The context window that used to be 60% full after 45 minutes is now 99% free.</div>
+      <div>You should now understand both core mechanisms: the **sandbox** (ephemeral data processing where raw output never enters context) and the **knowledge base** (persistent FTS5 search index for reference material). The sandbox is for data you process and discard. The knowledge base is for data you want to query repeatedly.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">5</div>
-        <h2>The Invisible Part: Auto-Routing and Subagent Upgrades</h2>
+        <h2>Stress Test: Does the 98% Claim Hold Up?</h2>
       </div>
       <div class="step-body">
-        <p>Here&#x27;s what makes Context Mode practical instead of just cool: you don&#x27;t have to change how you work.</p>
+        <p>Alright, the marketing numbers sound great — 315 KB → 5.4 KB, 98% reduction. But we&#x27;re the kind of people who check receipts. Let&#x27;s actually stress-test this with real workflows and see what happens.</p>
 
-<p>When you install the full plugin (not just the MCP server), it registers a <strong>PreToolUse hook</strong>. This hook intercepts tool outputs <em>before</em> they enter your context and routes them through the sandbox automatically. You don&#x27;t have to remember to use <code>execute</code> instead of <code>bash</code>. You just work normally, and the compression happens behind the scenes.</p>
+<p>The article validated across 11 scenarios. The standout numbers:</p>
+<ul>
+<li>Playwright snapshot: <strong>56 KB → 299 B</strong></li>
+<li>20 GitHub issues: <strong>59 KB → 1.1 KB</strong></li>
+<li>500-line access log: <strong>45 KB → 155 B</strong></li>
+<li>500-row CSV analytics: <strong>85 KB → 222 B</strong></li>
+<li>153 git commits: <strong>11.6 KB → 107 B</strong></li>
+</ul>
 
-<p>The subagent upgrade is the other subtle win. Normally, when Claude Code spawns a subagent (like a Bash-only agent for running commands), that subagent can only use bash tools. Context Mode upgrades these to <code>general-purpose</code> agents that can access MCP tools — meaning subagents also get the context compression benefits. They use <code>batch_execute</code> to do multiple operations in a single sandbox call, which is why the repo research scenario dropped from 37 tool calls to 5.</p>
+<p>The most interesting one is the &quot;repo research&quot; scenario: <strong>986 KB → 62 KB</strong> using a subagent that makes 5 calls instead of 37. That&#x27;s still a 94% reduction, but notice it&#x27;s not 98% — because the subagent needs to return richer context to be useful.</p>
 
-<p>Think of it like installing an ad blocker. After setup, you just browse normally. The blocking happens in the background, and you occasionally notice pages load faster. Same energy here — you just code normally, and your sessions last 6x longer.</p>
+<p>Honestly, the individual numbers almost don&#x27;t matter. What matters is the <em>session-level</em> impact: going from ~30 minutes before degradation to ~3 hours. That&#x27;s the difference between an agent that forgets your project structure halfway through a task and one that stays coherent for an entire work session.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to explain what hooks are registered and do a real task that would normally burn a lot of context — like reviewing a git diff or running a test suite — to see auto-routing in action
+          Pick a real task from your daily workflow — something that generates a lot of tool output — and run it with and without Context Mode to compare
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What&#x27;s a task you regularly do that generates lots of output? Test suites? Build logs? Code reviews?</li><li>How would you verify that the output was actually routed through the sandbox vs. dumped raw?</li><li>Ask the agent to compare how much context this task would have cost without Context Mode</li></ul>
+          <ul><li>What&#x27;s the most data-heavy thing your agent does regularly? (Reading logs? Reviewing PRs? Analyzing test output?)</li><li>How would you measure the &#x27;before&#x27; and &#x27;after&#x27; fairly?</li><li>What would you look at besides raw size — does the compressed output still contain everything you need?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should run a data-heavy task — a test suite, a large git diff review, or a multi-file code analysis — and you&#x27;ll notice the output is compact and focused. The agent should confirm that the PreToolUse hook intercepted the output (you might see it in the tool call metadata or the agent can explain what happened). The key metric: &#x27;This git diff was 23 KB raw. The sandbox extracted the 4 changed functions, summarized the modifications, and returned 800 bytes. Your context saved 22.2 KB on this one operation.&#x27; Over a session with 20-30 tool calls, those savings compound to hundreds of KB.</p></div>
+        <div class="reveal-body"><p>This one&#x27;s personal to your workflow, but the agent should help you design a fair comparison: run the task once with raw tool output (note the context consumed), then again using Context Mode&#x27;s execute/batch_execute. You should see a dramatic reduction in context usage while still getting the information you need. The key validation: does the compressed output actually let you make the same decisions? If Context Mode strips something you needed, that&#x27;s a real problem — compression is only useful if it preserves the signal.</p></div>
       </details>
       </div>
         
         
-      <div class="callout callout-tip">
-        <div class="callout-label">Tip</div>
-        The <code>batch_execute</code> tool is especially powerful for subagents doing research. Instead of 37 separate tool calls (each adding overhead to the context), a single <code>batch_execute</code> runs all operations in one sandbox and returns one compact result. Fewer calls = less context overhead = longer sessions.
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Context Mode&#x27;s PreToolUse hook auto-routes outputs through the sandbox. This means you might see different behavior than expected if tools you rely on get intercepted. Keep an eye on whether any of your existing workflows break after installation.
       </div>
         
       <details class="reveal">
-        <summary>What exactly is a PreToolUse hook?</summary>
-        <div class="reveal-body"><p>In Claude Code&#x27;s plugin system, hooks are functions that run at specific points in the tool execution lifecycle. A <strong>PreToolUse</strong> hook runs <em>before</em> a tool&#x27;s output enters the conversation context. It can intercept, modify, or redirect the output. Context Mode&#x27;s hook checks: &#x27;Is this tool output larger than a threshold? If so, route it through the sandbox for compression before it enters context.&#x27; Other hook points exist too (PostToolUse, PreMessage, etc.), but PreToolUse is the critical one for context optimization because it catches the data before it&#x27;s too late.</p></div>
+        <summary>What about the subagent upgrade?</summary>
+        <div class="reveal-body"><p>One subtle but powerful detail: Context Mode upgrades Bash subagents to <code>general-purpose</code> subagents so they can access MCP tools, including <code>batch_execute</code>. This means when Claude Code spawns a subagent to research something, that subagent uses the sandbox too — compounding the context savings.</p>
+
+<p>The article&#x27;s repo research example dropped from 37 tool calls to 5 and from 986 KB to 62 KB. The subagent was doing the same work — it was just doing it <em>smarter</em>, batching operations inside sandboxes instead of making individual raw calls. This is where the session-level impact really comes from: not just compressing individual outputs, but reducing the total number of context-consuming interactions.</p></div>
       </details>
       </div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Set up a &#x27;session starter&#x27; prompt that indexes your project&#x27;s key documentation and configures Context Mode for maximum efficiency at the beginning of every coding session</div>
-      <div class="your-turn-context">The biggest win with Context Mode isn&#x27;t any single compressed output — it&#x27;s the compound effect over a full session. If you index your project docs, API references, and style guides at session start, every subsequent lookup is free. Combined with auto-routing, your sessions go from 30 minutes to 3 hours before slowdown. The challenge: create a reusable prompt that sets this up for your specific project.</div>
+      <div class="your-turn-goal">Build a prompt that gets your agent to create a &#x27;context budget dashboard&#x27; — a quick way to monitor how much context you&#x27;ve consumed in a session and what consumed it</div>
+      <div class="your-turn-context">Now that you understand the problem (context drain) and the solution (sandbox + knowledge base), the natural next step is visibility. You can&#x27;t optimize what you can&#x27;t measure. Imagine a lightweight dashboard that shows you a breakdown: how many tokens went to tool definitions, how many to tool outputs, and how much headroom you have left.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What documentation does your agent reference most often? README? API docs? Contributing guide? Architecture docs?</li><li>Should you index remote URLs (fetch_and_index) or local files (index)? What about both?</li><li>How would you verify the knowledge base is working — what&#x27;s a good test query?</li><li>Could you save this as a Claude Code slash command or custom instruction so it runs automatically?</li></ul>
+        <ul><li>What information would you need to calculate context usage? (Think: what goes IN to the context and how to track it)</li><li>How should the dashboard present this? A simple text summary? A bar chart? Percentages?</li><li>Should it run inside Context Mode&#x27;s sandbox to avoid... burning context to measure context? (Meta, right?)</li><li>What thresholds would trigger a warning? When should you worry?</li></ul>
       </div>
       
       <details class="reveal">
@@ -1002,58 +996,49 @@ body {
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>At the start of this session, please set up my knowledge base for efficient context usage:
-
-1. Use fetch_and_index to index our API documentation at [docs-url]
-2. Use index to add the content of our README.md and CONTRIBUTING.md to the knowledge base
-3. Index the architecture decision records in docs/adr/
-4. Run a test search for &#x27;authentication&#x27; to verify the knowledge base is working
-5. Confirm how many chunks were indexed and estimate the context savings vs. re-reading these docs every time
-
-For the rest of this session, whenever I ask about our API or project conventions, search the knowledge base first instead of re-reading the source files.</code></pre>
+            <pre><code>I want to build a context budget monitor for Claude Code sessions. Create a script that I can run inside Context Mode&#x27;s execute sandbox that: (1) estimates token usage based on conversation length, (2) breaks down usage into categories — tool definitions, tool outputs, user messages, and agent responses, (3) shows a simple ASCII bar chart of the breakdown, and (4) flags a warning if remaining context drops below 20%. The output should be compact — under 500 bytes — since the whole point is not burning context to measure context. Give me the script and explain how I&#x27;d integrate it as a periodic check during a session.</code></pre>
           </div>
         </div>
       </details>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You&#x27;re about to start a long debugging session. Your project has 50 KB of API docs, a 30 KB changelog, and you&#x27;ll be running test suites that output ~40 KB each. Without Context Mode, roughly how much context would be consumed by tool outputs after 5 test runs and 3 doc lookups?</div>
+      <div class="question">You need to reference a 200-page API specification throughout a long coding session. What&#x27;s the most context-efficient approach?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt0">
-          <label for="decision_11_opt0">~350 KB — likely exceeding your context window</label>
-          <div class="decision-feedback correct">&#10003; Correct! Let&#x27;s do the math: 5 test runs × 40 KB = 200 KB, plus 3 doc lookups × 50 KB = 150 KB (assuming the full docs are re-read each time). That&#x27;s 350 KB of tool output alone — well past the 200K token limit (roughly 150 KB of text). Your session would be crippled long before the 5th test run. With Context Mode, those same operations might cost ~5 KB total. That&#x27;s the difference between a session that dies after 20 minutes and one that lasts all afternoon.</div>
+          <label for="decision_11_opt0">Use fetch_and_index to load the spec into the knowledge base, then search as needed</label>
+          <div class="decision-feedback correct">&#10003; Correct! The full spec gets chunked and indexed in SQLite — never entering context. Each search returns only the relevant section (maybe 200-500 bytes). Over a session with 20 lookups, you might use 10 KB instead of loading 200+ KB upfront.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt1">
-          <label for="decision_11_opt1">~50 KB — plenty of room left</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This would only be true if each tool call&#x27;s output magically disappeared after use. It doesn&#x27;t — in the context window model, every tool output stays in the conversation for the entire session. Five 40 KB test runs plus repeated doc reads compounds fast. This is exactly the sneaky problem that makes people wonder why their agent &#x27;got dumber&#x27; halfway through a session.</div>
+          <label for="decision_11_opt1">Use the sandbox to process the spec once and extract all the endpoints into a summary</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This works for a one-time extraction, but you lose the ability to go deep on specific endpoints later. The knowledge base lets you query different parts at different times, which is what you need for ongoing reference. The sandbox is better for ephemeral processing.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt2">
-          <label for="decision_11_opt2">~120 KB — tight but manageable</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. You might get this number if you assumed each doc lookup doesn&#x27;t re-read the full docs, but in practice, without a knowledge base, the agent re-reads the source each time it needs to reference documentation. And test suite outputs are fully dumped into context on every run. The compound effect is worse than most people expect — which is exactly why Context Mode&#x27;s numbers feel so dramatic.</div>
+          <label for="decision_11_opt2">Paste the most important 20% of the spec directly into the conversation</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Even 20% of a 200-page spec is a LOT of context. And you&#x27;re guessing which 20% you&#x27;ll need. The knowledge base approach means you don&#x27;t have to predict — you search when the need arises, and only pay the context cost for what you actually use.</div>
         </div>
     </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>Let&#x27;s zoom out. We just installed a tool that fundamentally changes the economics of AI-assisted coding sessions.</p>
+      <div class="recap-body"><p>Let&#x27;s zoom out. We started with a deceptively simple problem: MCP tool calls dump raw data into your AI agent&#x27;s context window, and after 30 minutes, your agent basically has amnesia.</p>
 
-<p>The core insight isn&#x27;t about compression algorithms or SQLite tricks — it&#x27;s about <strong>where data lives</strong>. Your context window is precious real estate. Every byte of raw tool output that sits there is a byte your agent can&#x27;t use for reasoning about your actual problem. Context Mode introduces a simple but powerful boundary: raw data stays in the sandbox, processed intelligence enters the conversation.</p>
+<p>Context Mode solves this with two complementary ideas:</p>
 
-<p>Three capabilities, one philosophy:</p>
-<ul>
-<li><strong>Sandbox execution</strong> — tool outputs get processed in isolated subprocesses; only compact results enter context</li>
-<li><strong>Knowledge base</strong> — index docs once, search for free forever; no repeated context cost for lookups</li>
-<li><strong>Auto-routing</strong> — hooks intercept outputs automatically so you don&#x27;t change how you work</li>
-</ul>
+<p><strong>The Sandbox</strong> — a separate room where data gets processed. Raw output never enters the conversation. Your agent writes a little script, the sandbox runs it, and only the printed results (the sticky note) come back. This is perfect for ephemeral tasks: log analysis, API responses, test output, data crunching.</p>
 
-<p>The result: sessions that last 6x longer, agents that stay sharp because they&#x27;re not wading through 200 KB of raw git diffs, and a workflow that feels exactly the same from your perspective. That&#x27;s the best kind of infrastructure — invisible until you notice everything just... works better.</p></div>
-      <ul class="takeaways-list"><li>Every MCP tool output stays in your context window for the entire session — they compound, and 30 minutes of tool use can consume 40%+ of your context</li><li>Context Mode&#x27;s sandbox processes raw data in isolated subprocesses and only returns compact results — 315 KB becomes 5.4 KB (98% reduction)</li><li>The SQLite FTS5 knowledge base with BM25 ranking lets you index documentation once and search it for free — no embeddings, no API calls, sub-millisecond queries</li><li>Auto-routing via PreToolUse hooks means you don&#x27;t change how you work — the compression happens invisibly behind every tool call</li></ul>
+<p><strong>The Knowledge Base</strong> — a local search engine powered by SQLite FTS5 and BM25 ranking. Feed in docs, specs, or any reference material once, then query it repeatedly throughout your session. Porter stemming means your searches are forgiving. Heading-aware chunking means you get properly scoped results with code blocks intact.</p>
+
+<p>The practical impact? Sessions that used to degrade after 30 minutes now stay coherent for 3+ hours. Context remaining after 45 minutes: 99% instead of 60%.</p>
+
+<p>But here&#x27;s the deeper insight: <strong>this is a pattern, not just a tool.</strong> The idea of &#x27;process data in isolation and only surface the results&#x27; applies everywhere in AI agent design. Whether you&#x27;re building your own MCP servers, designing agent workflows, or just prompting more effectively — thinking about what <em>needs</em> to be in context vs. what can stay outside of it is a superpower.</p></div>
+      <ul class="takeaways-list"><li>Every MCP tool call has a hidden cost — raw output consumes context that your agent needs for reasoning. Awareness of this cost changes how you design agent workflows.</li><li>Sandboxed execution is the key pattern: process data in an isolated subprocess and only return the extracted signal to context. The raw data never touches the conversation.</li><li>A local FTS5 knowledge base with BM25 ranking gives you &#x27;search, don&#x27;t paste&#x27; semantics for reference material — no embedding model, no API calls, just fast local search with stemming.</li><li>The biggest wins are at the session level: not just compressing individual outputs, but reducing the total number of context-consuming interactions through batching and smarter subagent routing.</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Index your most-referenced project docs at session start and measure how much context you save over a typical session</li><li>Try <code>batch_execute</code> for multi-step research tasks — fewer tool calls means less context overhead and faster results</li><li>Explore combining Context Mode with Cloudflare&#x27;s Code Mode for tool <em>definition</em> compression — together they optimize both sides of the MCP context equation</li><li>Watch the Context Mode GitHub repo for new processing scripts — the community is adding domain-specific compressors for common tool outputs</li></ul>
+        <ul><li>Try Context Mode on your heaviest daily workflow — the one where your agent usually starts forgetting things after 30 minutes — and compare the before/after experience</li><li>Explore building your own MCP server that applies the sandbox pattern to a domain-specific tool you use frequently</li><li>Look into Cloudflare&#x27;s Code Mode for tool definition compression — combine it with Context Mode for optimization on both sides of the MCP pipeline</li></ul>
       </div>
     </div>
     <div class="sources-section">
@@ -1067,7 +1052,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">VectifyAI/PageIndex</div>
-            <div class="oa-summary">📑 PageIndex: Document Index for Vectorless, Reasoning-based RAG PageIndex: Vectorless, Reasoning-based RAG...</div>
+            <div class="oa-summary">A RAG framework that retrieves document pages using reasoning instead of vector databases or chunking.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1080,7 +1065,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">datawhalechina/hello-agents</div>
-            <div class="oa-summary">📚 《从零开始构建智能体》——从零开始的智能体原理与实践教程 English | 中文 Hello-Agents 🤖 《从零开始构建智能体》 从基础理论到实际应用，全面掌握智能体系统的设计与实现 🎯 项目介绍 如果说 2024...</div>
+            <div class="oa-summary">Chinese tutorial teaching how to build AI agents from scratch, covering theory through practical implementation.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1093,7 +1078,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">ruvnet/wifi-densepose</div>
-            <div class="oa-summary">Production-ready implementation of InvisPose - a revolutionary WiFi-based dense human pose estimation system that...</div>
+            <div class="oa-summary">Estimates human body poses through walls in real time using standard WiFi routers.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1106,7 +1091,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">4thfever/cultivation-world-simulator</div>
-            <div class="oa-summary">基于 AI Agent 工作流的修仙世界模拟器，旨在还原智能、开放的仙侠世界。| An open-source Cultivation World Simulator using Agentic Workflow to create...</div>
+            <div class="oa-summary">AI agent-driven simulator that generates a dynamic Chinese fantasy (Xianxia) cultivation world.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1119,7 +1104,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">muratcankoylan/Agent-Skills-for-Context-Engineering</div>
-            <div class="oa-summary">A comprehensive collection of Agent Skills for context engineering, multi-agent architectures, and production agent...</div>
+            <div class="oa-summary">Collection of reusable agent skills for context engineering, multi-agent architectures, and production agent systems.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1132,7 +1117,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">anthropics/skills</div>
-            <div class="oa-summary">Public repository for Agent Skills Note: This repository contains Anthropic&#x27;s implementation of skills for Claude....</div>
+            <div class="oa-summary">Anthropic&#x27;s official repository of agent skills that extend Claude&#x27;s capabilities with specialized tools.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1145,7 +1130,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">QwenLM/Qwen-Agent</div>
-            <div class="oa-summary">Agent framework and applications built upon Qwen&gt;=3.0, featuring Function Calling, MCP, Code Interpreter, RAG,...</div>
+            <div class="oa-summary">Agent framework built on Qwen models with function calling, MCP, code interpreter, and RAG support.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1158,7 +1143,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">NevaMind-AI/memU</div>
-            <div class="oa-summary">Memory for 24/7 proactive agents like openclaw (moltbot, clawdbot). memU 24/7 Always-On Proactive Memory for AI...</div>
+            <div class="oa-summary">Memory framework for always-on AI agents that need persistent, proactive recall across long-running sessions.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1171,7 +1156,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">modelscope/ms-swift</div>
-            <div class="oa-summary">Use PEFT or Full-parameter to CPT/SFT/DPO/GRPO 600+ LLMs (Qwen3.5, DeepSeek-R1, GLM4.5, InternLM3, Llama4, ...) and...</div>
+            <div class="oa-summary">Toolkit for fine-tuning 600+ LLMs and 300+ multimodal models using PEFT, SFT, DPO, and GRPO.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1184,7 +1169,7 @@ For the rest of this session, whenever I ask about our API or project convention
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">agentscope-ai/agentscope</div>
-            <div class="oa-summary">Build and run agents you can see, understand and trust. 中文主页 | Tutorial | Roadmap (Jan 2026 -) | FAQ What is...</div>
+            <div class="oa-summary">Production-ready framework for building transparent, trustworthy AI agents you can inspect and understand.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
