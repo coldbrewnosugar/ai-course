@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>General AI — 2026-02-28 — AI Daily Courses</title>
+  <title>Build an AI Prompt Energy &amp; Carbon Footprint Calculator — AI Daily Courses</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root {
@@ -509,30 +509,924 @@ body {
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>General AI — 2026-02-28</h1>
-      <div class="hero-subtitle">Session unavailable</div>
+      <h1>How Many Watts Did That Prompt Cost?</h1>
+      <div class="hero-subtitle">Let&#x27;s build a calculator that turns token counts into kilowatt-hours and CO₂ — because every API call has a power bill somewhere.</div>
       <div class="hero-meta">
-        <span>5 min</span>
-        <span></span>
+        <span>40 min</span>
+        <span> <span class="tag">energy</span> <span class="tag">sustainability</span> <span class="tag">LLM-ops</span> <span class="tag">python</span> <span class="tag">data-viz</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p><strong>Note:</strong> Today&#x27;s session could not be fully generated.</p>
+      <h2>The Story Behind This Workshop</h2>
 
-<p><strong>Reason:</strong> Planning call failed.</p>
+<p>MIT Technology Review just got shortlisted for a 2026 National Magazine Award for their investigation into AI&#x27;s energy footprint — a piece called <em>&quot;We did the math on AI&#x27;s energy footprint. Here&#x27;s the story you haven&#x27;t heard.&quot;</em> Their reporters spent six months digging through hundreds of pages of reports, interviewing experts, and crunching numbers that AI companies had kept closely guarded.</p>
 
-<p>Please check back tomorrow or run the pipeline manually.</p>
+<p>The kicker? After MIT Tech Review published their findings, major players like OpenAI, Mistral, and Google actually started publishing their own energy and water usage data. Sunlight really is the best disinfectant.</p>
+
+<p>Here&#x27;s what makes this relevant to <em>us</em>: most developers have zero intuition for the energy cost of their AI calls. We treat API endpoints like they&#x27;re free — you send tokens in, you get tokens out. But behind every inference call, there&#x27;s a GPU drawing 300-700 watts, cooling systems working overtime, and a power grid that might be running on coal or wind depending on where that data center sits.</p>
+
+<p>Today we&#x27;re going to build the tool that gives you that intuition. A Python CLI that estimates energy consumption and carbon emissions per prompt, per session, and lets you actually <em>see</em> what your AI usage costs the planet.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>The Energy-Per-Token Math</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we write any code, let&#x27;s get the mental model right. When you send a prompt to an LLM, here&#x27;s what actually happens at the hardware level:</p>
+
+<ol>
+<li>Your tokens get batched and sent to a GPU (or a cluster of them)</li>
+<li>The GPU runs matrix multiplications for each layer of the model</li>
+<li>Each token generation requires a forward pass through the entire network</li>
+<li>The GPU draws power the entire time — whether it&#x27;s an A100 at ~300W or an H100 at ~700W</li>
+</ol>
+
+<p>The key insight is that energy-per-token depends on three things: <strong>GPU power draw</strong>, <strong>throughput</strong> (tokens per second), and <strong>how many GPUs</strong> the model needs. A 70B parameter model on 4× A100s is a very different energy story than a 7B model on a single GPU.</p>
+
+<p>Let&#x27;s define our energy profiles for common configurations. These numbers come from published benchmarks and GPU spec sheets — they&#x27;re estimates, but they&#x27;re in the right ballpark.</p>
+        
+      <div class="code-block">
+        <span class="code-caption">Defines GPU power profiles with realistic wattage and throughput numbers. The watts_per_token property is our core calculation — total system power divided by tokens generated per second.</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python">from dataclasses import dataclass, field
+from enum import Enum
+
+
+class GPUType(Enum):
+    A100_80GB = &quot;A100 80GB&quot;
+    H100_SXM = &quot;H100 SXM&quot;
+    H200_SXM = &quot;H200 SXM&quot;
+
+
+@dataclass
+class GPUProfile:
+    &quot;&quot;&quot;Power and throughput characteristics of a GPU configuration.&quot;&quot;&quot;
+    name: str
+    tdp_watts: float            # Thermal Design Power (max draw)
+    typical_inference_watts: float  # Realistic draw during inference
+    tokens_per_second: float    # Per-GPU throughput for a typical model size
+    gpu_count: int = 1          # GPUs needed for the model
+
+    @property
+    def watts_per_token(self) -&gt; float:
+        &quot;&quot;&quot;Energy per token = (total power draw) / throughput.&quot;&quot;&quot;
+        total_watts = self.typical_inference_watts * self.gpu_count
+        return total_watts / self.tokens_per_second
+
+    @property
+    def joules_per_token(self) -&gt; float:
+        &quot;&quot;&quot;Same as watts_per_token since watts = joules/second
+        and we&#x27;re measuring per-token at tokens/second rate.&quot;&quot;&quot;
+        return self.watts_per_token
+
+
+# Profiles for common model-size / GPU combos
+GPU_PROFILES = {
+    &quot;small-a100&quot;: GPUProfile(
+        name=&quot;~7B model on 1× A100&quot;,
+        tdp_watts=300, typical_inference_watts=210,
+        tokens_per_second=95, gpu_count=1
+    ),
+    &quot;medium-a100&quot;: GPUProfile(
+        name=&quot;~70B model on 4× A100&quot;,
+        tdp_watts=300, typical_inference_watts=250,
+        tokens_per_second=35, gpu_count=4
+    ),
+    &quot;large-h100&quot;: GPUProfile(
+        name=&quot;~70B model on 2× H100&quot;,
+        tdp_watts=700, typical_inference_watts=500,
+        tokens_per_second=80, gpu_count=2
+    ),
+    &quot;frontier-h100&quot;: GPUProfile(
+        name=&quot;~400B+ model on 8× H100&quot;,
+        tdp_watts=700, typical_inference_watts=550,
+        tokens_per_second=30, gpu_count=8
+    ),
+}
+
+# Quick sanity check
+for key, profile in GPU_PROFILES.items():
+    print(f&quot;{profile.name}: {profile.watts_per_token:.2f} W/token &quot;
+          f&quot;({profile.joules_per_token:.2f} J/token)&quot;)</code></pre>
+      </div>
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        These numbers are <em>estimates</em>. Real inference power depends on batch size, quantization, sequence length, and a dozen other factors. But they&#x27;re grounded in published benchmarks and give us the right order of magnitude — which is the whole point.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Don&#x27;t confuse TDP (Thermal Design Power) with actual draw. GPUs rarely hit their TDP during inference — training is where they max out. We use &#x27;typical_inference_watts&#x27; to be more realistic.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why joules per token? What&#x27;s the unit intuition?</summary>
+        <div class="reveal-body"><p>A joule is one watt for one second. If a GPU draws 500W and produces 50 tokens/second, each token &quot;costs&quot; 10 joules. For comparison, turning on a 60W light bulb for one second uses 60 joules. So a single token from a big model is roughly equivalent to leaving a lightbulb on for 1/6th of a second. Not much on its own — but at millions of requests per day, it adds up fast.</p>
+
+<p>The reason we track watts-per-token (which equals joules-per-token at steady state) is that it lets us multiply by total tokens to get total energy in joules, then convert to kilowatt-hours (1 kWh = 3,600,000 J).</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Building the Prompt Energy Estimator</h2>
+      </div>
+      <div class="step-body">
+        <p>Now let&#x27;s build the core engine. We need a function that takes a prompt and a response (or just token counts), picks the right GPU profile, and returns an energy estimate.</p>
+
+<p>We also need to handle the <strong>PUE</strong> — Power Usage Effectiveness. Data centers don&#x27;t just power GPUs; they run cooling, networking, storage, lighting. PUE is the ratio of total facility power to IT equipment power. A PUE of 1.2 means for every watt the GPU uses, the facility uses 1.2 watts total. Hyperscalers like Google claim ~1.1; older facilities can be 1.5+.</p>
+
+<p>Honestly, this part confused me at first too — it felt like we were just making up a fudge factor. But PUE is a well-established metric in data center engineering, and it makes a real difference in the final numbers.</p>
+        
+      <div class="code-block">
+        <span class="code-caption">The core estimator class. Takes prompts (or raw token counts), multiplies by the GPU profile&#x27;s joules-per-token, applies the data center PUE overhead, and tracks everything in a session history.</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python">from dataclasses import dataclass, field
+from datetime import datetime
+import tiktoken  # pip install tiktoken
+
+
+@dataclass
+class EnergyEstimate:
+    &quot;&quot;&quot;Result of estimating energy for a single prompt-response pair.&quot;&quot;&quot;
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    gpu_profile_key: str
+    joules: float
+    kwh: float
+    pue: float
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+
+    def __str__(self):
+        return (
+            f&quot;Tokens: {self.total_tokens:,} &quot;
+            f&quot;({self.input_tokens:,} in + {self.output_tokens:,} out) | &quot;
+            f&quot;Energy: {self.joules:.2f} J ({self.kwh:.6f} kWh) | &quot;
+            f&quot;Profile: {self.gpu_profile_key} | PUE: {self.pue}&quot;
+        )
+
+
+class PromptEnergyEstimator:
+    &quot;&quot;&quot;Estimates energy consumption for LLM prompt-response pairs.&quot;&quot;&quot;
+
+    JOULES_PER_KWH = 3_600_000
+
+    def __init__(self, gpu_profile_key: str = &quot;large-h100&quot;, pue: float = 1.2):
+        if gpu_profile_key not in GPU_PROFILES:
+            raise ValueError(
+                f&quot;Unknown profile &#x27;{gpu_profile_key}&#x27;. &quot;
+                f&quot;Choose from: {list(GPU_PROFILES.keys())}&quot;
+            )
+        self.gpu_profile = GPU_PROFILES[gpu_profile_key]
+        self.gpu_profile_key = gpu_profile_key
+        self.pue = pue
+        self.session_history: list[EnergyEstimate] = []
+
+        # Use cl100k_base encoder (works for GPT-4 / Claude-class tokenization)
+        # Not exact for every model, but close enough for estimation
+        self._encoder = tiktoken.get_encoding(&quot;cl100k_base&quot;)
+
+    def count_tokens(self, text: str) -&gt; int:
+        &quot;&quot;&quot;Estimate token count for a string.&quot;&quot;&quot;
+        return len(self._encoder.encode(text))
+
+    def estimate(
+        self,
+        prompt: str | None = None,
+        response: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+    ) -&gt; EnergyEstimate:
+        &quot;&quot;&quot;Estimate energy for a prompt-response pair.
+
+        Pass either raw strings (we&#x27;ll count tokens) or token counts directly.
+        &quot;&quot;&quot;
+        if input_tokens is None:
+            input_tokens = self.count_tokens(prompt) if prompt else 0
+        if output_tokens is None:
+            output_tokens = self.count_tokens(response) if response else 0
+
+        total_tokens = input_tokens + output_tokens
+        joules_raw = total_tokens * self.gpu_profile.joules_per_token
+        joules_with_pue = joules_raw * self.pue
+        kwh = joules_with_pue / self.JOULES_PER_KWH
+
+        estimate = EnergyEstimate(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            gpu_profile_key=self.gpu_profile_key,
+            joules=joules_with_pue,
+            kwh=kwh,
+            pue=self.pue,
+        )
+        self.session_history.append(estimate)
+        return estimate
+
+    @property
+    def session_total_kwh(self) -&gt; float:
+        return sum(e.kwh for e in self.session_history)
+
+    @property
+    def session_total_tokens(self) -&gt; int:
+        return sum(e.total_tokens for e in self.session_history)
+
+
+# --- Try it out ---
+estimator = PromptEnergyEstimator(gpu_profile_key=&quot;large-h100&quot;, pue=1.2)
+
+result = estimator.estimate(
+    prompt=&quot;Explain quantum computing in simple terms.&quot;,
+    response=&quot;Quantum computing uses qubits instead of classical bits. &quot;
+             &quot;While a classical bit is either 0 or 1, a qubit can exist in &quot;
+             &quot;a superposition of both states simultaneously...&quot;
+             &quot; (imagine a coin spinning in the air before it lands).&quot;
+)
+print(result)
+print(f&quot;\nThat&#x27;s roughly {result.joules:.1f} joules — about the same as &quot;
+      f&quot;a {result.joules/60:.1f}-second blast from a 60W light bulb.&quot;)</code></pre>
+      </div>
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        We&#x27;re using tiktoken&#x27;s cl100k_base encoding as a universal approximation. Different models use different tokenizers, but for energy <em>estimation</em> purposes, being within 10-15% is totally fine. If you want exact counts, use the model provider&#x27;s actual tokenizer.
+      </div>
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        No API keys needed for this step! We&#x27;re estimating locally. In Step 4 we&#x27;ll optionally wrap real API calls, but the estimator itself runs entirely offline.
+      </div>
+        
+      <details class="reveal">
+        <summary>What about input vs output token energy differences?</summary>
+        <div class="reveal-body"><p>Sharp question. In reality, input tokens (prompt processing / &quot;prefill&quot;) and output tokens (generation / &quot;decode&quot;) have different energy profiles. Prefill can be parallelized — you process all input tokens at once through the attention layers. Generation is sequential — each new token depends on all previous ones.</p>
+
+<p>In practice, prefill is more compute-dense per second but takes less wall-clock time, while generation is slower per token but draws power for longer. For our estimator, we treat them equally — it&#x27;s a simplification, but a reasonable one for a first approximation. If you wanted to get fancy, you could apply a 0.7× multiplier to input tokens and a 1.3× multiplier to output tokens.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>Nice — you should now have a working `PromptEnergyEstimator` that converts any prompt-response pair into joules and kilowatt-hours. Try feeding it a few different prompts and see how the numbers change. A short prompt should come in under 50 joules; a long conversation might hit several hundred.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">When converting energy to CO₂ emissions, should we use a single global average carbon intensity or look up the regional grid mix for the data center&#x27;s location?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Regional grid carbon intensity (gCO₂/kWh by location)</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the right call. Carbon intensity varies *wildly* by region — from ~20 gCO₂/kWh in hydro-heavy Quebec to ~900 gCO₂/kWh in coal-dependent parts of India or Poland. A prompt processed in a Norwegian data center might produce 10× less CO₂ than the same prompt in West Virginia. Using a global average (~475 gCO₂/kWh) would hide these critical differences. The EPA&#x27;s eGRID data and the EIA provide exactly the numbers we need.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">A single global average (~475 gCO₂/kWh)</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Tempting for simplicity, but this misses the whole point. The MIT Tech Review investigation specifically highlighted that *where* the energy comes from matters as much as *how much*. A global average would tell you nothing actionable — you couldn&#x27;t compare providers or choose lower-carbon regions.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">Just skip carbon and only show raw energy in kWh</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Energy alone tells an incomplete story. Two identical prompts consuming the same kWh can have radically different climate impacts depending on the grid. Plus, CO₂ equivalents are what people intuitively connect to — &#x27;this prompt produced 2 grams of CO₂&#x27; is more meaningful than &#x27;0.00003 kWh&#x27; to most folks.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Adding Carbon Intensity by Region</h2>
+      </div>
+      <div class="step-body">
+        <p>Let&#x27;s add the CO₂ dimension. We&#x27;ll build a carbon intensity lookup keyed by region — think of it as a dictionary mapping data center locations to how &quot;dirty&quot; their electricity is.</p>
+
+<p>These numbers come from the EPA&#x27;s eGRID database for US regions and the EIA / IEA for international grids. We&#x27;ll hardcode a curated set and also give users the option to override with their own values (because grids change over time, and some providers buy renewable energy credits).</p>
+        
+      <div class="code-block">
+        <span class="code-caption">The full carbon calculator: looks up regional grid carbon intensity, multiplies by energy consumed, and includes a fun analogy function so the numbers feel real. We demo the same prompt on a US East grid vs. Nordic hydro to show the dramatic difference.</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python">@dataclass
+class GridRegion:
+    &quot;&quot;&quot;Carbon intensity data for a power grid region.&quot;&quot;&quot;
+    name: str
+    code: str
+    carbon_intensity_gco2_per_kwh: float  # grams CO₂-equivalent per kWh
+    source: str
+    renewable_pct: float = 0.0  # percentage of generation from renewables
+
+
+# Curated from EPA eGRID 2024 + IEA 2024/2025 data
+GRID_REGIONS: dict[str, GridRegion] = {
+    # --- US Regions (eGRID subregions, simplified) ---
+    &quot;us-west&quot;: GridRegion(
+        &quot;US West (WECC)&quot;, &quot;WECC&quot;, 280, &quot;EPA eGRID 2024&quot;, 38.5
+    ),
+    &quot;us-east&quot;: GridRegion(
+        &quot;US East (SERC/RFC)&quot;, &quot;SERC&quot;, 420, &quot;EPA eGRID 2024&quot;, 15.2
+    ),
+    &quot;us-midwest&quot;: GridRegion(
+        &quot;US Midwest (MROE)&quot;, &quot;MROE&quot;, 510, &quot;EPA eGRID 2024&quot;, 22.0
+    ),
+    &quot;us-texas&quot;: GridRegion(
+        &quot;Texas (ERCOT)&quot;, &quot;ERCT&quot;, 380, &quot;EPA eGRID 2024&quot;, 31.0
+    ),
+    # --- International ---
+    &quot;eu-west&quot;: GridRegion(
+        &quot;Western Europe&quot;, &quot;EU-W&quot;, 230, &quot;IEA 2024&quot;, 45.0
+    ),
+    &quot;eu-north&quot;: GridRegion(
+        &quot;Nordic (Sweden/Norway/Finland)&quot;, &quot;EU-N&quot;, 45, &quot;IEA 2024&quot;, 78.0
+    ),
+    &quot;uk&quot;: GridRegion(
+        &quot;United Kingdom&quot;, &quot;UK&quot;, 210, &quot;IEA 2024&quot;, 48.0
+    ),
+    &quot;india&quot;: GridRegion(
+        &quot;India&quot;, &quot;IN&quot;, 710, &quot;IEA 2024&quot;, 12.0
+    ),
+    &quot;japan&quot;: GridRegion(
+        &quot;Japan&quot;, &quot;JP&quot;, 470, &quot;IEA 2024&quot;, 22.0
+    ),
+    &quot;canada-quebec&quot;: GridRegion(
+        &quot;Quebec (Hydro)&quot;, &quot;QC&quot;, 18, &quot;IEA 2024&quot;, 95.0
+    ),
+    &quot;australia&quot;: GridRegion(
+        &quot;Australia (NEM)&quot;, &quot;AU&quot;, 560, &quot;IEA 2024&quot;, 28.0
+    ),
+}
+
+# Global fallback
+GLOBAL_AVERAGE = GridRegion(
+    &quot;Global Average&quot;, &quot;GLOBAL&quot;, 475, &quot;IEA 2024&quot;, 30.0
+)
+
+
+@dataclass
+class CarbonEstimate:
+    &quot;&quot;&quot;Full energy + carbon estimate for a prompt.&quot;&quot;&quot;
+    energy: EnergyEstimate
+    region: GridRegion
+    co2_grams: float
+    co2_kg: float
+
+    def __str__(self):
+        return (
+            f&quot;{self.energy}\n&quot;
+            f&quot;  → CO₂: {self.co2_grams:.4f} g &quot;
+            f&quot;({self.co2_kg:.6f} kg) | &quot;
+            f&quot;Grid: {self.region.name} &quot;
+            f&quot;({self.region.carbon_intensity_gco2_per_kwh} gCO₂/kWh, &quot;
+            f&quot;{self.region.renewable_pct}% renewable)&quot;
+        )
+
+
+class CarbonPromptCalculator:
+    &quot;&quot;&quot;Combines energy estimation with regional carbon intensity.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        gpu_profile_key: str = &quot;large-h100&quot;,
+        pue: float = 1.2,
+        region: str = &quot;us-west&quot;,
+    ):
+        self.estimator = PromptEnergyEstimator(gpu_profile_key, pue)
+        self.region = GRID_REGIONS.get(region, GLOBAL_AVERAGE)
+        self.carbon_history: list[CarbonEstimate] = []
+
+    def calculate(
+        self,
+        prompt: str | None = None,
+        response: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+    ) -&gt; CarbonEstimate:
+        energy = self.estimator.estimate(
+            prompt=prompt, response=response,
+            input_tokens=input_tokens, output_tokens=output_tokens,
+        )
+        co2_grams = energy.kwh * self.region.carbon_intensity_gco2_per_kwh
+        result = CarbonEstimate(
+            energy=energy,
+            region=self.region,
+            co2_grams=co2_grams,
+            co2_kg=co2_grams / 1000,
+        )
+        self.carbon_history.append(result)
+        return result
+
+    def session_summary(self) -&gt; dict:
+        total_kwh = self.estimator.session_total_kwh
+        total_co2_g = sum(c.co2_grams for c in self.carbon_history)
+        total_tokens = self.estimator.session_total_tokens
+        return {
+            &quot;total_prompts&quot;: len(self.carbon_history),
+            &quot;total_tokens&quot;: f&quot;{total_tokens:,}&quot;,
+            &quot;total_kwh&quot;: f&quot;{total_kwh:.6f}&quot;,
+            &quot;total_co2_grams&quot;: f&quot;{total_co2_g:.4f}&quot;,
+            &quot;co2_equivalent&quot;: _co2_analogy(total_co2_g),
+            &quot;region&quot;: self.region.name,
+        }
+
+
+def _co2_analogy(grams: float) -&gt; str:
+    &quot;&quot;&quot;Make CO₂ numbers relatable.&quot;&quot;&quot;
+    if grams &lt; 0.1:
+        return f&quot;~{grams*1000:.1f} mg — less than a single human breath (≈200mg CO₂)&quot;
+    elif grams &lt; 1:
+        return f&quot;{grams:.2f}g — about {grams/0.2:.0f} human breaths&quot;
+    elif grams &lt; 100:
+        return f&quot;{grams:.1f}g — like driving a car {grams/210*1000:.0f} meters&quot;
+    elif grams &lt; 1000:
+        return f&quot;{grams:.0f}g — like driving a car {grams/210:.1f} km&quot;
+    else:
+        return f&quot;{grams/1000:.2f} kg — like driving a car {grams/210:.0f} km&quot;
+
+
+# --- Demo ---
+calc = CarbonPromptCalculator(
+    gpu_profile_key=&quot;frontier-h100&quot;,
+    pue=1.2,
+    region=&quot;us-east&quot;
+)
+
+result = calc.calculate(
+    prompt=&quot;Write me a 2000-word essay on the history of renewable energy.&quot;,
+    response=&quot;(imagine a 2000-word response here)&quot; * 50  # simulate long output
+)
+print(result)
+print()
+
+# Compare same prompt on a clean grid
+calc_clean = CarbonPromptCalculator(
+    gpu_profile_key=&quot;frontier-h100&quot;,
+    pue=1.1,
+    region=&quot;eu-north&quot;
+)
+result_clean = calc_clean.calculate(
+    prompt=&quot;Write me a 2000-word essay on the history of renewable energy.&quot;,
+    response=&quot;(imagine a 2000-word response here)&quot; * 50
+)
+print(&quot;Same prompt on Nordic grid:&quot;)
+print(result_clean)</code></pre>
+      </div>
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>_co2_analogy</code> function is a small touch but it matters a lot for usability. Nobody intuitively knows what 0.3 grams of CO₂ means, but &#x27;about 1.5 human breaths&#x27; clicks immediately.
+      </div>
+        
+      <details class="reveal">
+        <summary>Where do real AI companies run their inference?</summary>
+        <div class="reveal-body"><p>Good question — and it directly affects our estimates:</p>
+
+<ul>
+<li><strong>OpenAI</strong>: Primarily Azure data centers. Major clusters in Iowa (us-midwest, ~510 gCO₂/kWh), Virginia (us-east, ~420), and West Des Moines. Azure has committed to 100% renewable by 2025 but that&#x27;s via credits, not direct supply.</li>
+<li><strong>Anthropic (Claude)</strong>: Uses Google Cloud and AWS. GCP regions include us-central1 (Iowa) and us-east1 (South Carolina). Google claims ~90% carbon-free energy across its fleet.</li>
+<li><strong>Google (Gemini)</strong>: Their own data centers, many with direct renewable PPAs. The Hamina, Finland facility runs on wind. Their Oklahoma facility... less so.</li>
+</ul>
+
+<p>The honest truth is that even &#x27;renewable&#x27; claims are complicated — RECs (Renewable Energy Certificates) let you count wind power generated in Texas while your actual data center runs on Iowa coal. Google&#x27;s &#x27;24/7 carbon-free&#x27; initiative is trying to fix this, but we&#x27;re not there yet.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point you have a working energy + carbon estimator. You can feed it any prompt/response pair and get back joules, kWh, and grams of CO₂ for a specific GPU profile and grid region. Try comparing &#x27;small-a100&#x27; on &#x27;canada-quebec&#x27; versus &#x27;frontier-h100&#x27; on &#x27;india&#x27; — the difference is eye-opening.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Building the CLI with a Live Session Dashboard</h2>
+      </div>
+      <div class="step-body">
+        <p>Let&#x27;s wrap everything in a proper CLI tool using <code>rich</code> for a live-updating dashboard. This is where it gets fun — we&#x27;ll show a running table of every prompt in the session, with a footer showing cumulative energy and carbon.</p>
+
+<p>The idea is: you start the tool, type prompts (or paste token counts), and watch your energy budget tick up in real time. Think of it like a calorie counter, but for AI.</p>
+        
+      <div class="code-block">
+        <span class="code-caption">A full CLI tool with rich-powered dashboard. Accepts either natural language prompts (tokens counted automatically) or raw token counts in &#x27;input:output&#x27; format. Shows a running table and summary panel after each entry.</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python"># pip install rich
+import argparse
+import sys
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.layout import Layout
+from rich.text import Text
+from rich import box
+
+
+def build_session_table(calculator: CarbonPromptCalculator) -&gt; Table:
+    &quot;&quot;&quot;Build a rich table showing all prompts in the session.&quot;&quot;&quot;
+    table = Table(
+        title=&quot;⚡ Session Energy Log&quot;,
+        box=box.ROUNDED,
+        show_lines=True,
+        title_style=&quot;bold cyan&quot;,
+    )
+    table.add_column(&quot;#&quot;, style=&quot;dim&quot;, width=4)
+    table.add_column(&quot;Tokens&quot;, justify=&quot;right&quot;, style=&quot;green&quot;)
+    table.add_column(&quot;Energy (J)&quot;, justify=&quot;right&quot;, style=&quot;yellow&quot;)
+    table.add_column(&quot;kWh&quot;, justify=&quot;right&quot;, style=&quot;yellow&quot;)
+    table.add_column(&quot;CO₂ (g)&quot;, justify=&quot;right&quot;, style=&quot;red&quot;)
+    table.add_column(&quot;Analogy&quot;, style=&quot;dim italic&quot;, max_width=40)
+
+    for i, entry in enumerate(calculator.carbon_history, 1):
+        table.add_row(
+            str(i),
+            f&quot;{entry.energy.total_tokens:,}&quot;,
+            f&quot;{entry.energy.joules:.2f}&quot;,
+            f&quot;{entry.energy.kwh:.6f}&quot;,
+            f&quot;{entry.co2_grams:.4f}&quot;,
+            _co2_analogy(entry.co2_grams),
+        )
+
+    return table
+
+
+def build_summary_panel(calculator: CarbonPromptCalculator) -&gt; Panel:
+    &quot;&quot;&quot;Build a summary panel with session totals.&quot;&quot;&quot;
+    summary = calculator.session_summary()
+    text = Text()
+    text.append(&quot;Total Prompts: &quot;, style=&quot;bold&quot;)
+    text.append(f&quot;{summary[&#x27;total_prompts&#x27;]}\n&quot;)
+    text.append(&quot;Total Tokens:  &quot;, style=&quot;bold&quot;)
+    text.append(f&quot;{summary[&#x27;total_tokens&#x27;]}\n&quot;)
+    text.append(&quot;Total Energy:  &quot;, style=&quot;bold yellow&quot;)
+    text.append(f&quot;{summary[&#x27;total_kwh&#x27;]} kWh\n&quot;)
+    text.append(&quot;Total CO₂:     &quot;, style=&quot;bold red&quot;)
+    text.append(f&quot;{summary[&#x27;total_co2_grams&#x27;]} g\n&quot;)
+    text.append(&quot;Equivalent:    &quot;, style=&quot;bold&quot;)
+    text.append(f&quot;{summary[&#x27;co2_equivalent&#x27;]}\n&quot;)
+    text.append(&quot;Grid Region:   &quot;, style=&quot;bold&quot;)
+    text.append(f&quot;{summary[&#x27;region&#x27;]}&quot;)
+
+    return Panel(text, title=&quot;📊 Session Summary&quot;, border_style=&quot;cyan&quot;)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=&quot;⚡ AI Prompt Energy &amp; Carbon Calculator&quot;
+    )
+    parser.add_argument(
+        &quot;--gpu&quot;, choices=list(GPU_PROFILES.keys()),
+        default=&quot;large-h100&quot;, help=&quot;GPU profile to use&quot;
+    )
+    parser.add_argument(
+        &quot;--region&quot;, choices=list(GRID_REGIONS.keys()),
+        default=&quot;us-west&quot;, help=&quot;Grid region for carbon intensity&quot;
+    )
+    parser.add_argument(
+        &quot;--pue&quot;, type=float, default=1.2,
+        help=&quot;Power Usage Effectiveness (1.0-2.0)&quot;
+    )
+    args = parser.parse_args()
+
+    console = Console()
+    calc = CarbonPromptCalculator(
+        gpu_profile_key=args.gpu, pue=args.pue, region=args.region
+    )
+
+    console.print(Panel(
+        f&quot;GPU: [bold]{GPU_PROFILES[args.gpu].name}[/] | &quot;
+        f&quot;Region: [bold]{GRID_REGIONS.get(args.region, GLOBAL_AVERAGE).name}[/] | &quot;
+        f&quot;PUE: [bold]{args.pue}[/]&quot;,
+        title=&quot;⚡ AI Carbon Calculator&quot;,
+        subtitle=&quot;Type a prompt, paste token counts (in:out), or &#x27;quit&#x27; to exit&quot;,
+        border_style=&quot;bright_cyan&quot;,
+    ))
+
+    while True:
+        try:
+            user_input = console.input(&quot;\n[bold cyan]&gt;[/] &quot;).strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+
+        if user_input.lower() in (&quot;quit&quot;, &quot;exit&quot;, &quot;q&quot;):
+            break
+
+        if not user_input:
+            continue
+
+        # Support raw token counts like &quot;500:2000&quot;
+        if &quot;:&quot; in user_input and user_input.replace(&quot;:&quot;, &quot;&quot;).isdigit():
+            parts = user_input.split(&quot;:&quot;)
+            result = calc.calculate(
+                input_tokens=int(parts[0]),
+                output_tokens=int(parts[1]),
+            )
+        else:
+            # Treat as a prompt, simulate a response ~2x the prompt length
+            result = calc.calculate(
+                prompt=user_input,
+                output_tokens=calc.estimator.count_tokens(user_input) * 2,
+            )
+
+        console.print()
+        console.print(build_session_table(calc))
+        console.print(build_summary_panel(calc))
+
+    # Final summary
+    if calc.carbon_history:
+        console.print(&quot;\n&quot;)
+        console.print(build_session_table(calc))
+        console.print(build_summary_panel(calc))
+        console.print(&quot;\n[dim]Thanks for tracking your AI energy footprint! 🌱[/]&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre>
+      </div>
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Run it with: <code>python carbon_calc.py --gpu frontier-h100 --region india</code> to see worst-case estimates, or <code>--gpu small-a100 --region eu-north</code> for best-case. The difference will surprise you.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The &#x27;simulated response&#x27; (2× prompt length) is a rough heuristic. In a real integration, you&#x27;d capture actual response tokens from the API. We&#x27;ll cover that in the Try It section.
+      </div>
+        
+      <details class="reveal">
+        <summary>How could we plug this into a real API wrapper?</summary>
+        <div class="reveal-body"><p>The cleanest approach is to wrap the OpenAI or Anthropic client and intercept the <code>usage</code> field from API responses:</p>
+
+<p>```python</p>
+<p>import anthropic</p>
+
+<p>client = anthropic.Anthropic()</p>
+<p>calc = CarbonPromptCalculator(gpu_profile_key=&#x27;frontier-h100&#x27;, region=&#x27;us-west&#x27;)</p>
+
+<p>response = client.messages.create(</p>
+<p>model=&#x27;claude-sonnet-4-20250514&#x27;,</p>
+<p>max_tokens=1024,</p>
+<p>messages=[{&#x27;role&#x27;: &#x27;user&#x27;, &#x27;content&#x27;: &#x27;Hello!&#x27;}]</p>
+<p>)</p>
+
+<h1>Grab actual token counts from the response</h1>
+<p>carbon = calc.calculate(</p>
+<p>input_tokens=response.usage.input_tokens,</p>
+<p>output_tokens=response.usage.output_tokens,</p>
+<p>)</p>
+<p>print(carbon)</p>
+<p>```</p>
+
+<p>You could even monkey-patch the client or use a middleware pattern to do this transparently for every call. That&#x27;s a great next-step project.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Visualizing Your Carbon Budget Over Time</h2>
+      </div>
+      <div class="step-body">
+        <p>Let&#x27;s add one more feature — a bar chart showing cumulative energy and CO₂ across a session. This uses <code>rich</code>&#x27;s built-in bar rendering, so no extra dependencies. It&#x27;s a simple but powerful way to spot which prompts are your energy hogs.</p>
+
+<p>This is the kind of thing that makes people go &quot;oh wow&quot; — seeing a visual spike for that one massive prompt compared to a bunch of small ones really drives the point home.</p>
+        
+      <div class="code-block">
+        <span class="code-caption">Two visualizations: (1) a per-prompt energy bar chart showing which prompts in your session are the energy hogs, and (2) a region comparison showing how the same 5000-token prompt produces wildly different CO₂ across grid regions.</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python">from rich.bar import Bar
+from rich.columns import Columns
+
+
+def render_energy_chart(calculator: CarbonPromptCalculator, console: Console):
+    &quot;&quot;&quot;Render a horizontal bar chart of energy per prompt.&quot;&quot;&quot;
+    if not calculator.carbon_history:
+        return
+
+    max_joules = max(c.energy.joules for c in calculator.carbon_history)
+    if max_joules == 0:
+        return
+
+    console.print(&quot;\n[bold cyan]⚡ Energy per Prompt (Joules)[/]\n&quot;)
+
+    for i, entry in enumerate(calculator.carbon_history, 1):
+        bar_width = int((entry.energy.joules / max_joules) * 40)
+        bar_str = &quot;█&quot; * bar_width + &quot;░&quot; * (40 - bar_width)
+
+        # Color based on relative size
+        ratio = entry.energy.joules / max_joules
+        if ratio &gt; 0.75:
+            color = &quot;red&quot;
+        elif ratio &gt; 0.4:
+            color = &quot;yellow&quot;
+        else:
+            color = &quot;green&quot;
+
+        console.print(
+            f&quot;  Prompt {i:&gt;2} │ [{color}]{bar_str}[/] &quot;
+            f&quot;{entry.energy.joules:&gt;8.2f} J  &quot;
+            f&quot;({entry.co2_grams:.3f}g CO₂)&quot;
+        )
+
+    # Cumulative line
+    total_j = sum(c.energy.joules for c in calculator.carbon_history)
+    total_co2 = sum(c.co2_grams for c in calculator.carbon_history)
+    console.print(f&quot;  {&#x27;─&#x27; * 60}&quot;)
+    console.print(
+        f&quot;  [bold]Total[/]    │ {total_j:&gt;8.2f} J  ({total_co2:.3f}g CO₂)  &quot;
+        f&quot;[dim]{_co2_analogy(total_co2)}[/]&quot;
+    )
+
+
+def render_region_comparison(prompt_tokens: int, output_tokens: int, console: Console):
+    &quot;&quot;&quot;Show how the same prompt&#x27;s CO₂ varies across grid regions.&quot;&quot;&quot;
+    console.print(&quot;\n[bold cyan]🌍 Same Prompt, Different Grids[/]\n&quot;)
+
+    results = []
+    for region_key, region in sorted(
+        GRID_REGIONS.items(),
+        key=lambda r: r[1].carbon_intensity_gco2_per_kwh
+    ):
+        calc = CarbonPromptCalculator(
+            gpu_profile_key=&quot;large-h100&quot;, region=region_key
+        )
+        result = calc.calculate(
+            input_tokens=prompt_tokens, output_tokens=output_tokens
+        )
+        results.append((region, result))
+
+    max_co2 = max(r[1].co2_grams for r in results)
+
+    for region, result in results:
+        bar_width = int((result.co2_grams / max_co2) * 35) if max_co2 &gt; 0 else 0
+        bar_str = &quot;█&quot; * bar_width + &quot;░&quot; * (35 - bar_width)
+
+        if region.renewable_pct &gt; 60:
+            color = &quot;green&quot;
+        elif region.renewable_pct &gt; 30:
+            color = &quot;yellow&quot;
+        else:
+            color = &quot;red&quot;
+
+        console.print(
+            f&quot;  {region.name:&lt;30} │ [{color}]{bar_str}[/] &quot;
+            f&quot;{result.co2_grams:.4f}g  &quot;
+            f&quot;[dim]({region.renewable_pct}% renewable)[/]&quot;
+        )
+
+
+# --- Demo the visualizations ---
+console = Console()
+demo_calc = CarbonPromptCalculator(
+    gpu_profile_key=&quot;frontier-h100&quot;, region=&quot;us-east&quot;
+)
+
+# Simulate a realistic session
+prompts = [
+    (50, 150),      # Quick question
+    (200, 800),     # Medium request
+    (500, 3000),    # Long essay generation
+    (100, 400),     # Follow-up question
+    (1000, 5000),   # Massive code generation
+    (30, 100),      # Short clarification
+]
+
+for in_tok, out_tok in prompts:
+    demo_calc.calculate(input_tokens=in_tok, output_tokens=out_tok)
+
+render_energy_chart(demo_calc, console)
+render_region_comparison(1000, 4000, console)</code></pre>
+      </div>
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The region comparison chart is the real eye-opener. Show this to someone and ask: &#x27;Did you know the same AI prompt can produce 40× more CO₂ depending on which data center processes it?&#x27; It&#x27;s a great conversation starter about responsible AI infrastructure.
+      </div>
+        
+      <details class="reveal">
+        <summary>What about training vs inference energy?</summary>
+        <div class="reveal-body"><p>We&#x27;ve been focusing entirely on <em>inference</em> — the energy cost of running a trained model. But training is the elephant in the room:</p>
+
+<ul>
+<li>Training GPT-4 reportedly consumed ~50 GWh of energy (that&#x27;s 50,000,000 kWh)</li>
+<li>Training a single large model can emit as much CO₂ as 300+ transatlantic flights</li>
+<li>However, that cost is amortized across billions of inference calls</li>
+</ul>
+
+<p>The MIT Tech Review investigation highlighted that the industry talks a lot about training costs because they&#x27;re dramatic numbers, but the <em>cumulative</em> inference cost may actually be larger over a model&#x27;s lifetime — especially as AI usage scales to billions of daily queries.</p>
+
+<p>For our calculator, we&#x27;re focused on what <em>you</em> can measure and control: the marginal cost of each prompt you send. But it&#x27;s worth knowing that the model already had a massive carbon debt before you ever typed your first token.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="try-it">
+      <h3>Your Turn</h3>
+      <div class="try-prompt">Your turn — modify the `CarbonPromptCalculator` to support a **daily carbon budget** in grams of CO₂. Add a `budget_gco2` parameter to the constructor and a `budget_remaining` property. When a prompt would exceed the budget, the `calculate` method should still return the estimate but also include a `budget_exceeded: bool` field in the result. Bonus: add a warning bar to the visualization that shows how much budget you&#x27;ve used.</div>
+      
+      <div class="code-block">
+        <span class="code-caption">Starter code</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python">class BudgetCarbonCalculator(CarbonPromptCalculator):
+    &quot;&quot;&quot;Carbon calculator with a daily CO₂ budget.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        budget_gco2: float = 50.0,  # Default 50g daily budget
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.budget_gco2 = budget_gco2
+
+    @property
+    def budget_remaining(self) -&gt; float:
+        # TODO: Calculate remaining budget
+        pass
+
+    @property
+    def budget_used_pct(self) -&gt; float:
+        # TODO: Calculate percentage of budget used
+        pass
+
+    def calculate(self, **kwargs):
+        # TODO: Call parent calculate, then check budget
+        # Hint: add a &#x27;budget_exceeded&#x27; attribute to the result
+        pass</code></pre>
+      </div>
+      
+      <details class="reveal">
+        <summary>Show solution</summary>
+        <div class="reveal-body">
+      <div class="code-block">
+        <span class="code-caption">Solution</span>
+        <button class="copy-btn">COPY</button>
+        <pre><code class="language-python">class BudgetCarbonCalculator(CarbonPromptCalculator):
+    &quot;&quot;&quot;Carbon calculator with a daily CO₂ budget.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        budget_gco2: float = 50.0,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.budget_gco2 = budget_gco2
+
+    @property
+    def budget_remaining(self) -&gt; float:
+        used = sum(c.co2_grams for c in self.carbon_history)
+        return max(0, self.budget_gco2 - used)
+
+    @property
+    def budget_used_pct(self) -&gt; float:
+        used = sum(c.co2_grams for c in self.carbon_history)
+        return min(100.0, (used / self.budget_gco2) * 100)
+
+    def calculate(self, **kwargs) -&gt; CarbonEstimate:
+        result = super().calculate(**kwargs)
+        # Attach budget status to the result
+        result.budget_exceeded = self.budget_remaining &lt;= 0
+        result.budget_remaining_g = self.budget_remaining
+        result.budget_used_pct = self.budget_used_pct
+        return result
+
+
+# --- Demo ---
+budget_calc = BudgetCarbonCalculator(
+    budget_gco2=0.5,  # Tight budget for demo
+    gpu_profile_key=&quot;frontier-h100&quot;,
+    region=&quot;us-east&quot;,
+)
+
+# Fire off some prompts
+for i in range(5):
+    r = budget_calc.calculate(input_tokens=200, output_tokens=1000)
+    status = &quot;🔴 OVER BUDGET&quot; if r.budget_exceeded else &quot;🟢 Within budget&quot;
+    print(
+        f&quot;Prompt {i+1}: {r.co2_grams:.4f}g CO₂ | &quot;
+        f&quot;Budget used: {r.budget_used_pct:.1f}% | &quot;
+        f&quot;Remaining: {r.budget_remaining_g:.4f}g | {status}&quot;
+    )</code></pre>
+      </div></div>
+      </details>
     </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>No content was available today.</p></div>
-      <ul class="takeaways-list"><li>Check back tomorrow for fresh content</li></ul>
+      <div class="recap-body"><h2>What We Built</h2>
+
+<p>We went from &quot;how much energy does an AI prompt use?&quot; to a fully working Python CLI tool that:</p>
+
+<ol>
+<li><strong>Models energy-per-token</strong> for real GPU configurations (A100, H100) with realistic power draw and throughput numbers</li>
+<li><strong>Accounts for data center overhead</strong> via PUE (Power Usage Effectiveness)</li>
+<li><strong>Calculates CO₂ emissions</strong> using regional grid carbon intensity data from EPA eGRID and IEA</li>
+<li><strong>Renders a live dashboard</strong> with per-prompt energy tracking and session summaries</li>
+<li><strong>Visualizes regional differences</strong> showing how the same prompt can have 40× different carbon impact depending on where it&#x27;s processed</li>
+</ol>
+
+<p>This isn&#x27;t just a toy — you can plug this into any API wrapper by capturing the <code>usage.input_tokens</code> and <code>usage.output_tokens</code> from real API responses. The MIT Tech Review investigation showed that transparency about AI energy costs actually changes behavior: once OpenAI and Google started publishing their numbers, the conversation shifted. Your calculator brings that same transparency to the individual developer level.</p></div>
+      <ul class="takeaways-list"><li>A single LLM token costs roughly 2-150 joules depending on model size and GPU — tiny alone, massive at scale</li><li>Data center location matters as much as efficiency: the same prompt on a Nordic hydro grid produces ~40× less CO₂ than on an Indian coal grid</li><li>PUE (Power Usage Effectiveness) adds 10-50% overhead on top of raw GPU power — cooling and infrastructure aren&#x27;t free</li><li>Training energy is enormous but amortized; cumulative inference energy may actually exceed training over a model&#x27;s lifetime</li><li>Making energy costs visible changes behavior — the MIT Tech Review investigation proved this at the industry level</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Try running the pipeline manually</li></ul>
+        <ul><li>Wrap a real OpenAI or Anthropic API client to capture actual token counts per request and feed them into the calculator</li><li>Add a SQLite backend to persist session data and track your carbon footprint across days/weeks/months</li><li>Pull live carbon intensity data from electricityMap.org&#x27;s API instead of static values</li><li>Build a comparison mode that estimates the same prompt across multiple model sizes to find the most energy-efficient option</li><li>Contribute your anonymized data to projects like ML CO2 Impact or CodeCarbon to help build industry benchmarks</li></ul>
       </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://www.technologyreview.com/2026/02/27/1133769/asme-finalist-reporting/" target="_blank" rel="noopener">MIT Technology Review is a 2026 ASME finalist in reporting</a> <span class="source-name">(MIT Tech Review)</span></li><li><a href="https://www.epa.gov/egrid" target="_blank" rel="noopener">EPA eGRID — Emissions &amp; Generation Resource Integrated Database</a> <span class="source-name">(EPA)</span></li><li><a href="https://www.iea.org/reports/electricity-market-report-2024" target="_blank" rel="noopener">IEA Electricity Market Report 2024</a> <span class="source-name">(IEA)</span></li><li><a href="https://www.nvidia.com/en-us/data-center/h100/" target="_blank" rel="noopener">NVIDIA H100 Tensor Core GPU Datasheet</a> <span class="source-name">(NVIDIA)</span></li></ul>
     </div>
     <footer class="session-footer">
       <span>AI Daily Courses</span> &middot; Auto-generated workshop
