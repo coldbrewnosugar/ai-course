@@ -6,27 +6,36 @@
   <title>Tinker</title>
   <meta name="description" content="Daily hands-on workshops — build real projects with AI agents.">
   <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');
 :root {
-  --bg: #F8F9FC;
-  --ink: #1A1D2B;
-  --ink-secondary: #4A5568;
-  --muted: #A0AEC0;
-  --accent: #8B5CF6;
-  --red: #8B5CF6;
-  --blue: #3B82F6;
-  --yellow: #F59E0B;
-  --green: #10B981;
-  --light-gray: #F1F5F9;
-  --border-gray: #E2E8F0;
-  --card-shadow: 0 4px 20px rgba(149,157,165,0.1);
+  --bg: #FAF9F7;
+  --bg-subtle: #F3F1ED;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #78716C;
+  --accent: #0D7377;
+  --accent-hover: #0A5E61;
+  --accent-light: rgba(13,115,119,0.07);
+  --red: #DC2626;
+  --blue: #2563EB;
+  --yellow: #D97706;
+  --green: #059669;
+  --light-gray: #F0EEEB;
+  --border-gray: #E7E5E4;
+  --card-shadow: 0 1px 3px rgba(28,25,23,0.04), 0 4px 16px rgba(28,25,23,0.06);
+  --card-shadow-hover: 0 2px 6px rgba(28,25,23,0.06), 0 8px 24px rgba(28,25,23,0.10);
   --mono: 'JetBrains Mono', monospace;
-  --sans: 'Inter', system-ui, sans-serif;
+  --display: 'Outfit', system-ui, sans-serif;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --sans: 'Outfit', system-ui, sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: var(--sans);
-  background: var(--bg);
+  font-family: var(--serif);
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(28,25,23,0.005) 2px, rgba(28,25,23,0.005) 4px),
+    linear-gradient(180deg, #FAF9F7 0%, #F3F1ED 50%, #FAF9F7 100%);
+  background-attachment: fixed;
   color: var(--ink);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -58,7 +67,7 @@ body {
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.25);
+  box-shadow: 0 4px 14px rgba(13,115,119,0.25);
 }
 .header-mark span {
   font-family: var(--mono);
@@ -67,9 +76,9 @@ body {
   color: #fff;
 }
 .header-text h1 {
-  font-family: var(--sans);
+  font-family: var(--display);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
@@ -101,11 +110,11 @@ body {
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s;
   border-radius: 12px;
-  box-shadow: 0 3px 10px rgba(139,92,246,0.2);
+  box-shadow: 0 3px 10px rgba(13,115,119,0.2);
 }
-.week-nav button:hover { background: #7C3AED; box-shadow: 0 4px 14px rgba(139,92,246,0.3); }
+.week-nav button:hover { background: var(--accent-hover); box-shadow: 0 4px 14px rgba(13,115,119,0.3); }
 .week-nav .week-label {
-  font-family: var(--sans);
+  font-family: var(--display);
   font-size: 0.95rem;
   font-weight: 600;
   min-width: 240px;
@@ -125,11 +134,11 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(149,157,165,0.1);
+  box-shadow: 0 1px 4px rgba(28,25,23,0.06);
 }
 .week-nav .today-btn:hover {
   background: #fff;
-  box-shadow: 0 2px 8px rgba(149,157,165,0.15);
+  box-shadow: 0 2px 8px rgba(28,25,23,0.1);
 }
 
 /* ── Calendar grid ── */
@@ -138,7 +147,7 @@ body {
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
   background: var(--border-gray);
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--card-shadow);
 }
@@ -173,10 +182,11 @@ body {
   border-radius: 10px;
 }
 .day-col.is-today {
-  background: rgba(139,92,246,0.04);
+  background: rgba(13,115,119,0.03);
 }
 .day-col.empty-day {
-  background: var(--light-gray);
+  background: var(--bg);
+  opacity: 0.6;
 }
 .day-courses {
   flex: 1;
@@ -202,20 +212,20 @@ body {
   border-radius: 8px;
 }
 .course-pill:hover {
-  background: rgba(139,92,246,0.08);
-  box-shadow: 0 2px 6px rgba(149,157,165,0.12);
+  background: rgba(13,115,119,0.06);
+  box-shadow: 0 2px 6px rgba(28,25,23,0.08);
 }
 .course-pill .pill-shape {
   flex-shrink: 0;
   font-size: 0.85rem;
   line-height: 1;
 }
-.course-pill.track-general  { border-left: 3px solid var(--red); }
-.course-pill.track-image-gen { border-left: 3px solid var(--blue); }
-.course-pill.track-audio    { border-left: 3px solid var(--yellow); }
-.course-pill.track-general:hover  { background: rgba(139,92,246,0.08); }
-.course-pill.track-image-gen:hover { background: rgba(59,130,246,0.08); }
-.course-pill.track-audio:hover    { background: rgba(245,158,11,0.08); }
+.course-pill.track-general  { border-left: 3px solid #0D7377; }
+.course-pill.track-image-gen { border-left: 3px solid #7C3AED; }
+.course-pill.track-audio    { border-left: 3px solid #B45309; }
+.course-pill.track-general:hover  { background: rgba(13,115,119,0.08); }
+.course-pill.track-image-gen:hover { background: rgba(124,58,237,0.08); }
+.course-pill.track-audio:hover    { background: rgba(180,83,9,0.08); }
 
 /* ── Legend ── */
 .legend {
@@ -238,17 +248,17 @@ body {
   font-size: 1rem;
   line-height: 1;
 }
-.legend-item.track-general  .legend-shape { color: var(--red); }
-.legend-item.track-image-gen .legend-shape { color: var(--blue); }
-.legend-item.track-audio    .legend-shape { color: var(--yellow); }
+.legend-item.track-general  .legend-shape { color: #0D7377; }
+.legend-item.track-image-gen .legend-shape { color: #7C3AED; }
+.legend-item.track-audio    .legend-shape { color: #B45309; }
 .legend-swatch {
   display: inline-block;
   width: 12px; height: 12px;
   border-radius: 3px;
 }
-.legend-item.track-general  .legend-swatch { background: var(--red); }
-.legend-item.track-image-gen .legend-swatch { background: var(--blue); }
-.legend-item.track-audio    .legend-swatch { background: var(--yellow); }
+.legend-item.track-general  .legend-swatch { background: #0D7377; }
+.legend-item.track-image-gen .legend-swatch { background: #7C3AED; }
+.legend-item.track-audio    .legend-swatch { background: #B45309; }
 
 /* ── Stats bar ── */
 .stats-bar {
@@ -284,19 +294,49 @@ footer span { color: var(--ink); font-weight: 600; }
 @media (max-width: 700px) {
   .header { flex-direction: column; align-items: flex-start; }
   .week-grid {
-    grid-template-columns: repeat(7, minmax(80px, 1fr));
-    overflow-x: auto;
-    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-radius: 10px;
   }
-  .day-col { min-height: 120px; }
+  .day-col {
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border-gray);
+  }
+  .day-col:last-child { border-bottom: none; }
+  .day-col.empty-day { display: none; }
+  .day-header {
+    flex-shrink: 0;
+    width: 2.5rem;
+    text-align: left;
+    padding: 0;
+  }
+  .day-num {
+    flex-shrink: 0;
+    width: 2rem;
+    text-align: center;
+    padding: 0;
+    font-size: 1.1rem;
+  }
+  .day-courses {
+    flex: 1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0;
+  }
   .legend { flex-wrap: wrap; gap: 1rem; }
   .week-nav .week-label { min-width: auto; font-size: 0.75rem; }
 }
 @media (max-width: 480px) {
   .header-text h1 { font-size: 1.2rem; }
-  .week-grid {
-    grid-template-columns: repeat(7, minmax(65px, 1fr));
-  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body { background-attachment: scroll; }
 }
 </style>
 </head>
@@ -320,46 +360,46 @@ footer span { color: var(--ink); font-weight: 600; }
 
     <div class="week-nav">
       <button id="prev-week" aria-label="Previous week">&#9664;</button>
-      <div id="week-label" class="week-label">Feb 22 – 28, 2026</div>
+      <div id="week-label" class="week-label">Mar 1 – 7, 2026</div>
       <button id="next-week" aria-label="Next week">&#9654;</button>
       <button id="today-btn" class="today-btn">Today</button>
     </div>
 
     <div class="week-grid" id="week-grid">
-      <div class="day-col empty-day">
+      <div class="day-col is-today empty-day">
         <div class="day-header">SUN</div>
-        <div class="day-num">22</div>
+        <div class="day-num">1</div>
         <div class="day-courses"></div>
       </div>
       <div class="day-col empty-day">
         <div class="day-header">MON</div>
-        <div class="day-num">23</div>
+        <div class="day-num">2</div>
         <div class="day-courses"></div>
       </div>
       <div class="day-col empty-day">
         <div class="day-header">TUE</div>
-        <div class="day-num">24</div>
+        <div class="day-num">3</div>
         <div class="day-courses"></div>
       </div>
       <div class="day-col empty-day">
         <div class="day-header">WED</div>
-        <div class="day-num">25</div>
+        <div class="day-num">4</div>
         <div class="day-courses"></div>
       </div>
       <div class="day-col empty-day">
         <div class="day-header">THU</div>
-        <div class="day-num">26</div>
+        <div class="day-num">5</div>
         <div class="day-courses"></div>
       </div>
       <div class="day-col empty-day">
         <div class="day-header">FRI</div>
-        <div class="day-num">27</div>
+        <div class="day-num">6</div>
         <div class="day-courses"></div>
       </div>
-      <div class="day-col is-today">
+      <div class="day-col empty-day">
         <div class="day-header">SAT</div>
-        <div class="day-num">28</div>
-        <div class="day-courses"><a href="general/2026-02-28.html" class="course-pill track-general" title="Context Mode: Slash Your MCP Context Burn by 98%"><span class="pill-shape">●</span>Context Mode: Slash Your MCP Context Burn by 98%</a></div>
+        <div class="day-num">7</div>
+        <div class="day-courses"></div>
       </div>
     </div>
 
@@ -368,7 +408,7 @@ footer span { color: var(--ink); font-weight: 600; }
     <div class="stats-bar">
       <div><strong>1</strong> session</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-02-28 23:58 UTC</strong></div>
+      <div>Updated <strong>2026-03-01 00:40 UTC</strong></div>
     </div>
 
     <footer>
@@ -382,9 +422,9 @@ const COURSES = {"2026-02-28":{"general":{"title":"Context Mode: Slash Your MCP 
 const TRACK_ORDER = ["general", "image-gen", "audio"];
 const TRACK_META = {"general":{"shape":"●","css":"track-general"},"image-gen":{"shape":"■","css":"track-image-gen"},"audio":{"shape":"▲","css":"track-audio"}};
 const DAY_NAMES = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
-const TODAY = "2026-02-28";
+const TODAY = "2026-03-01";
 
-let refDate = new Date("2026-02-22" + "T00:00:00");
+let refDate = new Date("2026-03-01" + "T00:00:00");
 
 function fmt(d) {
   const y = d.getFullYear();
