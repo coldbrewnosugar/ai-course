@@ -161,45 +161,18 @@ body {
   border-color: var(--ink);
 }
 
-/* ── Day-card feed ── */
-.day-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+/* ── Day card ── */
 .day-card {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1rem;
   box-shadow: var(--shadow-sm);
+  min-height: 80px;
 }
 .day-card.is-today {
   background: var(--accent-light);
   border-color: var(--accent-subtle);
-}
-.day-card-header {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
-}
-.day-card-dow {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.day-card-date {
-  font-family: var(--sans);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-.day-card.is-today .day-card-dow {
-  color: var(--accent);
 }
 .day-card-pills {
   display: flex;
@@ -318,8 +291,9 @@ footer span { color: var(--ink); font-weight: 600; }
   .legend { flex-wrap: wrap; gap: 0.75rem; }
   .week-nav .week-label { min-width: auto; font-size: 0.75rem; }
   .week-nav { gap: 0.5rem; }
-  .day-card { padding: 0.85rem; }
+  .day-card { padding: 0.75rem; }
   .session-pill { font-size: 0.72rem; }
+  .week-nav .week-label { min-width: auto; }
 }
 @media (max-width: 480px) {
   .header-text h1 { font-size: 1.2rem; }
@@ -352,20 +326,14 @@ footer span { color: var(--ink); font-weight: 600; }
     </div>
 
     <div class="week-nav">
-      <button id="prev-week" aria-label="Previous week">&#9664;</button>
-      <div id="week-label" class="week-label">Mar 1 – 7, 2026</div>
-      <button id="next-week" aria-label="Next week">&#9654;</button>
+      <button id="prev-day" aria-label="Previous day">&#9664;</button>
+      <div id="day-label" class="week-label">Sun, Mar 1, 2026</div>
+      <button id="next-day" aria-label="Next day">&#9654;</button>
       <button id="today-btn" class="today-btn">Today</button>
     </div>
 
-    <div class="day-feed" id="day-feed">
-      <div class="day-card is-today">
-        <div class="day-card-header">
-          <span class="day-card-dow">SUN</span>
-          <span class="day-card-date">Mar 1</span>
-        </div>
-        <div class="day-card-pills"><a href="general/2026-03-01-3.html" class="session-pill track-general" title="OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents"><span class="pill-shape">●</span>OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents</a><a href="general/2026-03-01-2.html" class="session-pill track-general" title="Hermes Agent: Build a Persistent Personal AI That Lives on Your Server"><span class="pill-shape">●</span>Hermes Agent: Build a Persistent Personal AI That Lives on Your Server</a><a href="general/2026-03-01-1.html" class="session-pill track-general" title="Vectorless RAG with PageIndex: Ditch the Vector DB"><span class="pill-shape">●</span>Vectorless RAG with PageIndex: Ditch the Vector DB</a></div>
-      </div>
+    <div class="day-card" id="day-card">
+      <div class="day-card-pills"><a href="general/2026-03-01-3.html" class="session-pill track-general" title="OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents"><span class="pill-shape">●</span>OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents</a><a href="general/2026-03-01-2.html" class="session-pill track-general" title="Hermes Agent: Build a Persistent Personal AI That Lives on Your Server"><span class="pill-shape">●</span>Hermes Agent: Build a Persistent Personal AI That Lives on Your Server</a><a href="general/2026-03-01-1.html" class="session-pill track-general" title="Vectorless RAG with PageIndex: Ditch the Vector DB"><span class="pill-shape">●</span>Vectorless RAG with PageIndex: Ditch the Vector DB</a></div>
     </div>
 
     <div class="legend"><div class="legend-item track-general"><span class="legend-swatch"></span><span class="legend-shape">●</span>General AI<span style="color:var(--muted);font-size:0.6rem">(Daily)</span></div><div class="legend-item track-image-gen"><span class="legend-swatch"></span><span class="legend-shape">■</span>Image &amp; Video Generation<span style="color:var(--muted);font-size:0.6rem">(M/W/F)</span></div><div class="legend-item track-audio"><span class="legend-swatch"></span><span class="legend-shape">▲</span>Audio AI<span style="color:var(--muted);font-size:0.6rem">(T/Th)</span></div></div>
@@ -373,7 +341,7 @@ footer span { color: var(--ink); font-weight: 600; }
     <div class="stats-bar">
       <div><strong>4</strong> sessions</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-03-01 17:25 UTC</strong></div>
+      <div>Updated <strong>2026-03-01 17:32 UTC</strong></div>
     </div>
 
     <footer>
@@ -386,12 +354,11 @@ footer span { color: var(--ink); font-weight: 600; }
 const COURSES = {"2026-03-01":{"general":[{"title":"OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents","url":"general/2026-03-01-3.html","slot":"3"},{"title":"Hermes Agent: Build a Persistent Personal AI That Lives on Your Server","url":"general/2026-03-01-2.html","slot":"2"},{"title":"Vectorless RAG with PageIndex: Ditch the Vector DB","url":"general/2026-03-01-1.html","slot":"1"}]},"2026-02-28":{"general":[{"title":"Context Mode: Slash Your MCP Context Burn by 98%","url":"general/2026-02-28.html","slot":null}]}};
 const TRACK_ORDER = ["general", "image-gen", "audio"];
 const TRACK_META = {"general":{"shape":"●","css":"track-general"},"image-gen":{"shape":"■","css":"track-image-gen"},"audio":{"shape":"▲","css":"track-audio"}};
-const TRACK_LABELS = {"general":"General AI","image-gen":"Image & Video Generation","audio":"Audio AI"};
-const DAY_NAMES = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const TODAY = "2026-03-01";
 
-let refDate = new Date("2026-03-01" + "T00:00:00");
+let refDate = new Date(TODAY + "T00:00:00");
 
 function fmt(d) {
   const y = d.getFullYear();
@@ -400,91 +367,58 @@ function fmt(d) {
   return y+"-"+m+"-"+day;
 }
 
-function getWeekDates(start) {
-  const dates = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    dates.push(d);
-  }
-  return dates;
-}
-
 function esc(s) {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-function renderWeek() {
-  const dates = getWeekDates(refDate);
-  const feed = document.getElementById("day-feed");
-  const end = dates[6];
-  const startM = dates[0].toLocaleDateString("en",{month:"short"});
-  const endM = end.toLocaleDateString("en",{month:"short"});
-  let label;
-  if (dates[0].getMonth() === end.getMonth()) {
-    label = startM+" "+dates[0].getDate()+" \u2013 "+end.getDate()+", "+end.getFullYear();
-  } else {
-    label = startM+" "+dates[0].getDate()+" \u2013 "+endM+" "+end.getDate()+", "+end.getFullYear();
-  }
-  document.getElementById("week-label").textContent = label;
+function renderDay() {
+  const ds = fmt(refDate);
+  const card = document.getElementById("day-card");
+  const isToday = ds === TODAY;
 
-  // Collect days with sessions, reverse chronological
-  const cards = [];
-  dates.forEach((d) => {
-    const ds = fmt(d);
-    const dayData = COURSES[ds] || {};
-    const hasCourses = Object.values(dayData).some(v => Array.isArray(v) ? v.length > 0 : !!v);
-    if (hasCourses) cards.push({d, ds, dayData});
-  });
-  cards.reverse();
+  // Update label
+  const dow = DAY_NAMES[refDate.getDay()];
+  const label = dow + ", " + MONTH_NAMES[refDate.getMonth()] + " " + refDate.getDate() + ", " + refDate.getFullYear();
+  document.getElementById("day-label").textContent = label;
 
-  if (cards.length === 0) {
-    feed.innerHTML = '<div class="empty-week-msg">No sessions this week</div>';
+  // Toggle today highlight on card
+  card.classList.toggle("is-today", isToday);
+
+  const dayData = COURSES[ds] || {};
+  const hasCourses = Object.values(dayData).some(v => Array.isArray(v) ? v.length > 0 : !!v);
+
+  if (!hasCourses) {
+    card.innerHTML = '<div class="empty-week-msg">No sessions on this day</div>';
     return;
   }
 
-  let html = "";
-  cards.forEach(({d, ds, dayData}) => {
-    const isToday = ds === TODAY;
-    const todayCls = isToday ? " is-today" : "";
-    const dow = DAY_NAMES[d.getDay()];
-    const dateDisp = MONTH_NAMES[d.getMonth()] + " " + d.getDate();
-
-    let pillsHtml = "";
-    TRACK_ORDER.forEach(t => {
-      if (!dayData[t]) return;
-      const m = TRACK_META[t];
-      const entries = Array.isArray(dayData[t]) ? dayData[t] : [dayData[t]];
-      entries.forEach(entry => {
-        const title = esc(entry.title);
-        pillsHtml += '<a href="'+entry.url+'" class="session-pill '+m.css+'" title="'+title+'">' +
-          '<span class="pill-shape">'+m.shape+'</span>'+title+'</a>';
-      });
+  let pillsHtml = "";
+  TRACK_ORDER.forEach(t => {
+    if (!dayData[t]) return;
+    const m = TRACK_META[t];
+    const entries = Array.isArray(dayData[t]) ? dayData[t] : [dayData[t]];
+    entries.forEach(entry => {
+      const title = esc(entry.title);
+      pillsHtml += '<a href="'+entry.url+'" class="session-pill '+m.css+'" title="'+title+'">' +
+        '<span class="pill-shape">'+m.shape+'</span>'+title+'</a>';
     });
-
-    html += '<div class="day-card'+todayCls+'"><div class="day-card-header">' +
-      '<span class="day-card-dow">'+dow+'</span>' +
-      '<span class="day-card-date">'+dateDisp+'</span>' +
-      '</div><div class="day-card-pills">'+pillsHtml+'</div></div>';
   });
-  feed.innerHTML = html;
+
+  card.innerHTML = '<div class="day-card-pills">'+pillsHtml+'</div>';
 }
 
 function navigate(offset) {
-  refDate.setDate(refDate.getDate() + offset * 7);
-  renderWeek();
+  refDate.setDate(refDate.getDate() + offset);
+  renderDay();
 }
 
 function goToday() {
-  const t = new Date(TODAY + "T00:00:00");
-  const wd = t.getDay();
-  refDate = new Date(t);
-  refDate.setDate(refDate.getDate() - wd);
-  renderWeek();
+  refDate = new Date(TODAY + "T00:00:00");
+  renderDay();
 }
 
-document.getElementById("prev-week").addEventListener("click", () => navigate(-1));
-document.getElementById("next-week").addEventListener("click", () => navigate(1));
+document.getElementById("prev-day").addEventListener("click", () => navigate(-1));
+document.getElementById("next-day").addEventListener("click", () => navigate(1));
 document.getElementById("today-btn").addEventListener("click", goToday);
 
   </script>
