@@ -350,16 +350,16 @@ footer span { color: var(--ink); font-weight: 600; }
       <button id="today-btn" class="today-btn">Today</button>
     </div>
 
-    <div class="day-card is-empty" id="day-card">
-      <div class="empty-week-msg">No sessions on this day</div>
+    <div class="day-card" id="day-card">
+      <div class="day-card-pills"><a href="general/2026-03-02-3.html" class="session-pill track-general" title="Sandbox AI Code Execution with Alibaba's OpenSandbox"><span class="pill-shape">●</span>Sandbox AI Code Execution with Alibaba's OpenSandbox</a><a href="general/2026-03-02-2.html" class="session-pill track-general" title="Build a Super Agent with DeerFlow 2.0"><span class="pill-shape">●</span>Build a Super Agent with DeerFlow 2.0</a><a href="general/2026-03-02-1.html" class="session-pill track-general" title="Real-Time Vision AI Agents with Stream's Open Vision Agents"><span class="pill-shape">●</span>Real-Time Vision AI Agents with Stream's Open Vision Agents</a><a href="image-gen/2026-03-02-3.html" class="session-pill track-image-gen" title="DeerFlow 2.0: Build Creative AI Pipelines with Sub-Agent Orchestration"><span class="pill-shape">■</span>DeerFlow 2.0: Build Creative AI Pipelines with Sub-Agent Orchestration</a><a href="image-gen/2026-03-02-2.html" class="session-pill track-image-gen" title="GUI-Owl 1.5: Multi-Platform Vision Agent Models You Can Run Today"><span class="pill-shape">■</span>GUI-Owl 1.5: Multi-Platform Vision Agent Models You Can Run Today</a><a href="image-gen/2026-03-02-1.html" class="session-pill track-image-gen" title="Build Real-Time Vision AI Agents with Stream's Open Vision Agents"><span class="pill-shape">■</span>Build Real-Time Vision AI Agents with Stream's Open Vision Agents</a></div>
     </div>
 
     <div class="legend"><div class="legend-item track-general"><span class="legend-swatch"></span><span class="legend-shape">●</span>General AI<span style="color:var(--muted);font-size:0.6rem">(Daily)</span></div><div class="legend-item track-image-gen"><span class="legend-swatch"></span><span class="legend-shape">■</span>Image &amp; Video Generation<span style="color:var(--muted);font-size:0.6rem">(M/W/F)</span></div><div class="legend-item track-audio"><span class="legend-swatch"></span><span class="legend-shape">▲</span>Audio AI<span style="color:var(--muted);font-size:0.6rem">(T/Th)</span></div></div>
 
     <div class="stats-bar">
-      <div><strong>5</strong> sessions</div>
+      <div><strong>11</strong> sessions</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-03-02 04:14 UTC</strong></div>
+      <div>Updated <strong>2026-03-02 04:42 UTC</strong></div>
     </div>
 
     <footer>
@@ -369,7 +369,7 @@ footer span { color: var(--ink); font-weight: 600; }
   </div>
   <script>
 
-const COURSES = {"2026-03-01":{"general":[{"title":"Vectorless RAG with PageIndex: Ditch Your Vector DB","url":"general/2026-03-01.html","slot":null},{"title":"OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents","url":"general/2026-03-01-3.html","slot":"3"},{"title":"Hermes Agent: Build a Persistent Personal AI That Lives on Your Server","url":"general/2026-03-01-2.html","slot":"2"},{"title":"Vectorless RAG with PageIndex: Ditch the Vector DB","url":"general/2026-03-01-1.html","slot":"1"}]},"2026-02-28":{"general":[{"title":"Context Mode: Slash Your MCP Context Burn by 98%","url":"general/2026-02-28.html","slot":null}]}};
+const COURSES = {"2026-03-02":{"general":[{"title":"Sandbox AI Code Execution with Alibaba's OpenSandbox","url":"general/2026-03-02-3.html","slot":"3"},{"title":"Build a Super Agent with DeerFlow 2.0","url":"general/2026-03-02-2.html","slot":"2"},{"title":"Real-Time Vision AI Agents with Stream's Open Vision Agents","url":"general/2026-03-02-1.html","slot":"1"}],"image-gen":[{"title":"DeerFlow 2.0: Build Creative AI Pipelines with Sub-Agent Orchestration","url":"image-gen/2026-03-02-3.html","slot":"3"},{"title":"GUI-Owl 1.5: Multi-Platform Vision Agent Models You Can Run Today","url":"image-gen/2026-03-02-2.html","slot":"2"},{"title":"Build Real-Time Vision AI Agents with Stream's Open Vision Agents","url":"image-gen/2026-03-02-1.html","slot":"1"}]},"2026-03-01":{"general":[{"title":"Vectorless RAG with PageIndex: Ditch Your Vector DB","url":"general/2026-03-01.html","slot":null},{"title":"OpenSandbox: Spin Up Secure Sandboxes for Your AI Agents","url":"general/2026-03-01-3.html","slot":"3"},{"title":"Hermes Agent: Build a Persistent Personal AI That Lives on Your Server","url":"general/2026-03-01-2.html","slot":"2"},{"title":"Vectorless RAG with PageIndex: Ditch the Vector DB","url":"general/2026-03-01-1.html","slot":"1"}]},"2026-02-28":{"general":[{"title":"Context Mode: Slash Your MCP Context Burn by 98%","url":"general/2026-02-28.html","slot":null}]}};
 const TRACK_ORDER = ["general", "image-gen", "audio"];
 const TRACK_META = {"general":{"shape":"●","css":"track-general"},"image-gen":{"shape":"■","css":"track-image-gen"},"audio":{"shape":"▲","css":"track-audio"}};
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];

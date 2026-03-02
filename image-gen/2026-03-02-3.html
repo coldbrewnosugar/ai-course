@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeerFlow 2.0: Build Creative AI Pipelines with Sub-Agent Orchestration — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-image-gen">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>One Agent Is Cool. A Team of Agents Is a Studio.</h1>
+      <div class="hero-subtitle">DeerFlow 2.0 lets you orchestrate sub-agents, memory, and sandboxed code execution into creative pipelines — and it just hit #1 on GitHub Trending. Let&#x27;s build with it.</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">multi-agent</span> <span class="tag">orchestration</span> <span class="tag">creative-pipelines</span> <span class="tag">open-source</span> <span class="tag">sandboxes</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>On February 28th, 2026, ByteDance dropped <strong>DeerFlow 2.0</strong> — a ground-up rewrite of their open-source super-agent harness — and it immediately claimed the #1 spot on GitHub Trending.</p>
+
+<p>Here&#x27;s why that matters: most AI agent frameworks give you <em>one</em> agent that does everything. DeerFlow flips that. It&#x27;s an <strong>orchestration layer</strong> — a coordinator that spins up specialized sub-agents, gives them sandboxed environments to execute code safely, plugs in long-term memory, and wires everything together with an extensible skills system.</p>
+
+<p>Think of it like the difference between a solo musician and a film production crew. The solo musician is talented, but the crew has a director, a cinematographer, a sound engineer, and an editor — each doing what they&#x27;re best at, coordinated by a shared vision.</p>
+
+<p>Today we&#x27;re going to set up DeerFlow locally, understand its architecture, and build a <strong>creative visual pipeline</strong> where one agent researches references, another generates images via API, and a coordinator iterates on the results. The cool part? You&#x27;ll mostly be <em>talking to your AI agent</em> about what to build, not writing code by hand.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Get the Mental Model: How DeerFlow Orchestrates Agents</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we touch any config files, let&#x27;s understand what DeerFlow actually <em>is</em> — because honestly, the architecture confused me at first too.</p>
+
+<p>Imagine you&#x27;re running a small creative agency. You&#x27;ve got:</p>
+
+<ul>
+<li><strong>A project manager</strong> (the coordinator agent) who breaks tasks into pieces and assigns them</li>
+<li><strong>Specialists</strong> (sub-agents) — a researcher, an image generator, a copywriter — each with their own desk and tools</li>
+<li><strong>A shared filing cabinet</strong> (memory) so everyone can see past work</li>
+<li><strong>Locked offices</strong> (sandboxes) where specialists can run experiments without messing up the main workspace</li>
+<li><strong>A skills handbook</strong> (the skills system) that defines what each specialist can do</li>
+</ul>
+
+<p>DeerFlow&#x27;s architecture maps almost 1:1 to this. The <strong>coordinator</strong> receives a task, decomposes it, and dispatches sub-tasks to <strong>sub-agents</strong>. Each sub-agent has access to <strong>skills</strong> (which are basically tool definitions — &quot;you can search the web,&quot; &quot;you can generate images,&quot; &quot;you can execute Python&quot;). When a sub-agent needs to run code, it does so in a <strong>sandbox</strong> — either a local process or a Docker container — so nothing dangerous touches your actual machine.</p>
+
+<p>The <strong>memory system</strong> persists context across sessions. If your image-generation agent learned that a certain style prompt works well for product shots last Tuesday, it can recall that next time.</p>
+
+<p>And the whole thing is <strong>event-driven</strong> — agents emit events (&quot;task started,&quot; &quot;image generated,&quot; &quot;error encountered&quot;), and the coordinator reacts. It&#x27;s not a rigid pipeline; it&#x27;s more like a conversation between specialists.</p>
+        
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        DeerFlow 2.0 is a complete rewrite — it shares zero code with v1. If you&#x27;ve used the original Deep Research framework, forget what you know. The v1 branch is still maintained separately.
+      </div>
+        
+      <details class="reveal">
+        <summary>How is this different from just chaining API calls?</summary>
+        <div class="reveal-body"><p>Great question. You <em>could</em> chain API calls yourself — call a search API, pass results to an image API, evaluate the output. But you&#x27;d be writing all the glue code: error handling, retries, state management, context passing between steps.</p>
+
+<p>DeerFlow gives you that glue as infrastructure. The coordinator handles task decomposition, the sandbox handles safe execution, the memory system handles context. You just define <em>what</em> each agent can do (skills) and <em>what</em> you want done (the task). The orchestration layer figures out the <em>how</em>.</p>
+
+<p>It&#x27;s the difference between building a car from parts vs. driving one. Both get you somewhere, but one lets you focus on the destination.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What&#x27;s &#x27;event-driven&#x27; actually mean here?</summary>
+        <div class="reveal-body"><p>In a traditional pipeline, Step 1 finishes → Step 2 starts → Step 3 starts. It&#x27;s linear.</p>
+
+<p>In an event-driven system, agents emit <em>events</em> — structured messages like &quot;I found 5 reference images&quot; or &quot;Image generation failed with error X.&quot; The coordinator <em>subscribes</em> to these events and decides what to do next. Maybe it retries. Maybe it asks a different agent. Maybe it adjusts the task.</p>
+
+<p>This is what makes DeerFlow feel more like a team collaborating than a script running. The coordinator can adapt mid-task based on what&#x27;s happening.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Stand Up DeerFlow with Docker</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, let&#x27;s get this thing running. DeerFlow recommends Docker, and honestly it&#x27;s the right call — the sandbox system <em>needs</em> container isolation to be safe, and Docker gives you a consistent environment regardless of your OS.</p>
+
+<p>Here&#x27;s where we start talking to our AI agent. Instead of copying commands from a README, let&#x27;s have our agent walk us through the setup with our specific situation in mind.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to generate a complete DeerFlow 2.0 local setup script tailored to your machine — including cloning, config generation, model configuration, and Docker launch.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What model provider are you planning to use? OpenAI? Anthropic? A local model? Your agent needs to know this to configure config.yaml correctly.</li><li>Do you already have Docker installed and running? What about Node.js 22+ and pnpm?</li><li>Where do you want to keep your API keys — in a .env file, as environment variables, or hardcoded? (Hint: one of these is a bad idea for production.)</li><li>DeerFlow has multiple sandbox modes. For a first setup, which would be simplest?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a step-by-step walkthrough customized to your setup. The key pieces are: (1) clone the repo, (2) run <code>make config</code> to generate local config files from templates, (3) edit <code>config.yaml</code> to add your model — the important bit looks like this:</p>
+
+<p>```yaml</p>
+<p>models:</p>
+<ul>
+<li>name: gpt-4</li>
+</ul>
+<p>use: langchain_openai:ChatOpenAI</p>
+<p>model: gpt-4</p>
+<p>api_key: $OPENAI_API_KEY</p>
+<p>```</p>
+
+<p>(4) set your API keys in <code>.env</code>, and (5) run <code>make docker-init</code> then <code>make docker-start</code>. The agent should also mention that <code>docker-init</code> pulls the sandbox image (only needed once) and that the app will be at <code>http://localhost:2026</code>.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        You&#x27;ll need at least two API keys: one for your LLM provider (OpenAI, Anthropic, etc.) and one for Tavily (web search). DeerFlow uses Tavily for its research agent&#x27;s web searching capability. Grab a free key at tavily.com.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Don&#x27;t put API keys directly in config.yaml for anything beyond local tinkering. Use the .env file or environment variables. If you accidentally commit a key to git, rotate it immediately.
+      </div>
+        
+      <details class="reveal">
+        <summary>What&#x27;s this LangChain class path about?</summary>
+        <div class="reveal-body"><p>Notice the <code>use: langchain_openai:ChatOpenAI</code> line in the config? DeerFlow uses LangChain under the hood as its model abstraction layer. That class path tells DeerFlow <em>which LangChain chat model class</em> to instantiate.</p>
+
+<p>This is actually clever — it means you can use <em>any</em> model that has a LangChain integration without DeerFlow needing to know about it specifically. Want to use a local Ollama model? Point it to the Ollama LangChain class. Want to use Anthropic&#x27;s Claude? Use <code>langchain_anthropic:ChatAnthropic</code>. The config becomes the only thing you change.</p>
+
+<p>It&#x27;s like a universal power adapter — DeerFlow doesn&#x27;t care what brand your appliance is, as long as it speaks the LangChain interface.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Docker vs. local sandbox — what&#x27;s the real difference?</summary>
+        <div class="reveal-body"><p>In <strong>local mode</strong>, when a sub-agent needs to execute code (say, a Python script that calls an image API), it runs directly on your machine. Fast, but risky — a buggy or malicious script has access to your filesystem.</p>
+
+<p>In <strong>Docker mode</strong>, that same script runs inside an isolated container. It can&#x27;t touch your files, can&#x27;t access your network in unexpected ways, and gets cleaned up when it&#x27;s done. It&#x27;s slower (container startup overhead) but much safer.</p>
+
+<p>For learning and experimenting, local mode is fine. For anything you&#x27;d show someone else or run with untrusted inputs, use Docker. DeerFlow&#x27;s <code>config.yaml</code> lets you switch between them with a single line change.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have DeerFlow running at http://localhost:2026 with at least one model configured. Open it in your browser — you should see the DeerFlow interface. If you&#x27;re stuck on Docker, try `make check` to verify your prerequisites.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Design Your Creative Pipeline: Research → Generate → Iterate</h2>
+      </div>
+      <div class="step-body">
+        <p>Now for the fun part. We&#x27;re going to build a <strong>creative visual pipeline</strong> — a multi-agent workflow where:</p>
+
+<ol>
+<li><strong>Research Agent</strong> — searches for visual references and style inspiration based on a creative brief</li>
+<li><strong>Generator Agent</strong> — takes the research and produces images using an API (like DALL-E or Stability AI) inside a sandbox</li>
+<li><strong>Coordinator Agent</strong> — evaluates the results, decides if they&#x27;re good enough, and either ships them or sends feedback for another round</li>
+</ol>
+
+<p>This is where DeerFlow&#x27;s skills system shines. Each agent gets different skills — the researcher gets web search, the generator gets sandboxed code execution and image API access, and the coordinator gets evaluation and routing logic.</p>
+
+<p>Let&#x27;s have our AI agent help us design the skill definitions.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your AI agent to design the skill definitions for a three-agent creative pipeline in DeerFlow — a researcher, an image generator, and a coordinator.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What does each agent need to be *able* to do? Think about the tools each specialist needs on their desk.</li><li>The generator agent needs to call an external image API from inside a sandbox. What does that imply about network access and API key handling?</li><li>How should the coordinator decide if an image is &#x27;good enough&#x27;? What criteria could it evaluate?</li><li>DeerFlow skills are defined declaratively. What information does a skill definition need — a name, a description, input/output schemas?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you three skill definitions described in plain language with their config structure. The <strong>researcher</strong> skill needs web search (Tavily) and the ability to return structured reference data — mood boards, color palettes, style keywords. The <strong>generator</strong> skill needs sandboxed Python execution with network access to call an image generation API, taking a prompt and style parameters as input and returning image URLs. The <strong>coordinator</strong> skill is the interesting one — it needs access to a vision model to evaluate generated images against the original brief, returning a score and specific feedback. The agent should explain that skills are registered in DeerFlow&#x27;s config and mapped to sub-agents, so the coordinator knows who can do what.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Skills in DeerFlow are like job descriptions — they tell the coordinator what each sub-agent is capable of without revealing implementation details. The coordinator doesn&#x27;t need to know HOW the generator makes images, just that it CAN and what inputs/outputs to expect.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why sandboxed execution for image generation?</summary>
+        <div class="reveal-body"><p>You might wonder — why not just call the DALL-E API directly from the coordinator? Why bother with a sandbox?</p>
+
+<p>Two reasons. First, <strong>isolation</strong>. The image generation code might need to install Python packages, manipulate files, do retries with backoff — messy operational stuff you don&#x27;t want leaking into the coordinator&#x27;s clean orchestration logic.</p>
+
+<p>Second, <strong>flexibility</strong>. Today you&#x27;re calling DALL-E. Tomorrow you might want to run a local Stable Diffusion model, which means loading a 4GB model into GPU memory and running inference. That&#x27;s <em>definitely</em> something you want in a container, not in your coordinator process.</p>
+
+<p>The sandbox is like giving each specialist their own workshop. They can make a mess in there — as long as they hand back clean results.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does the coordinator &#x27;see&#x27; generated images?</summary>
+        <div class="reveal-body"><p>This is the cool part. The coordinator uses a <strong>vision-capable model</strong> (like GPT-4o or Claude) to actually look at the generated images and evaluate them against the original brief.</p>
+
+<p>It&#x27;s not just checking if the API returned a 200 status. It&#x27;s asking: Does this image match the style references? Is the composition right? Are the colors on-brand? It can articulate <em>specific</em> feedback — &#x27;the lighting is too warm, try cooler tones&#x27; — and send that back to the generator for another round.</p>
+
+<p>This is genuinely new behavior that wasn&#x27;t practical before multimodal models. You&#x27;re building a creative director that can actually <em>see</em>.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">Your generator agent needs to call an image API from inside a DeerFlow sandbox. How should the API key get into the sandbox?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">Pass it through DeerFlow&#x27;s environment config so it&#x27;s injected into the sandbox at runtime</label>
+          <div class="decision-feedback correct">&#10003; Correct! Correct! DeerFlow&#x27;s sandbox system supports environment variable injection from the host&#x27;s .env file. The API key lives securely on the host and gets passed into the container at runtime — it&#x27;s never hardcoded in the skill definition or the generated code. This is the same pattern Docker uses for secrets.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Hardcode it in the skill&#x27;s Python code that runs inside the sandbox</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Never hardcode API keys in code — especially code that gets generated dynamically by an AI agent. If the code gets logged, cached, or shared, your key is exposed. DeerFlow&#x27;s environment injection exists specifically to avoid this.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Have the coordinator agent pass it as a parameter in the task assignment</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Close, but risky. Task parameters often get logged in DeerFlow&#x27;s event system for debugging. Passing secrets through the task chain means they show up in logs and memory. Environment injection keeps secrets out of the data plane entirely.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Wire It Up: Configuring the Coordinator and Memory</h2>
+      </div>
+      <div class="step-body">
+        <p>We&#x27;ve got our skill definitions designed. Now we need to tell DeerFlow&#x27;s coordinator how to actually <em>run</em> this pipeline — what order to try things, when to iterate, and when to stop.</p>
+
+<p>This is where DeerFlow&#x27;s <strong>context engineering</strong> comes in. The coordinator isn&#x27;t following a rigid flowchart. It&#x27;s an LLM that receives a system prompt describing the pipeline, the available sub-agents and their skills, and rules for when to iterate. Think of it less like programming and more like writing a project brief for a very capable intern.</p>
+
+<p>The <strong>memory system</strong> adds another layer. As your pipeline runs, DeerFlow stores results, feedback, and decisions in long-term memory. Next time you run a similar creative brief, the coordinator can recall what worked — &quot;last time we did product photography, the client preferred muted earth tones over bright primaries.&quot;</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to generate a coordinator system prompt and DeerFlow memory configuration for your creative pipeline — including iteration rules, quality thresholds, and what to remember across sessions.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How many iteration rounds should the coordinator allow before accepting the best result? What prevents infinite loops?</li><li>What should the coordinator&#x27;s system prompt emphasize — speed, quality, variety? This shapes its decision-making personality.</li><li>What&#x27;s worth remembering across sessions? Style preferences? Successful prompts? Failed approaches?</li><li>How should the coordinator handle errors — like the image API being down or returning unexpected results?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you two things. First, a <strong>coordinator system prompt</strong> written in natural language — something like &#x27;You are a creative director coordinating a visual production pipeline. You have access to a researcher and an image generator. For each brief, first dispatch research to gather style references, then use those references to craft a detailed image generation prompt. Evaluate results against the brief. Allow up to 3 iterations. If quality score exceeds 8/10, deliver. If still below after 3 rounds, deliver the best with a note about what could improve.&#x27;</p>
+
+<p>Second, a <strong>memory configuration</strong> that tells DeerFlow what to persist — successful prompt templates, style preferences per project, and common failure patterns. The agent should explain that memory entries are tagged and searchable, so the coordinator can query &#x27;what worked for product photography&#x27; in future sessions.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The coordinator&#x27;s system prompt IS your pipeline definition. Spend time getting it right. A well-written prompt with clear rules will make the coordinator behave predictably. A vague prompt will make it creative but unpredictable — sometimes that&#x27;s what you want, sometimes it isn&#x27;t.
+      </div>
+        
+      <details class="reveal">
+        <summary>What is &#x27;context engineering&#x27; in DeerFlow?</summary>
+        <div class="reveal-body"><p>Context engineering is a term the DeerFlow team uses for the practice of carefully designing what information each agent sees at each point in the workflow.</p>
+
+<p>It&#x27;s not just &#x27;give the agent all the context.&#x27; It&#x27;s <em>curating</em> context. The researcher doesn&#x27;t need to see previous image generation failures — that would distract it. The generator doesn&#x27;t need to see every search result — just the synthesized style brief. The coordinator sees everything but at different levels of detail.</p>
+
+<p>Think of it like a well-run meeting. Everyone doesn&#x27;t need every email thread. They need a briefing document tailored to their role. DeerFlow&#x27;s skill and sub-agent system lets you control exactly what context each agent receives, which dramatically improves output quality.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does long-term memory actually work?</summary>
+        <div class="reveal-body"><p>DeerFlow&#x27;s memory system is essentially a <strong>vector store with metadata tagging</strong>. When the coordinator decides something is worth remembering — a successful prompt, a style preference, a learned pattern — it writes a memory entry with:</p>
+
+<ul>
+<li><strong>Content</strong>: the actual thing to remember</li>
+<li><strong>Tags</strong>: searchable labels (project name, client, style, etc.)</li>
+<li><strong>Relevance score</strong>: how important this is for future recall</li>
+</ul>
+
+<p>When a new task comes in, the coordinator queries memory with the task&#x27;s context and gets back relevant past experiences, ranked by similarity and recency. It&#x27;s like how you might think &#x27;oh, this reminds me of that project we did for Client X — we learned that...&#x27;</p>
+
+<p>The memory persists across sessions, so your pipeline genuinely gets better over time. That&#x27;s a meaningful difference from starting from scratch every run.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Run the Pipeline and Watch Agents Collaborate</h2>
+      </div>
+      <div class="step-body">
+        <p>Everything&#x27;s configured. Let&#x27;s fire this thing up and give it a real creative brief.</p>
+
+<p>This is the moment where DeerFlow&#x27;s architecture pays off. You give the coordinator <em>one task</em> — a creative brief — and it decomposes it, dispatches sub-tasks, collects results, evaluates, and iterates. You watch from the DeerFlow UI at <code>localhost:2026</code> as events stream in from each agent.</p>
+
+<p>It&#x27;s honestly kind of mesmerizing the first time. You see the researcher fire off web searches, the coordinator synthesize references into a generation prompt, the generator spin up a sandbox and call the image API, then the coordinator <em>look at</em> the result and decide whether to iterate.</p>
+
+<p>Let&#x27;s craft our first creative brief and run it.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your AI agent to write a rich creative brief that will exercise all three agents in your pipeline — including specific style requirements, reference concepts, and quality criteria.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What kind of image are you generating? A product shot? Album art? A game asset? The more specific, the better the research agent can focus.</li><li>What style references should the researcher look for? Think about artists, aesthetics, color palettes, moods.</li><li>What quality criteria will help the coordinator evaluate results objectively? Think beyond &#x27;looks good.&#x27;</li><li>Should the brief specify any constraints — aspect ratio, color restrictions, brand guidelines?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a creative brief formatted for DeerFlow&#x27;s task input. Something like: &#x27;Create a hero image for a sustainable fashion brand. Style: editorial photography meets Studio Ghibli color warmth. Mood: optimistic, grounded, human. Research: look for examples of fashion editorial with natural textures, earth-tone palettes, soft directional lighting. Generate at 16:9 aspect ratio. Quality criteria: composition follows rule of thirds, color palette has max 5 dominant colors all in warm earth range, no synthetic/plastic textures, image should feel aspirational but approachable. Iterate until score exceeds 8/10 or 3 rounds complete.&#x27;</p>
+
+<p>The agent should also explain how to submit this through the DeerFlow UI or via the API endpoint at <code>localhost:2026</code>.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Watch the DeerFlow event stream in the UI while the pipeline runs. You&#x27;ll see each agent&#x27;s thought process, tool calls, and results in real time. This is incredibly useful for debugging — if something goes wrong, you&#x27;ll see exactly where and why.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Image generation APIs cost money per call. Each iteration round generates at least one image. A 3-round max with one image per round is manageable, but be mindful if you set higher limits or generate multiple variants per round.
+      </div>
+        
+      <details class="reveal">
+        <summary>What if I want to use a free/local image generation model?</summary>
+        <div class="reveal-body"><p>Absolutely possible — and this is where the sandbox architecture shines. Instead of calling DALL-E&#x27;s API, your generator skill can spin up a local Stable Diffusion instance inside the Docker sandbox.</p>
+
+<p>The trade-off is setup complexity and hardware requirements. You&#x27;ll need a GPU-capable Docker setup (NVIDIA Container Toolkit) and enough VRAM to load the model. But once configured, your pipeline runs entirely locally with zero per-image cost.</p>
+
+<p>To do this, modify your generator skill to pull a Stable Diffusion Docker image instead of calling an external API. Ask your AI agent to help you write a generator skill that uses <code>diffusers</code> library with a local model — it&#x27;s a great exercise in customizing DeerFlow skills.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a working creative pipeline that researches, generates, and iterates. Run your creative brief through the DeerFlow UI and watch the agents collaborate. If images aren&#x27;t generating, check: (1) your image API key is in .env, (2) the sandbox has network access, (3) the generator skill&#x27;s Python code is correct in the sandbox logs.</div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Extend your pipeline with a fourth agent: a &#x27;Style Transfer&#x27; specialist that takes a generated image and applies artistic style modifications based on the research agent&#x27;s reference findings.</div>
+      <div class="your-turn-context">Right now your pipeline generates images from scratch based on a text prompt. But what if the coordinator could also *modify* existing images — applying the color palette from a reference photo, mimicking the brushstroke texture of a specific artist, or compositing elements from multiple generations? A style transfer agent would give your coordinator a whole new capability to reach quality targets.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What new skill does this agent need? Think about what inputs it takes (a source image + style parameters) and what it outputs.</li><li>Should this agent run in the same sandbox as the generator, or its own? What are the trade-offs?</li><li>How does the coordinator decide when to use the style transfer agent vs. just re-generating from scratch?</li><li>What happens to your iteration logic now that there are two ways to improve an image?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>I need to add a style transfer sub-agent to my DeerFlow creative pipeline. Here&#x27;s what I want:
+
+1. A new skill definition for a &#x27;style_transfer&#x27; agent that takes two inputs: a source image URL and a style specification object (containing color palette, texture keywords, and an optional reference image URL). It should output a modified image URL.
+
+2. The skill should run in a Docker sandbox with GPU access if available, falling back to a CPU-based approach using the Stability AI style transfer API.
+
+3. Update my coordinator&#x27;s system prompt to include a decision rule: after the first generation round, if the quality score is between 5-7, try style transfer before re-generating from scratch. Only re-generate from scratch if the score is below 5 or style transfer didn&#x27;t improve the score.
+
+4. Add memory entries for successful style transfer parameters so the coordinator can recall &#x27;this color palette mapping worked well for fashion photography&#x27; in future runs.
+
+Please give me the skill config YAML, the updated coordinator prompt section, and explain how the coordinator&#x27;s iteration logic changes.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">Your creative pipeline sometimes produces great images on round 1 but then &#x27;over-iterates&#x27; — the coordinator keeps tweaking until the result is worse. What&#x27;s the best fix?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Add a &#x27;high-water mark&#x27; rule: always keep the best result so far and only replace it if a new iteration scores higher</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the right pattern. By tracking the best result across iterations, the coordinator can explore without risk of regression. If iteration 2 is worse than iteration 1, you still deliver iteration 1. This is essentially the &#x27;best-so-far&#x27; optimization strategy, and it works because image quality evaluation isn&#x27;t monotonically improving — sometimes the generator gets lucky on round 1.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Reduce max iterations to 1 so it never over-iterates</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This throws the baby out with the bathwater. Sometimes iteration genuinely improves results — especially when the coordinator gives specific, actionable feedback. You don&#x27;t want to remove iteration entirely; you want to make it safe. A high-water mark lets you iterate aggressively while guaranteeing you never deliver worse than your best.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Increase the quality threshold so only clearly better images pass</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Raising the bar doesn&#x27;t solve the core problem. If iteration 2 scores 7.5 and iteration 1 scored 8.0, a higher threshold might reject iteration 2 — but then what? You&#x27;ve used an iteration round and have nothing to show for it. The real issue is that the coordinator doesn&#x27;t remember its best result. A high-water mark addresses the root cause.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>Let&#x27;s step back and appreciate what we just built. We started with a single GitHub repo and ended up with a <strong>multi-agent creative production system</strong> — a coordinator that breaks down creative briefs, a researcher that gathers visual references from the web, a generator that produces images in a sandboxed environment, and an iteration loop guided by a vision model that can actually <em>see</em> and critique the results.</p>
+
+<p>But the bigger takeaway isn&#x27;t the specific pipeline. It&#x27;s the <strong>pattern</strong>. DeerFlow&#x27;s architecture — coordinator + specialized sub-agents + sandboxed execution + memory — is a general-purpose framework for building any multi-step AI workflow. Swap out the image generator for a code writer. Replace the research agent with a data analyst. The orchestration pattern stays the same.</p>
+
+<p>And here&#x27;s what I think is genuinely exciting: the memory system means your pipelines <strong>get better over time</strong>. Every successful run teaches the system something. That&#x27;s not just automation — it&#x27;s accumulating institutional knowledge in an AI-native way.</p></div>
+      <ul class="takeaways-list"><li>Multi-agent orchestration isn&#x27;t about having more AI — it&#x27;s about having the RIGHT agent for each sub-task, with clear boundaries and communication protocols. A specialist beats a generalist when you can coordinate effectively.</li><li>Sandboxed execution is the unlock that makes AI agents safe to give real tools to. Without isolation, you can&#x27;t let an agent run code, call APIs, or manipulate files without constant supervision. The sandbox is what makes autonomous operation practical.</li><li>Memory-augmented agents bridge the gap between one-shot AI interactions and genuine workflows. When agents can recall what worked before, they move from &#x27;impressive demo&#x27; to &#x27;useful tool that improves with use.&#x27;</li><li>The coordinator&#x27;s system prompt IS your pipeline logic. Getting good at writing coordinator prompts — clear rules, specific criteria, explicit iteration bounds — is the core skill for building reliable multi-agent systems.</li><li>DeerFlow&#x27;s extensible skills system means you&#x27;re never locked in. Today it&#x27;s image generation; tomorrow you add video, 3D, or music — same orchestration layer, new capabilities.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Add an MCP (Model Context Protocol) server to DeerFlow — this lets external tools and services plug into your pipeline as first-class skills, dramatically expanding what your agents can do</li><li>Build a second pipeline that&#x27;s completely different — maybe a code review system or a data analysis workflow — to see how the same orchestration patterns apply across domains</li><li>Experiment with different models for different agents — use a fast, cheap model for the researcher, a powerful model for the coordinator, and a specialized model for generation. DeerFlow&#x27;s config lets you assign different models per agent.</li><li>Explore DeerFlow&#x27;s community skills library — other people have already built skills for web scraping, PDF analysis, database queries, and more. Installing a community skill is like hiring a new specialist for your team.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/bytedance/deer-flow" target="_blank" rel="noopener">bytedance/deer-flow</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">666ghj/BettaFish</div>
+            <div class="oa-summary">Multi-agent public opinion analysis assistant that collects data, breaks filter bubbles, and predicts trends.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">anthropics/skills</div>
+            <div class="oa-summary">Anthropic&#x27;s official repository of reusable agent skills for extending Claude&#x27;s capabilities.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">datawhalechina/hello-agents</div>
+            <div class="oa-summary">Chinese open-source tutorial teaching how to build AI agents from scratch, covering theory and practice.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">microsoft/markitdown</div>
+            <div class="oa-summary">Python tool that converts office documents and various file formats into Markdown, with MCP server support.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Comfy-Org/ComfyUI</div>
+            <div class="oa-summary">Modular node-based GUI for building and running diffusion model image generation workflows.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">EbookFoundation/free-programming-books</div>
+            <div class="oa-summary">Massive curated list of free programming books and learning resources in many languages.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">I built a demo of what AI chat will look like when it&#x27;s “free” and ad-supported</div>
+            <div class="oa-summary">Article URL: https://99helpers.com/tools/ad-supported-chat Comments URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Argues AI coding tools lower the coding bar but raise the bar for real engineering judgment.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
+            <div class="oa-summary">AMD demonstrates running a one-trillion-parameter language model locally on their Ryzen AI Max+ hardware.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude hits #1 on the App Store as users rally behind Anthropic</div>
+            <div class="oa-summary">Claude reaches top App Store spot as users support Anthropic amid a government-related controversy.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}, {"title": "Claude hits #1 on the App Store as users rally behind Anthropic", "tags": "", "source": "Hacker News AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "image-gen";
+      var date = "2026-03-02";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

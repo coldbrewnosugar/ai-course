@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Real-Time Vision AI Agents with Stream&#x27;s Open Vision Agents — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-image-gen">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Teaching Cameras to Think — In Real Time</h1>
+      <div class="hero-subtitle">Stream just open-sourced a framework that wires fast object detection to LLM reasoning over live video. Let&#x27;s figure out how it works and build something with it.</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">vision-agents</span> <span class="tag">real-time-video</span> <span class="tag">YOLO</span> <span class="tag">multimodal</span> <span class="tag">Gemini</span> <span class="tag">low-latency</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <h2>What just dropped</h2>
+
+<p>Stream — the company behind the chat and video SDK that powers apps like Strava and Imgur — just open-sourced <strong>Vision Agents</strong>, a Python framework for building AI agents that watch, listen to, and reason about live video.</p>
+
+<p>Here&#x27;s why this is interesting: until now, if you wanted an AI to understand live video, you had two painful choices. You could send frames to an LLM (slow, expensive, no real-time feel), or you could run a detection model like YOLO (fast, but it only sees boxes — it can&#x27;t <em>reason</em> about what&#x27;s happening).</p>
+
+<p>Vision Agents combines both. You run YOLO (or any fast detection model) as a <strong>processor</strong> that annotates every frame, and then pipe those annotated frames to Gemini or OpenAI&#x27;s realtime APIs as the <strong>LLM brain</strong>. The detection model gives the LLM structured context (&#x27;there&#x27;s a person in a golf stance at coordinates X,Y&#x27;), and the LLM gives you natural language reasoning (&#x27;your backswing is too steep — try rotating your hips earlier&#x27;).</p>
+
+<p>The whole thing runs on Stream&#x27;s edge network with sub-30ms video latency and 500ms join times. And because it uses native LLM SDK methods (<code>create response</code> for OpenAI, <code>generate</code> for Gemini, <code>create message</code> for Claude), you always get the latest model capabilities without waiting for wrapper library updates.</p>
+
+<p>Let&#x27;s dig in.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>The Architecture: Two Brains Are Better Than One</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we build anything, let&#x27;s understand <em>why</em> this framework exists. The core insight is beautifully simple:</p>
+
+<p><strong>Fast models see. Slow models think.</strong></p>
+
+<p>YOLO can process a video frame in ~5 milliseconds. It&#x27;ll tell you &#x27;there&#x27;s a person here, a ball there, a golf club at this angle.&#x27; But it has zero understanding of <em>context</em>. It doesn&#x27;t know what a good golf swing looks like. It can&#x27;t give advice.</p>
+
+<p>Gemini or GPT-4o can reason about complex scenarios, give coaching advice, detect suspicious behavior. But if you just send them raw video frames, they&#x27;re doing all the work — figuring out where objects are AND reasoning about them. That&#x27;s slow and expensive.</p>
+
+<p>Vision Agents gives you a <strong>pipeline</strong>: processors handle the fast perception work, and the LLM handles reasoning. Think of it like a sports broadcast — the camera operators (YOLO) track all the action and overlay graphics, and the commentator (Gemini) provides the analysis.</p>
+
+<p>The <code>Agent</code> class is the orchestrator that wires everything together. It needs four things:</p>
+<ul>
+<li><strong>Edge</strong>: The video delivery network (Stream&#x27;s, or your own)</li>
+<li><strong>LLM</strong>: The reasoning brain (Gemini Realtime, OpenAI Realtime, Claude, etc.)</li>
+<li><strong>Processors</strong>: Fast models that annotate frames (YOLO pose, face detection, etc.)</li>
+<li><strong>Instructions</strong>: What the agent should actually do with all this information</li>
+</ul>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain the Vision Agents architecture and help you set up the project skeleton
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What dependencies would a real-time video AI project need? Think about the detection side AND the LLM side.</li><li>The framework is called `vision-agents` on PyPI — what&#x27;s the recommended way to install it?</li><li>What API keys will you need? Think about which services are involved.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should walk you through installing <code>vision-agents</code> via <code>uv add vision-agents</code>, explain that you&#x27;ll need API keys for Stream (video delivery), plus whichever LLM you pick (Gemini API key or OpenAI API key). It&#x27;ll probably suggest creating a <code>.env</code> file with <code>STREAM_API_KEY</code>, <code>STREAM_API_SECRET</code>, and <code>GOOGLE_API_KEY</code> (or <code>OPENAI_API_KEY</code>). The key insight: the framework itself is lightweight — the heavy lifting comes from the models and the edge network.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        You&#x27;ll need a <strong>Stream account</strong> (free tier available at getstream.io) plus an API key for your LLM of choice. Gemini is the most common pairing in the examples since its Realtime API handles higher FPS affordably.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The framework uses <code>uv</code> as its package manager, not pip. If you haven&#x27;t tried <code>uv</code> yet — it&#x27;s a Rust-based Python package manager that&#x27;s absurdly fast. Your agent can help you install it.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why Stream&#x27;s edge network matters</summary>
+        <div class="reveal-body"><p>Video latency is a different beast than API latency. When you&#x27;re doing real-time video AI, you need the video frames to arrive fast AND the AI responses to come back fast. Stream&#x27;s edge network handles the video transport — they have servers distributed globally so video frames don&#x27;t have to travel far. The 500ms join time means a user opens the app and sees video almost instantly. The sub-30ms frame latency means the AI is seeing what&#x27;s happening <em>now</em>, not what happened a second ago. For something like a golf coach, that difference is the difference between useful feedback and useless delayed commentary.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Building a Golf Coach: YOLO Meets Gemini</h2>
+      </div>
+      <div class="step-body">
+        <p>Let&#x27;s build something concrete. The golf coach example is the perfect case study because it shows the processor + LLM pattern clearly.</p>
+
+<p>Here&#x27;s what happens frame by frame:</p>
+<ol>
+<li><strong>Camera captures a frame</strong> of someone swinging a golf club</li>
+<li><strong>YOLO Pose Processor</strong> runs on that frame (~5ms) and detects 17 body keypoints — shoulders, elbows, wrists, hips, knees, ankles</li>
+<li>The frame gets <strong>annotated</strong> with skeleton overlay and keypoint coordinates</li>
+<li><strong>Gemini Realtime</strong> receives the annotated frame and the pose data as structured context</li>
+<li>Gemini reasons about the swing mechanics and <strong>speaks coaching advice</strong> back to the user in real-time</li>
+</ol>
+
+<p>The magic is in step 3-4. YOLO doesn&#x27;t just draw pretty skeletons — it gives Gemini <em>structured data</em> about body positions. Gemini doesn&#x27;t have to figure out where the person&#x27;s elbow is; it already knows. It can focus entirely on &#x27;is this elbow angle good for a backswing?&#x27;</p>
+
+<p>Honestly, this part confused me at first too. I kept thinking &#x27;why not just send the video to Gemini directly?&#x27; The answer is cost and speed. YOLO pre-processing means Gemini can run at lower FPS (saving money) while still getting precise spatial data every frame.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to build a basic golf coach agent using Vision Agents&#x27; YOLO pose processor and Gemini Realtime
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The Agent class needs an edge, an LLM, processors, and instructions. What would each of those be for a golf coach?</li><li>YOLO has different model sizes (nano, small, medium, large). What&#x27;s the tradeoff for real-time use?</li><li>The instructions reference a markdown file — why would you put coaching instructions in a separate file instead of inline?</li><li>What FPS should Gemini run at? Think about cost vs. responsiveness.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a script that creates an <code>Agent</code> with Stream&#x27;s edge, Gemini Realtime at around 10 FPS, and a YOLO pose processor. The key structure looks roughly like:</p>
+
+<p>```python</p>
+<p>agent = Agent(</p>
+<p>edge=getstream.Edge(),</p>
+<p>agent_user=agent_user,</p>
+<p>instructions=&quot;Read @golf_coach.md&quot;,</p>
+<p>llm=gemini.Realtime(fps=10),</p>
+<p>processors=[ultralytics.YOLOPoseProcessor(</p>
+<p>model_path=&quot;yolo11n-pose.pt&quot;, device=&quot;cuda&quot;</p>
+<p>)],</p>
+<p>)</p>
+<p>```</p>
+
+<p>It should also generate the <code>golf_coach.md</code> instructions file — telling the AI to analyze swing mechanics, identify common mistakes, and give real-time verbal feedback. The agent will probably explain that <code>yolo11n</code> is the nano model (fastest, slightly less accurate) and that <code>cuda</code> means GPU acceleration.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Watch your FPS setting! At <code>fps=10</code> with Gemini Realtime, you&#x27;re sending 10 frames per second to the API. That adds up fast. OpenAI&#x27;s Realtime API is even more expensive — the example code warns to use <code>fps=1</code> with OpenAI. Start low and increase once you know it works.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>instructions=&quot;Read @golf_coach.md&quot;</code> pattern is clever — it keeps your system prompt in a versioned markdown file that you can iterate on without touching code. Think of it like a prompt engineering sandbox.
+      </div>
+        
+      <details class="reveal">
+        <summary>How YOLO Pose estimation actually works</summary>
+        <div class="reveal-body"><p>YOLO Pose is a variant of the YOLO (You Only Look Once) object detection model trained specifically to detect human body keypoints. It identifies 17 points per person: nose, eyes, ears, shoulders, elbows, wrists, hips, knees, and ankles. For each keypoint, you get x/y coordinates and a confidence score. The model runs in a single forward pass (hence &#x27;you only look once&#x27;), which is why it&#x27;s so fast — typically under 10ms per frame on a decent GPU. The pose data is incredibly useful for sports analysis because you can calculate joint angles, body alignment, and movement trajectories from those 17 points alone.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Why separate instructions into a markdown file?</summary>
+        <div class="reveal-body"><p>This is a prompt engineering best practice that&#x27;s easy to overlook. When your system prompt is in a <code>.md</code> file:</p>
+
+<ol>
+<li><strong>Version control</strong>: You can track prompt changes in git</li>
+<li><strong>Iterate fast</strong>: Edit the markdown, restart the agent — no code changes</li>
+<li><strong>Collaborate</strong>: Non-engineers can write and refine the coaching instructions</li>
+<li><strong>Length</strong>: System prompts for coaching can get long (swing phases, common mistakes, encouragement style). Inline strings get messy fast.</li>
+</ol>
+
+<p>The <code>@</code> syntax is Vision Agents&#x27; way of including external files — similar to how you&#x27;d use <code>@file</code> in many AI tools.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should understand the two-brain architecture (fast detection + LLM reasoning) and have an agent-generated golf coach script with YOLO pose estimation piped to Gemini Realtime. The key mental model: processors annotate, LLMs reason.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to build a drone-based fire detection system using Vision Agents. The drone has a lightweight onboard computer. Which processor + LLM combination makes the most sense?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">YOLO nano for flame/smoke detection + Gemini flash-lite for classification</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly right. You want the lightest, fastest YOLO variant (nano) for the resource-constrained drone hardware, paired with a fast/cheap LLM (flash-lite) that can classify &#x27;is this a real fire or just someone&#x27;s barbecue?&#x27; without breaking the bank on tokens. Real-time detection needs speed at every layer.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">Skip YOLO, just send raw frames to GPT-4o at high FPS</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This defeats the whole architecture. Without a fast processor pre-filtering frames, you&#x27;re sending every frame to an expensive LLM. Most frames won&#x27;t contain fire — you&#x27;d be paying GPT-4o to look at trees and sky. YOLO can flag &#x27;hey, there&#x27;s something orange and flickering&#x27; in 5ms, and only THEN do you need the LLM to reason about it.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">YOLO large model + Claude with create_message for maximum accuracy</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. YOLO large is too heavy for a lightweight drone computer — inference time jumps from ~5ms to ~30ms+. And Claude&#x27;s create_message API isn&#x27;t a realtime streaming API like Gemini Realtime, so you&#x27;d lose the low-latency feedback loop. You&#x27;d get great accuracy... eventually. In fire detection, &#x27;eventually&#x27; means the fire spreads.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Stacking Processors: The Security Camera Example</h2>
+      </div>
+      <div class="step-body">
+        <p>Now let&#x27;s look at something more complex. The security camera example doesn&#x27;t just use one processor — it stacks multiple detection models into a single pipeline. This is where Vision Agents gets really powerful.</p>
+
+<p>The security system combines:</p>
+<ul>
+<li><strong>YOLOv11</strong> for package detection (trained on custom weights to spot delivery boxes)</li>
+<li><strong>Face recognition</strong> to identify known vs. unknown people</li>
+<li><strong>Nano Banana</strong> for additional classification</li>
+<li><strong>Gemini</strong> as the reasoning brain that ties it all together</li>
+</ul>
+
+<p>Plus it has <strong>speech</strong> (ElevenLabs TTS) and <strong>listening</strong> (Deepgram STT), so you can literally talk to your security camera and it talks back.</p>
+
+<p>The key concept here is that processors are composable. Each one adds a layer of understanding to the frame before the LLM sees it. Frame comes in → YOLO says &#x27;there&#x27;s a package at the door&#x27; → face recognition says &#x27;unknown person approaching&#x27; → Gemini puts it together: &#x27;Alert: unrecognized person is picking up your package.&#x27;</p>
+
+<p>Think of it like layers of annotation on a sports replay. One layer shows player positions, another shows ball trajectory, another shows tactical zones. Each layer is independent, but together they give the commentator (LLM) the full picture.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to design a multi-processor security camera agent with face recognition, object detection, and voice interaction
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The security example uses a custom processor class — what would that need to track between frames? Think about state (who was here before, where was the package).</li><li>The confidence threshold is set to 0.7 for package detection. Why not 0.5 or 0.9?</li><li>This agent uses TTS and STT — what does that add to the experience versus text-only?</li><li>How would you handle the &#x27;wanted poster&#x27; generation when a theft is detected?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a security camera script with a custom <code>SecurityCameraProcessor</code> class that wraps YOLO with state tracking (remembering where packages are between frames, maintaining a face database). It&#x27;ll wire up Gemini flash-lite as the LLM (cheaper for always-on surveillance), ElevenLabs for voice alerts, and Deepgram for voice commands. The agent should explain that the custom processor maintains state — it&#x27;s not just annotating individual frames, it&#x27;s tracking objects <em>across</em> frames. That&#x27;s the difference between &#x27;I see a package&#x27; and &#x27;the package that was here 30 seconds ago is now gone.&#x27;</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Notice the LLM choice: the golf coach uses <code>gemini.Realtime()</code> (expensive, conversational, streaming) while the security camera uses <code>gemini.LLM(&#x27;gemini-2.5-flash-lite&#x27;)</code> (cheap, efficient, always-on). Match your LLM to your use case&#x27;s latency and cost requirements.
+      </div>
+        
+      <details class="reveal">
+        <summary>Custom processors vs. built-in processors</summary>
+        <div class="reveal-body"><p>Vision Agents ships with built-in processors for common models (YOLO detection, YOLO pose, etc.), but the real power is in custom processors. A custom processor is just a Python class that:</p>
+
+<ol>
+<li>Receives a frame</li>
+<li>Does whatever processing you want</li>
+<li>Returns annotations and/or modified frame data</li>
+</ol>
+
+<p>The security example&#x27;s <code>SecurityCameraProcessor</code> maintains internal state — a dictionary of tracked packages, a face recognition database, event history. It&#x27;s essentially a stateful middleware that sits between the camera and the LLM. This pattern is incredibly flexible. You could build a processor that counts people entering a store, tracks inventory on shelves, monitors assembly line defects — anything where you need both per-frame detection AND cross-frame memory.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Why 0.7 confidence threshold?</summary>
+        <div class="reveal-body"><p>Confidence thresholds in object detection are always a tradeoff. At <strong>0.5</strong>, YOLO will detect more packages but also flag false positives — a brown cushion, a shadow, a cat sitting in a box shape. At <strong>0.9</strong>, you&#x27;ll only get detections the model is very sure about, but you&#x27;ll miss packages at weird angles or partially obscured ones.</p>
+
+<p><strong>0.7</strong> is the sweet spot for security applications: low enough to catch most real packages, high enough to avoid constant false alarms. For the security use case, a false negative (missing a real package theft) is worse than a false positive (briefly thinking a rock is a package), so you might even drop to 0.6. But for something like quality control in manufacturing, you&#x27;d crank it up to 0.85+.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Choosing Your LLM: Native APIs, Not Wrappers</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s something Vision Agents does differently that&#x27;s worth understanding: it uses <strong>native LLM SDK methods</strong> rather than wrapping everything in a generic interface.</p>
+
+<p>What does that mean? Most frameworks create an abstraction layer — you call <code>llm.chat()</code> and it translates to whatever the underlying provider needs. Convenient, but you lose access to provider-specific features. When OpenAI ships a new parameter or Gemini adds a new capability, you&#x27;re stuck waiting for the wrapper to update.</p>
+
+<p>Vision Agents takes the opposite approach:</p>
+<ul>
+<li>OpenAI → <code>create response</code> (their native method)</li>
+<li>Gemini → <code>generate</code> (Google&#x27;s native method)</li>
+<li>Claude → <code>create message</code> (Anthropic&#x27;s native method)</li>
+</ul>
+
+<p>This means you get <strong>day-one access</strong> to new model features. When Gemini ships improved video understanding, you don&#x27;t wait for an abstraction update — you&#x27;re already using the native API.</p>
+
+<p>The practical tradeoff: switching between providers requires changing more than just a model name. But honestly, in production you usually pick one provider and stick with it, so the native API access is worth more than easy switching.</p>
+
+<p>Let&#x27;s explore which LLM to pick for different use cases.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to create a comparison of the three LLM options (Gemini Realtime, OpenAI Realtime, Claude) for Vision Agents, including when to use each
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>Think about the difference between &#x27;realtime&#x27; APIs (streaming, conversational) and standard APIs (request-response). When would you want each?</li><li>Cost is a huge factor for always-on video. Which provider is cheapest for high-FPS video?</li><li>Some use cases need voice interaction, others just need text analysis. How does that affect your choice?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should lay out a clear comparison: <strong>Gemini Realtime</strong> is the go-to for interactive, voice-enabled agents (golf coach, interview helper) because it handles audio/video streaming natively at reasonable cost. <strong>OpenAI Realtime</strong> offers similar capabilities but watch the cost — the examples warn about FPS expense. <strong>Gemini flash-lite</strong> is ideal for always-on, background monitoring (security cameras) where you need cheap, fast analysis without voice. <strong>Claude</strong> via <code>create message</code> is best for complex reasoning tasks where you&#x27;re sending periodic frame snapshots rather than continuous streams — think analyzing a manufacturing defect in detail rather than live coaching.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The cost differences between LLM providers for real-time video are <strong>massive</strong>. At 10 FPS, you&#x27;re sending 600 frames per minute. Even at pennies per frame, that adds up to real money. Always start with the cheapest model that meets your needs and scale up.
+      </div>
+        
+      <details class="reveal">
+        <summary>The invisible assistant pattern</summary>
+        <div class="reveal-body"><p>One of the most interesting upcoming examples is the &#x27;Cluely-style invisible assistant.&#x27; It uses Gemini Realtime to watch your screen and listen to audio, but only responds via text overlay — no outbound audio. This is clever because it means the AI can coach you through a job interview or sales call without the other person hearing it.</p>
+
+<p>The architecture is the same Agent pattern, but with no TTS and no outbound audio stream. Gemini watches and listens, then writes text that appears on an overlay. The use cases are wild: interview coaching, real-time translation overlays, surgery guidance for doctors, live captioning with context. Same framework, totally different product.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now understand: (1) the processor + LLM pipeline architecture, (2) how to compose multiple processors for complex detection, (3) the tradeoffs between Gemini/OpenAI/Claude for different real-time video scenarios, and (4) why native API access matters. Time to build your own.</div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Design a real-time physical therapy agent that monitors exercise form and gives corrective feedback</div>
+      <div class="your-turn-context">Physical therapy is one of the use cases mentioned in the Vision Agents docs. Patients often do their exercises wrong at home because they don&#x27;t have a therapist watching. A vision agent could watch via webcam, detect body pose, and give real-time corrections — like a personal PT that never gets tired.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>Which processor would you use? The patient is doing body movements, so you need to track joints and angles...</li><li>Should the LLM be conversational (voice) or text-only? Think about someone mid-exercise trying to read a screen vs. hearing &#x27;straighten your back&#x27;</li><li>What should the instructions markdown file contain? A PT needs to know the specific exercises and what correct form looks like.</li><li>What FPS is appropriate? Too low and you miss fast movements. Too high and it&#x27;s expensive. What&#x27;s the sweet spot for exercise monitoring?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Build me a physical therapy coaching agent using Vision Agents. Use YOLO pose estimation to track 17 body keypoints and Gemini Realtime with voice output so the patient can hear corrections hands-free. Set FPS to 5 — exercises are slower than golf swings so we don&#x27;t need 10. Create an instructions markdown file that tells the AI it&#x27;s a physical therapy assistant monitoring squat form. It should watch for: knees caving inward, back rounding, heels lifting, and insufficient depth. Have it give encouraging, specific verbal cues like &#x27;push your knees out over your toes&#x27; rather than generic &#x27;bad form&#x27; feedback. Use the nano YOLO model for speed since we&#x27;re running on a consumer laptop, not a GPU server.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Going to Production: Edge Networks and Client SDKs</h2>
+      </div>
+      <div class="step-body">
+        <p>We&#x27;ve been focused on the server-side agent, but there&#x27;s a whole other half to this: how does the video get from the user&#x27;s device to your agent and back?</p>
+
+<p>This is where Stream&#x27;s <strong>edge network</strong> earns its keep. When a user opens your app, their video doesn&#x27;t travel to your server directly. It goes to the nearest Stream edge node (there are many distributed globally), gets relayed to your agent with minimal latency, and the agent&#x27;s response goes back through the edge network.</p>
+
+<p>The result: <strong>500ms join time</strong> (the user sees the experience almost instantly) and <strong>sub-30ms audio/video latency</strong> (the AI is reacting to what&#x27;s happening <em>now</em>, not a second ago).</p>
+
+<p>For the client side, Vision Agents works with Stream&#x27;s existing SDKs: <strong>React, iOS, Android, Flutter, React Native, and Unity</strong>. That&#x27;s not a throwaway bullet point — it means you can build a golf coaching app that works on phones, a security dashboard on the web, or even an AR coaching experience in Unity. The client SDKs handle all the video capture, encoding, and rendering. Your agent just processes frames and sends responses.</p>
+
+<p>The important mental model: your Vision Agent is a <strong>participant</strong> in a video call. It joins like any other user, receives the video stream, and can send back audio, video overlays, or text. The client SDKs already know how to handle video call participants.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to outline how you&#x27;d deploy a Vision Agent as a web app with a React frontend
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The agent needs a server to run on (YOLO needs compute). What kind of server makes sense?</li><li>How does the React client connect to the agent? Think about it like a video call — there&#x27;s a call ID both sides need to know.</li><li>What happens if multiple users want to use your golf coach simultaneously? Does each one get their own agent instance?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe a deployment where your Vision Agent runs on a GPU server (even a modest one — YOLO nano is lightweight), the React frontend uses Stream&#x27;s Video SDK to create a call, and the agent joins that call as a participant. Each user session spawns a new agent instance that joins their specific call. The frontend is surprisingly simple — it&#x27;s basically Stream&#x27;s video call UI with a custom overlay for AI feedback. The agent should mention that you&#x27;d use Stream&#x27;s <code>@stream-io/video-react-sdk</code> for the client and that authentication happens through Stream tokens generated by your backend.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Vision Agents says it&#x27;s &#x27;built by Stream, but works with any video edge network.&#x27; If you already have a WebRTC infrastructure or use a different provider like Agora or Daily, you can swap out the edge layer. The processor + LLM pipeline stays the same.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why sub-30ms latency actually matters</summary>
+        <div class="reveal-body"><p>Humans notice audio delay at around 150ms and it becomes annoying at 300ms. Video delay is more forgiving — we&#x27;re used to slight lag from video calls. But for real-time coaching, the magic number is around 100ms total round-trip: camera captures frame → edge network → processor → LLM → response back to user.</p>
+
+<p>If the edge network adds 200ms of latency, your golf coach is commenting on a swing position that already happened. The coaching feels disconnected, like a bad Zoom call. At sub-30ms for the network layer, you have ~70ms budget for processing, which is plenty for YOLO nano + LLM response. The coaching feels <em>present</em> — like having someone right next to you watching.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re building a cooking assistant that watches a user through their laptop camera and gives real-time recipe guidance. Which combination of STT, TTS, and LLM makes the most sense?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Gemini Realtime (handles voice natively) + no separate STT/TTS</label>
+          <div class="decision-feedback correct">&#10003; Correct! Gemini Realtime handles audio input and output natively — it can listen to the user and speak back without separate STT/TTS services. For a conversational cooking assistant where the user&#x27;s hands are covered in flour and they need to just *talk* to the AI, this is the simplest and most responsive setup. Fewer services = fewer points of failure = lower latency.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Claude + Deepgram STT + ElevenLabs TTS</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This works but it&#x27;s over-engineered for this use case. Claude&#x27;s create_message API isn&#x27;t a streaming realtime API — you&#x27;d have to batch frames and get responses in request-response cycles. Adding Deepgram and ElevenLabs means three separate services in the audio loop, adding latency at each hop. The security camera example uses this stack because it needs always-on surveillance (not conversational), but a cooking assistant is inherently conversational.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">OpenAI Realtime at 15 FPS for maximum quality</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. OpenAI Realtime could work, but 15 FPS is way too expensive for watching someone chop onions. Cooking happens slowly — you don&#x27;t need to capture every frame. More importantly, the Vision Agents examples explicitly warn about OpenAI Realtime costs at high FPS. You&#x27;d burn through your API budget during one lasagna recipe.</div>
+        </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Design a custom processor that tracks inventory on retail shelves and alerts when items are running low</div>
+      <div class="your-turn-context">Retail stores lose billions to out-of-stock items. A camera above each aisle could watch the shelves and notify staff when products need restocking. This needs a custom processor because you&#x27;re not just detecting objects — you need to count them per shelf section and track changes over time.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>A custom processor needs to maintain state between frames. What state would a shelf-monitoring processor need to keep?</li><li>YOLO can detect &#x27;bottle&#x27; or &#x27;box&#x27; but not &#x27;Coca-Cola 12oz.&#x27; How would you handle specific product identification?</li><li>This is always-on monitoring, not interactive coaching. How does that change your LLM choice?</li><li>How often do you actually need to check the shelves? Every frame? Every 10 seconds? Think about how fast items disappear vs. processing cost.</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Help me design a custom Vision Agents processor for retail shelf monitoring. The processor should use YOLO to detect products on shelves, maintain a count per shelf zone (top, middle, bottom), and track changes over time. When a zone drops below 30% of its expected capacity, flag it for restocking. Use Gemini flash-lite as the LLM since this is always-on background monitoring — no voice needed, just text alerts. Set the processor to analyze one frame every 10 seconds (shelves don&#x27;t change fast). The processor should output a JSON summary per frame with zone counts, and the LLM should generate natural language alerts like &#x27;Aisle 3, bottom shelf — soft drinks running low, currently at 25% capacity.&#x27; Include state tracking so it can report trends like &#x27;soft drinks section empties every day around 3pm.&#x27;</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><h2>What we built (and what we learned)</h2>
+
+<p>We went from &#x27;what is Vision Agents?&#x27; to understanding how to architect real-time video AI systems that combine fast detection with LLM reasoning. The framework&#x27;s big insight — <strong>let cheap, fast models do perception while expensive, smart models do reasoning</strong> — is a pattern you&#x27;ll see everywhere in production AI.</p>
+
+<p>We explored three concrete examples:</p>
+<ul>
+<li><strong>Golf coach</strong>: YOLO pose estimation → Gemini Realtime for interactive coaching</li>
+<li><strong>Security camera</strong>: Multi-processor pipeline (YOLO + face recognition) → Gemini flash-lite for always-on monitoring</li>
+<li><strong>Invisible assistant</strong>: Gemini Realtime watching screen/audio, responding via text overlay only</li>
+</ul>
+
+<p>And we designed two of our own:</p>
+<ul>
+<li>A physical therapy assistant for at-home exercise monitoring</li>
+<li>A retail shelf inventory tracker with custom state management</li>
+</ul>
+
+<p>The underlying pattern is always the same <code>Agent(edge, llm, processors, instructions)</code> — but the specific choices you make for each parameter dramatically change what you build and what it costs.</p></div>
+      <ul class="takeaways-list"><li>The two-brain architecture (fast detection + LLM reasoning) is how you make real-time video AI affordable and responsive. YOLO handles perception in ~5ms per frame; the LLM only handles high-level reasoning.</li><li>Processors are composable and stateful — you can stack multiple detection models and maintain cross-frame memory for tracking objects over time, not just detecting them in single frames.</li><li>Your LLM choice should match your interaction pattern: Gemini Realtime for conversational voice agents, flash-lite for cheap always-on monitoring, Claude for deep periodic analysis. Native API access means you always get the latest model capabilities.</li><li>The client SDK ecosystem (React, iOS, Android, Flutter, React Native, Unity) means your vision agent can run on virtually any platform — the agent is just a participant in a video call.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Clone the Vision Agents repo and run the golf coach example locally — seeing YOLO pose estimation in real-time is genuinely cool and will make the architecture click</li><li>Experiment with custom processors — start with a simple one that just counts objects per frame and builds up state, then add complexity</li><li>Try swapping LLM providers to feel the tradeoff between Gemini Realtime (fast, conversational) and Claude (thoughtful, detailed) for the same video input</li><li>Explore the Stream Video SDK for your platform of choice — building the client-side video capture and display is the other half of shipping a real product</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/GetStream/Vision-Agents" target="_blank" rel="noopener">GetStream/Vision-Agents</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">666ghj/BettaFish</div>
+            <div class="oa-summary">Multi-agent public opinion analysis assistant that collects data, breaks filter bubbles, and predicts trends.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">anthropics/skills</div>
+            <div class="oa-summary">Anthropic&#x27;s official repository of reusable agent skills for Claude, following the Agent Skills standard.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">datawhalechina/hello-agents</div>
+            <div class="oa-summary">Chinese-language tutorial teaching how to build AI agents from scratch, covering theory through practice.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">microsoft/markitdown</div>
+            <div class="oa-summary">Python tool that converts office documents and various file formats to Markdown, with MCP server support.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Comfy-Org/ComfyUI</div>
+            <div class="oa-summary">Modular node-based GUI for building and running diffusion model image generation workflows.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">EbookFoundation/free-programming-books</div>
+            <div class="oa-summary">Curated list of freely available programming books and learning resources in many languages.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">I built a demo of what AI chat will look like when it&#x27;s “free” and ad-supported</div>
+            <div class="oa-summary">Article URL: https://99helpers.com/tools/ad-supported-chat Comments URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Argues AI coding tools lower the bar for writing code but raise it for real engineering judgment.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
+            <div class="oa-summary">AMD demonstrates running a one-trillion-parameter language model locally on their Ryzen AI Max+ hardware.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude hits #1 on the App Store as users rally behind Anthropic</div>
+            <div class="oa-summary">Claude reaches top App Store spot as users show support amid Anthropic&#x27;s government contract standoff.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}, {"title": "Claude hits #1 on the App Store as users rally behind Anthropic", "tags": "", "source": "Hacker News AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "image-gen";
+      var date = "2026-03-02";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
