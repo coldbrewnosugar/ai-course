@@ -177,6 +177,11 @@ body {
   border-color: var(--ink);
   box-shadow: var(--shadow-md);
 }
+.day-card.is-empty {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
 .day-card-pills {
   display: flex;
   flex-direction: column;
@@ -345,7 +350,7 @@ footer span { color: var(--ink); font-weight: 600; }
       <button id="today-btn" class="today-btn">Today</button>
     </div>
 
-    <div class="day-card" id="day-card">
+    <div class="day-card is-empty" id="day-card">
       <div class="empty-week-msg">No sessions on this day</div>
     </div>
 
@@ -354,7 +359,7 @@ footer span { color: var(--ink); font-weight: 600; }
     <div class="stats-bar">
       <div><strong>4</strong> sessions</div>
       <div><strong>3</strong> tracks</div>
-      <div>Updated <strong>2026-03-02 03:56 UTC</strong></div>
+      <div>Updated <strong>2026-03-02 04:03 UTC</strong></div>
     </div>
 
     <footer>
@@ -399,6 +404,8 @@ function renderDay() {
 
   const dayData = COURSES[ds] || {};
   const hasCourses = Object.values(dayData).some(v => Array.isArray(v) ? v.length > 0 : !!v);
+
+  card.classList.toggle("is-empty", !hasCourses);
 
   if (!hasCourses) {
     card.innerHTML = '<div class="empty-week-msg">No sessions on this day</div>';
