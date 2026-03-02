@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-Time Vision AI Agents with Stream&#x27;s Open Vision Agents — Tinker</title>
+  <title>Build Real-Time Vision AI Agents with Stream&#x27;s Open Vision Agents — Tinker</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 :root {
@@ -771,386 +771,393 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>Teaching AI to Watch the World</h1>
-      <div class="hero-subtitle">Stream just open-sourced a framework for building AI agents that see, hear, and respond to live video — in under 30 milliseconds. Let&#x27;s figure out how it works and build one.</div>
+      <h1>AI That Watches, Listens, and Understands — In Real Time</h1>
+      <div class="hero-subtitle">Stream just open-sourced Vision Agents: a framework for building AI agents that process live video with sub-30ms latency. Let&#x27;s explore how it works and design our own.</div>
       <div class="hero-meta">
         <span>40 min</span>
-        <span> <span class="tag">vision-ai</span> <span class="tag">real-time</span> <span class="tag">multi-modal</span> <span class="tag">yolo</span> <span class="tag">gemini</span></span>
+        <span> <span class="tag">vision-ai</span> <span class="tag">real-time</span> <span class="tag">multi-modal</span> <span class="tag">yolo</span> <span class="tag">agents</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>Here&#x27;s the deal: <strong>Stream</strong> — the company behind the chat and video APIs powering apps like Strava and Imgur — just open-sourced <strong>Vision Agents</strong>, a Python framework for building AI agents that process live video in real-time.</p>
+      <h2>What Just Happened</h2>
 
-<p>Why is this interesting? Because until now, building something like &quot;an AI that watches a golf swing and coaches you&quot; required stitching together a dozen different tools: a video feed, an object detection model, a reasoning LLM, text-to-speech, a low-latency network... it was a mess.</p>
+<p>Stream — the company behind one of the most popular real-time chat and video SDKs — just open-sourced <strong>Vision Agents</strong>, a Python framework for building AI agents that process live video feeds in real time.</p>
 
-<p>Vision Agents wraps all of that into a clean architecture: <strong>Agent → Processors → LLM</strong>. You pick your detection model (YOLO, Roboflow), pick your reasoning brain (Gemini, OpenAI), and Stream&#x27;s edge network handles the plumbing to keep latency under 30ms.</p>
+<p>This is a big deal for a few reasons:</p>
 
-<p>The repo already has working examples: a <strong>golf coach</strong> that uses YOLO pose detection + Gemini to analyze your swing in real-time, a <strong>security camera</strong> that detects package theft and auto-generates wanted posters, and an <strong>invisible interview assistant</strong> (yes, really). Let&#x27;s dig into how this architecture works and build our own vision agent.</p>
+<p><strong>Speed matters more than smarts (sometimes).</strong> We&#x27;ve had vision models for a while. GPT-4o can describe an image. Gemini can analyze a video clip. But doing it <em>live</em> — at 10-30 frames per second, with under 30ms of latency — that&#x27;s an engineering problem, not just an AI problem. Stream&#x27;s contribution here is their <strong>edge network</strong>, which keeps the video pipeline fast enough that the AI feels responsive.</p>
+
+<p><strong>The &quot;fast model + smart model&quot; pattern is emerging everywhere.</strong> Vision Agents doesn&#x27;t pick one model. It lets you wire together a <em>fast</em> computer vision model (like YOLO for object detection — runs in milliseconds) with a <em>smart</em> reasoning model (like Gemini Realtime or OpenAI). The fast model tells you <em>what&#x27;s there</em>. The smart model tells you <em>what it means</em>. This two-tier pattern is becoming a standard architecture for production AI.</p>
+
+<p><strong>The demos are wild.</strong> A golf coaching agent that tracks your swing in real time using pose estimation, then gives you feedback via Gemini. A security camera that detects faces, tracks packages, identifies theft, generates WANTED posters, and <em>posts them to X automatically</em>. An invisible interview coaching overlay (yes, like Cluely).</p>
+
+<p>Today we&#x27;re going to understand how this architecture works, get comfortable with the mental model, and design our own vision agent — all by working with our AI coding assistant.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>The Mental Model: Fast Eyes + Smart Brain</h2>
+        <h2>The Three-Layer Cake: Understanding the Architecture</h2>
       </div>
       <div class="step-body">
-        <p>Before we build anything, let&#x27;s understand the core insight behind Vision Agents. It&#x27;s actually a really elegant design pattern.</p>
-
-<p>Imagine you&#x27;re a lifeguard at a pool. You don&#x27;t deeply analyze every single thing happening in the water — that would be way too slow. Instead, your eyes do fast pattern recognition: &quot;movement looks normal... normal... wait, that splash pattern is weird.&quot; Only THEN does your brain kick in to reason: &quot;Is that person struggling? Should I act?&quot;</p>
-
-<p>Vision Agents works the same way. It splits the work into two layers:</p>
+        <p>Before we build anything, let&#x27;s understand what we&#x27;re working with. Vision Agents has three core layers, and honestly, the naming is so clean it almost explains itself:</p>
 
 <ol>
-<li><strong>Processors</strong> (the fast eyes) — Models like YOLO that can process 30+ frames per second. They detect objects, track poses, recognize faces. They&#x27;re fast but not smart. They just tag what they see: &quot;person here, ball there, package on porch.&quot;</li>
+<li><strong>Edge</strong> — The video highway. This is Stream&#x27;s network that moves video frames and audio between your users and your agent. Think of it like a CDN, but for live video. It&#x27;s what gets you that sub-30ms latency.</li>
 </ol>
 
 <ol>
-<li><strong>LLM</strong> (the smart brain) — Models like Gemini Realtime or GPT-4o that receive those tagged frames and <em>reason</em> about them. &quot;The golfer&#x27;s elbow is dropping on the backswing&quot; or &quot;that person just picked up a package that isn&#x27;t theirs.&quot;</li>
+<li><strong>Processors</strong> — The fast eyes. These are computer vision models like YOLO that run on every frame (or every Nth frame). They&#x27;re dumb but <em>fast</em>. They can tell you &quot;there&#x27;s a person at coordinates (x, y)&quot; or &quot;I see a package&quot; in a couple milliseconds. They don&#x27;t understand <em>meaning</em> — they just detect patterns.</li>
 </ol>
 
-<p>The <strong>Agent</strong> is the orchestrator that ties it all together — it manages the video stream, runs frames through processors, feeds the annotated results to the LLM, and handles the response (voice, text, whatever).</p>
+<ol>
+<li><strong>LLM</strong> — The brain. This is your Gemini, OpenAI, or Claude model that takes the processor outputs plus the video context and actually <em>reasons</em> about what&#x27;s happening. &quot;That person picked up the package and is walking away — that might be theft.&quot;</li>
+</ol>
 
-<p>This two-layer pattern — fast detection feeding smart reasoning — is the key architectural insight. Let&#x27;s get our agent to help us understand it better.</p>
+<p>The magic is in how these layers compose. The Processor annotates frames (draws bounding boxes, extracts poses), and the LLM sees both the original video AND the annotations. It&#x27;s like giving someone a highlighted document vs. a raw one — the highlights guide their attention.</p>
+
+<p>Let&#x27;s get our agent to explain this architecture back to us and scaffold a minimal example.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to explain the tradeoffs between running YOLO at different FPS rates when paired with an LLM like Gemini Realtime
+          Get the agent to explain the Vision Agents Agent/Processor/LLM pattern and show you the minimal skeleton of a vision agent.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What happens to cost and latency as you increase frames per second?</li><li>Why might you want YOLO running at 30fps but only send frames to Gemini at 1-10fps?</li><li>Think about what information changes frame-to-frame vs. what needs deeper analysis...</li></ul>
+          <ul><li>What are the three main components the Agent class needs to be wired up?</li><li>How does data flow between them — what does the Processor output, and what does the LLM receive?</li><li>What&#x27;s the simplest possible configuration — one edge, one processor, one LLM?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should explain the core tradeoff: YOLO is cheap and fast (runs locally on GPU, can handle 30+ fps easily), while LLM calls are expensive and slower. So you run YOLO at high FPS for smooth detection, but only send key frames to the LLM — maybe every 100ms (10fps) or even every second. The agent should mention that the golf coach example uses <code>fps=10</code> for Gemini but YOLO runs on every frame. It should also note the comment in the code: &#x27;Careful with FPS can get expensive&#x27; for OpenAI Realtime.</p></div>
+        <div class="reveal-body"><p>The agent should explain that an <code>Agent</code> is basically a composition root — it takes an <code>Edge</code> (video transport), a list of <code>Processors</code> (CV models that run per-frame), and an <code>LLM</code> (the reasoning model). The minimal setup looks something like:</p>
+
+<p>```python</p>
+<p>agent = Agent(</p>
+<p>edge=getstream.Edge(),</p>
+<p>agent_user=User(name=&quot;My Agent&quot;, id=&quot;agent&quot;),</p>
+<p>instructions=&quot;You are a helpful video assistant.&quot;,</p>
+<p>llm=gemini.Realtime(fps=10),</p>
+<p>processors=[ultralytics.YOLOProcessor()],</p>
+<p>)</p>
+<p>```</p>
+
+<p>The key insight: Processors annotate frames → LLM sees annotated frames + instructions → LLM generates responses. The Agent orchestrates this pipeline.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        This fast-eyes/smart-brain pattern isn&#x27;t unique to Vision Agents. It shows up everywhere in AI systems — RAG uses fast retrieval + smart generation, autonomous driving uses fast sensors + planning models. Once you see it, you can&#x27;t unsee it.
+        Think of Processors like a highlighter pen and the LLM like a reader. The highlighter marks up the document (video frames) so the reader can focus on what matters instead of scanning everything.
       </div>
         
       <details class="reveal">
         <summary>Why not just send raw video to the LLM?</summary>
-        <div class="reveal-body"><p>You technically <em>can</em> — Gemini Realtime and GPT-4o both accept video input. But there are three problems:</p>
+        <div class="reveal-body"><p>You <em>could</em> skip Processors and send raw frames to Gemini or GPT-4o. But there are two problems:</p>
 
 <ol>
-<li><strong>Cost</strong>: Sending 30 raw frames per second to an LLM API would bankrupt you in hours. YOLO is essentially free by comparison since it runs locally.</li>
+<li><strong>Speed</strong>: LLMs take 100-500ms per frame. YOLO takes 2-5ms. If you need to track a golf ball mid-swing, you can&#x27;t wait for GPT to process each frame.</li>
 </ol>
 
 <ol>
-<li><strong>Precision</strong>: LLMs are good at reasoning but bad at pixel-level detection. YOLO can tell you the exact coordinates of a person&#x27;s elbow joint. An LLM will say &#x27;their arm is raised-ish.&#x27;</li>
+<li><strong>Cost</strong>: Sending 30 frames per second to an LLM API would bankrupt you in about 4 minutes. Processors are local models running on your GPU — essentially free after the initial setup.</li>
 </ol>
 
-<ol>
-<li><strong>Latency</strong>: Pre-processing with YOLO means the LLM gets <em>annotated</em> frames — bounding boxes, pose skeletons, labels. This dramatically reduces what the LLM needs to figure out, making it faster and more accurate.</li>
-</ol>
+<p>The two-tier approach gives you the speed of computer vision AND the intelligence of an LLM, without the cost or latency of either alone.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What does &#x27;Edge&#x27; actually mean here?</summary>
+        <div class="reveal-body"><p>Stream&#x27;s Edge network is essentially a globally distributed set of servers optimized for real-time media. When a user&#x27;s camera sends video, it goes to the nearest edge server (think: a data center in their city), gets processed, and the annotated result streams back.</p>
 
-<p>The processor layer essentially gives the LLM &#x27;reading glasses&#x27; so it can focus on reasoning instead of squinting at pixels.</p></div>
+<p>The 500ms join time and sub-30ms latency numbers come from this infrastructure. You <em>can</em> swap in your own edge network — the framework is designed to be pluggable — but Stream&#x27;s is the default and it&#x27;s what makes the &#x27;real-time&#x27; part actually real-time.</p>
+
+<p>For local development, you can also run everything on localhost, which is what the examples do.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Anatomy of a Vision Agent</h2>
+        <h2>Dissecting the Golf Coach: YOLO Meets Gemini</h2>
       </div>
       <div class="step-body">
-        <p>Now let&#x27;s look at how you actually compose a Vision Agent. The API surface is surprisingly small — the Agent constructor takes about five things, and honestly that&#x27;s the whole framework.</p>
+        <p>Let&#x27;s look at the most impressive example — the golf coaching agent. This one is genuinely cool because it shows the full power of the architecture.</p>
 
-<p>Think of it like ordering at a build-your-own-burger place:</p>
-
-<ul>
-<li><strong>Edge</strong> = your bun (the delivery network that gets video from point A to B)</li>
-<li><strong>Processors</strong> = your toppings (detection models that annotate each frame)</li>
-<li><strong>LLM</strong> = the patty (the reasoning engine that makes sense of everything)</li>
-<li><strong>TTS/STT</strong> = condiments (optional text-to-speech and speech-to-text)</li>
-<li><strong>Instructions</strong> = your order ticket (tells the agent its personality and job)</li>
-</ul>
-
-<p>The golf coach example shows this perfectly — it&#x27;s literally just one Agent constructor with a YOLO pose processor and Gemini Realtime. The security camera adds more toppings: face recognition, custom YOLO weights, ElevenLabs TTS, and Deepgram STT.</p>
-
-<p>Let&#x27;s get our agent to help us understand the processor chain concept.</p>
-        
-      <div class="agent-interaction">
-        <div class="agent-goal">
-          <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to design a processor chain for a real-time workout coaching app — what processors would you need and in what order?
-        </div>
-        
-        <div class="agent-hints">
-          <div class="agent-hints-label">Think about it</div>
-          <ul><li>What does a workout coach need to detect? (Think about body position, rep counting, form...)</li><li>Which tasks need a fast model vs. a reasoning model?</li><li>Should processors run in sequence or parallel? What are the tradeoffs?</li></ul>
-        </div>
-        
-      <details class="reveal">
-        <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should propose something like: (1) YOLOPoseProcessor for skeleton/joint detection running at full frame rate, (2) a custom RepCounterProcessor that tracks joint angles over time to count reps, (3) Gemini Realtime as the LLM at maybe 5-10fps to analyze form and give coaching cues. The key insight is that processors are a <em>list</em> — they run in order, each one annotating the frame further before the LLM sees it. The agent might also suggest an AudioProcessor if the user wants voice commands like &#x27;start set&#x27; or &#x27;switch exercise.&#x27;</p></div>
-      </details>
-      </div>
-        
-        
-      <div class="callout callout-api-key-note">
-        <div class="callout-label">API Key Note</div>
-        To actually run Vision Agents, you&#x27;ll need API keys for: <strong>Stream</strong> (free tier available for the edge network), <strong>Google AI</strong> (for Gemini) or <strong>OpenAI</strong> (for GPT-4o), and optionally <strong>Ultralytics</strong> for YOLO. The framework is model-agnostic though — you can swap any of these.
-      </div>
-        
-      <details class="reveal">
-        <summary>What makes processors composable?</summary>
-        <div class="reveal-body"><p>The elegant part is that each processor follows the same interface: it receives a frame, does something to it (adds annotations, bounding boxes, metadata), and passes it along. This means you can stack them like LEGO blocks.</p>
-
-<p>The security camera example chains: face recognition → YOLO object detection → a custom SecurityCameraProcessor that combines the outputs. Each processor enriches the frame with more context before the LLM ever sees it.</p>
-
-<p>This is a classic pipeline pattern from software engineering, but applied to real-time video. The framework handles all the threading and frame synchronization — you just define what each processor does.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>How does Stream&#x27;s edge network fit in?</summary>
-        <div class="reveal-body"><p>Stream&#x27;s edge network is the secret sauce for latency. Instead of your video going client → your server → back to client (which adds 100-300ms easily), Stream routes through edge nodes close to both parties.</p>
-
-<p>The numbers: <strong>500ms to join</strong> a call and <strong>under 30ms</strong> for ongoing audio/video latency. That&#x27;s faster than most people&#x27;s reaction time, which means the AI coach feels truly real-time.</p>
-
-<p>The framework abstracts this as the <code>Edge</code> class. You can use <code>getstream.Edge()</code> for Stream&#x27;s network, but the README says it works with any video edge network — so you could theoretically plug in your own WebRTC infrastructure.</p></div>
-      </details>
-      </div>
-    </div>
-    <div class="checkpoint">
-      <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point, you should understand the three-layer architecture: **Processors** (fast detection) feed annotated frames to an **LLM** (smart reasoning), all orchestrated by an **Agent** running on an **Edge** network. You should also understand *why* this split exists — cost, precision, and latency.</div>
-    </div>
-    <div class="decision-point">
-      <h3>Quick Check</h3>
-      <div class="question">You&#x27;re building an AI referee for a basketball game. You need to detect players, track the ball, and call fouls in real-time. Where should foul detection logic live?</div>
-      
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt0">
-          <label for="decision_5_opt0">In the LLM reasoning layer — let Gemini watch the annotated video and decide what&#x27;s a foul</label>
-          <div class="decision-feedback correct">&#10003; Correct! Correct! Foul detection requires understanding context, rules, and judgment — exactly what LLMs are good at. YOLO handles the fast work (tracking player positions and ball location), then the LLM reasons about whether contact was legal. You wouldn&#x27;t want YOLO trying to understand basketball rules, and you wouldn&#x27;t want the LLM trying to track 10 players at 30fps.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt1">
-          <label for="decision_5_opt1">In a custom YOLO processor — train it to detect fouls directly from video frames</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. While you *could* train a custom model for this, fouls are contextual — the same contact might be legal in one situation and illegal in another. Object detection models are great at &#x27;what is where&#x27; but bad at &#x27;what does this mean given the rules.&#x27; This is exactly the kind of reasoning you want to offload to the LLM layer.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt2">
-          <label for="decision_5_opt2">Split it — detect contact events in a processor, then send only those moments to the LLM for judgment</label>
-          <div class="decision-feedback correct">&#10003; Correct! This is also a great answer! It&#x27;s actually the most efficient approach — a processor could detect when players are within contact distance (cheap computation), and only flag those moments for LLM review. This reduces LLM calls dramatically. It&#x27;s the same pattern as the security camera example, where the processor detects package-related events and the LLM decides if theft is occurring.</div>
-        </div>
-    </div>
-    <div class="step-section">
-      <div class="step-header">
-        <div class="step-number">3</div>
-        <h2>Building the Golf Coach — Deconstructing the Example</h2>
-      </div>
-      <div class="step-body">
-        <p>Let&#x27;s break down the golf coach example because it&#x27;s the clearest demonstration of the pattern in action.</p>
-
-<p>The golf coach does something genuinely impressive: it watches you swing a golf club via live video, tracks your body pose in real-time using YOLO, and has Gemini Realtime analyze your form and give voice coaching. All with sub-30ms latency.</p>
-
-<p>Here&#x27;s what&#x27;s happening under the hood:</p>
+<p>Here&#x27;s what happens when you swing a golf club in front of this agent:</p>
 
 <ol>
-<li>Your camera feed goes to Stream&#x27;s edge network</li>
-<li>Every frame hits the <strong>YOLOPoseProcessor</strong>, which detects 17 body keypoints (shoulders, elbows, wrists, hips, knees, ankles) and draws a skeleton overlay</li>
-<li>Every ~100ms (10fps), an annotated frame goes to <strong>Gemini Realtime</strong> with instructions from a <code>golf_coach.md</code> file</li>
-<li>Gemini sees the skeleton + video and reasons about your swing: &quot;Your left elbow is bending too much at the top of your backswing&quot;</li>
-<li>The response streams back as audio through the edge network</li>
+<li><strong>YOLO Pose Processor</strong> runs on every frame and detects your body&#x27;s skeleton — 17 keypoints (shoulders, elbows, wrists, hips, knees, ankles, etc.) with their (x, y) coordinates.</li>
+<li>Those keypoints get drawn as an overlay on the video frame — little dots and lines showing your pose.</li>
+<li><strong>Gemini Realtime</strong> receives the annotated video stream at ~10fps and sees both you AND your skeleton overlay.</li>
+<li>Combined with instructions from a <code>golf_coach.md</code> prompt file, Gemini gives you real-time coaching: &quot;Your left elbow is breaking down at the top of your backswing — try keeping it straighter.&quot;</li>
 </ol>
 
-<p>The instructions file is doing a LOT of heavy lifting here. It&#x27;s essentially a prompt that turns Gemini into a golf expert. Let&#x27;s explore that.</p>
+<p>The really clever part? YOLO doesn&#x27;t know anything about golf. It just detects human poses. All the golf expertise lives in the LLM instructions. This means you could swap the instructions to create a yoga instructor, a physical therapy assistant, or a dance coach — same YOLO model, totally different agent.</p>
+
+<p>Let&#x27;s get our agent to help us understand how the processor pattern works and how instructions shape behavior.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to write a system prompt (instructions file) for a real-time AI golf coach that receives YOLO pose data alongside video frames
+          Get the agent to explain how YOLO pose estimation works at a high level, and how the golf coaching instructions turn a generic pose detector into a domain-specific coach.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What does the coach need to know about golf swing mechanics?</li><li>How should it reference the YOLO keypoint data? (Think: joint angles, body alignment)</li><li>What tone should a good coach use — encouraging or clinical?</li><li>Should it give feedback constantly or only when it spots something wrong?</li></ul>
+          <ul><li>What does YOLO actually output for each frame — what data structure represents a &#x27;pose&#x27;?</li><li>How do the instructions in the markdown file shape what Gemini does with that pose data?</li><li>What would you change to turn this into a yoga instructor instead?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a markdown instructions file that covers: the coach&#x27;s personality (encouraging but precise), key swing phases to watch for (setup, backswing, downswing, impact, follow-through), specific YOLO keypoints to monitor (shoulder-hip alignment, elbow angles, knee flex), when to speak up vs. stay quiet (only comment on significant form issues, not every frame), and how to structure feedback (&#x27;I noticed X, try Y instead&#x27;). The best prompts will also tell the LLM to track improvement over time: &#x27;If the user corrects an issue, acknowledge it positively.&#x27;</p></div>
+        <div class="reveal-body"><p>The agent should explain that YOLOPoseProcessor outputs 17 keypoints per detected person — each keypoint is an (x, y, confidence) tuple representing joints like &#x27;left_shoulder&#x27;, &#x27;right_elbow&#x27;, etc. These get drawn as a stick figure overlay on the video frame.</p>
+
+<p>The LLM never sees raw keypoint data — it sees the <em>visual</em> overlay on the video. The instructions file (<code>golf_coach.md</code>) is what gives it domain knowledge: what a good swing looks like, common mistakes, how to give feedback. Swapping that file to <code>yoga_instructor.md</code> with yoga-specific knowledge would completely change the agent&#x27;s behavior without touching any code.</p>
+
+<p>This is the power of the pattern: processors are generic, instructions are specific.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The <code>instructions = &quot;Read @golf_coach.md&quot;</code> pattern is worth stealing. Instead of cramming a huge prompt into code, put it in a markdown file and reference it. This makes it easy to iterate on the prompt without touching code — and you can version control it separately.
+        This &#x27;generic processor + specific instructions&#x27; pattern is one of the most reusable ideas here. You&#x27;re essentially building the eyes once and swapping the brain&#x27;s training manual.
+      </div>
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        The golf example requires a Google Gemini API key (for the Realtime LLM), a Stream API key (for the edge network), and YOLO weights (downloaded automatically on first run). The example README walks through setup.
       </div>
         
       <details class="reveal">
-        <summary>Why YOLO Pose specifically?</summary>
-        <div class="reveal-body"><p>YOLO has several variants. The standard YOLOv11 does object detection (bounding boxes around things). <strong>YOLO Pose</strong> specifically detects human body keypoints — it outputs 17 (x, y) coordinates representing joints.</p>
+        <summary>How does YOLO run so fast?</summary>
+        <div class="reveal-body"><p>YOLO (You Only Look Once) is a family of object detection models designed for speed. The key insight in YOLO&#x27;s design is right in the name — it processes the entire image in a single pass through the neural network, rather than scanning regions one at a time like older approaches.</p>
 
-<p>For the golf coach, this is gold. Instead of the LLM trying to figure out where your elbow is from raw pixels, it gets precise coordinates. It can literally calculate: &#x27;The angle between shoulder-elbow-wrist is 145°, optimal is 170°.&#x27;</p>
+<p>YOLO11n-pose (the &#x27;nano&#x27; variant used in the golf example) is specifically optimized for edge devices. It runs at 2-5ms per frame on a decent GPU, which means you can comfortably process 30+ fps with room to spare. The &#x27;pose&#x27; variant adds keypoint detection on top of the standard bounding box detection.</p>
 
-<p>The model file <code>yolo11n-pose.pt</code> is the &#x27;nano&#x27; variant — the smallest and fastest. On a modern GPU, it processes frames in about 5-8ms. There are larger variants (small, medium, large, extra-large) that are more accurate but slower. For real-time coaching where speed matters, nano is the sweet spot.</p></div>
+<p>The trade-off? YOLO is less accurate than slower models. It might occasionally miss a keypoint or jitter between frames. But for real-time coaching, speed matters more than pixel-perfect accuracy — the LLM smooths over the noise anyway.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What&#x27;s in the golf_coach.md instructions file?</summary>
+        <div class="reveal-body"><p>We don&#x27;t have the exact contents, but based on the pattern, it likely includes:</p>
+
+<ul>
+<li><strong>Role definition</strong>: &#x27;You are an expert golf coach analyzing a student&#x27;s swing in real time.&#x27;</li>
+<li><strong>What to look for</strong>: Key checkpoints in a golf swing — address position, backswing, top of swing, downswing, impact, follow-through.</li>
+<li><strong>Common mistakes</strong>: Things like &#x27;chicken wing&#x27; (bent left elbow), early extension, over-the-top swing path.</li>
+<li><strong>How to communicate</strong>: Be encouraging, give one tip at a time, use visual references (&#x27;notice how your right shoulder is dipping&#x27;).</li>
+<li><strong>When to speak</strong>: Don&#x27;t narrate every frame — wait for a complete swing, then give feedback.</li>
+</ul>
+
+<p>The instructions file IS the expertise. The models are just the delivery mechanism.</p></div>
       </details>
       </div>
     </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>By now you should understand the three-layer architecture (Edge → Processors → LLM), how YOLO provides fast per-frame detection while the LLM provides reasoning, and why the &#x27;generic processor + specific instructions&#x27; pattern is so powerful. If any of that feels fuzzy, re-read Step 1 before continuing.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re building a real-time fitness coaching agent. Your Processor detects human poses at 30fps, but your LLM (Gemini Realtime) can only handle ~10fps at a reasonable cost. What&#x27;s the best approach?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Set the LLM to 10fps and let the Processor run at 30fps independently</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is exactly how Vision Agents is designed. The Processor and LLM run at different frame rates — the Processor annotates every frame for smooth visual feedback, while the LLM samples at a lower rate for reasoning. The `fps` parameter on the LLM controls this. You get smooth pose overlay AND intelligent coaching without breaking the bank.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">Slow the Processor down to 10fps to match the LLM</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This would work but it&#x27;s wasteful. The Processor is fast and cheap — there&#x27;s no reason to throttle it. Running it at 30fps gives you smoother visual annotations (the stick figure overlay), even if the LLM only reasons about every 3rd frame. The whole point of the two-tier architecture is that each tier runs at its own optimal speed.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">Buffer 3 frames and send them as a batch to the LLM</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Batching adds latency and complexity. The LLM doesn&#x27;t need every frame to give good coaching advice — it needs a *recent* frame with context. Sending it 10 current frames per second is better than sending 3-frame batches with delays. The streaming architecture is designed for continuous processing, not batch processing.</div>
+        </div>
+    </div>
     <div class="step-section">
       <div class="step-header">
-        <div class="step-number">4</div>
-        <h2>Going Multi-Modal: The Security Camera That Talks</h2>
+        <div class="step-number">3</div>
+        <h2>The Security Camera: Multi-Processor Composition</h2>
       </div>
       <div class="step-body">
-        <p>The security camera example cranks things up a notch. It&#x27;s not just watching — it&#x27;s a full multi-modal agent with <strong>vision</strong> (YOLO + face recognition), <strong>speech</strong> (ElevenLabs TTS + Deepgram STT), and <strong>reasoning</strong> (Gemini).</p>
+        <p>The golf coach is impressive, but the security camera example is where things get <em>really</em> interesting architecturally. It doesn&#x27;t just use one processor — it composes multiple AI capabilities into a single agent:</p>
 
-<p>Honestly, this example is kind of wild. It detects faces, tracks packages, identifies when someone takes a package that wasn&#x27;t delivered to them, generates a &quot;WANTED&quot; poster, and <em>posts it to X in real-time</em>. That&#x27;s... a lot.</p>
-
-<p>But architecturally, it&#x27;s the same pattern — just with more processors in the chain. The interesting addition here is the <strong>TTS and STT</strong> modules. This means the agent can:</p>
 <ul>
-<li><strong>Listen</strong> to people approaching (Deepgram converts speech to text)</li>
-<li><strong>Reason</strong> about what&#x27;s happening (Gemini processes video + audio context)</li>
-<li><strong>Speak</strong> alerts or warnings (ElevenLabs converts the LLM&#x27;s response to natural speech)</li>
+<li><strong>YOLOv11</strong> (custom-trained) for package detection</li>
+<li><strong>Face recognition</strong> for identifying people</li>
+<li><strong>Gemini</strong> for reasoning about what&#x27;s happening</li>
+<li><strong>ElevenLabs</strong> for text-to-speech (the agent can <em>talk</em>)</li>
+<li><strong>Deepgram</strong> for speech-to-text (the agent can <em>listen</em>)</li>
 </ul>
 
-<p>This is what makes it a true <em>agent</em> and not just a detection system. It can have a conversation about what it sees.</p>
+<p>This is a full multi-modal agent. It watches your front porch, recognizes who&#x27;s there, tracks packages, detects suspicious behavior, and can have a voice conversation with you about what it sees.</p>
 
-<p>Let&#x27;s think about how to add voice interaction to any vision agent.</p>
+<p>The wildest part? When it detects a package theft, it automatically generates a WANTED poster from the face recognition data and posts it to X (Twitter). That&#x27;s... a lot.</p>
+
+<p>But here&#x27;s the architectural lesson: <strong>the Agent class is a composition root</strong>. It doesn&#x27;t care what processors you plug in or how many. Each processor does its own thing on each frame, and all their outputs get composed together before the LLM sees them. It&#x27;s like a Lego system — snap in the pieces you need.</p>
+
+<p>Let&#x27;s explore how this multi-processor pattern works and how TTS/STT add voice interaction.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to design the architecture for a real-time kitchen safety monitor — it watches a kitchen camera and can both see hazards and verbally warn the cook
+          Get the agent to explain how multiple processors compose in a single Vision Agent, and how TTS/STT add voice capabilities.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What objects should it detect? (Knives, flames, spills, smoke...)</li><li>When should it speak up vs. stay quiet? Nobody wants a nagging kitchen AI.</li><li>How would you handle the case where the cook asks &#x27;is the oven still on?&#x27; — that&#x27;s STT → reasoning → TTS</li><li>What&#x27;s the difference between using `gemini.Realtime()` vs `gemini.LLM()` here?</li></ul>
+          <ul><li>How do multiple processors run on the same frame — sequentially or in parallel?</li><li>When the LLM receives the frame, how does it know which annotations came from which processor?</li><li>What role do the `tts` and `stt` parameters play — how does voice interaction change the agent&#x27;s behavior?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should design something with: a YOLO processor trained on kitchen objects (or a general one detecting people, knives, flames), a custom HazardProcessor that flags dangerous situations (knife near edge of counter, unattended flame, smoke detected), Gemini as the LLM with clear instructions about when to alert vs. stay quiet (only for genuine safety risks, not normal cooking), Deepgram STT for voice commands, and ElevenLabs TTS for spoken warnings. The key design decision: use <code>gemini.Realtime()</code> for the interactive voice version (bidirectional conversation) vs <code>gemini.LLM()</code> with separate TTS/STT for more control over the voice pipeline.</p></div>
+        <div class="reveal-body"><p>The agent should explain that processors run as a pipeline on each frame — each one adds its own annotations (bounding boxes, labels, face tags). The LLM sees the combined annotated frame.</p>
+
+<p>The security example adds two new components: <code>tts=elevenlabs.TTS()</code> gives the agent a voice (it can speak its observations aloud), and <code>stt=deepgram.STT()</code> lets it hear voice commands. This turns a passive observer into an interactive assistant you can talk to.</p>
+
+<p>The key design insight: the Agent class treats processors, LLM, TTS, and STT as pluggable modules. You compose the capabilities you need — same pattern every time.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        The difference between <code>gemini.Realtime()</code> and <code>gemini.LLM()</code> matters. <strong>Realtime</strong> is Gemini&#x27;s native multimodal streaming mode — it handles audio in/out natively, which is simpler but gives you less control. <strong>LLM</strong> with separate TTS/STT modules gives you more flexibility (choose different voice providers, control audio routing) but is more complex to set up.
+        The security camera example auto-posts to X/Twitter. If you run it, make sure you either disable that feature or use a test account. Nobody wants to accidentally tweet a WANTED poster of their mail carrier.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Custom YOLO weights (<code>weights_custom.pt</code> in the example) mean someone trained a YOLO model specifically for package detection. You can do this too using tools like Roboflow — train on your specific objects, export YOLO weights, drop them in.
       </div>
         
       <details class="reveal">
-        <summary>The invisible assistant pattern</summary>
-        <div class="reveal-body"><p>The most provocative example in the repo is the &#x27;invisible assistant&#x27; — a Cluely-style overlay that watches your screen and listens to your audio but only responds via text (no audio broadcast).</p>
+        <summary>How would you train custom YOLO weights?</summary>
+        <div class="reveal-body"><p>Training a custom YOLO model for your specific use case is surprisingly accessible:</p>
 
-<p>This is architecturally interesting because it flips the output modality. Instead of speaking, it sends text to an overlay on your screen. The use cases they mention are... ethically spicy: job interview coaching, sales call assistance, on-the-job training through AR glasses.</p>
+<ol>
+<li><strong>Collect images</strong>: Take ~200-500 photos of the objects you want to detect (e.g., packages on porches).</li>
+<li><strong>Label them</strong>: Use a tool like Roboflow or Label Studio to draw bounding boxes around your objects.</li>
+<li><strong>Train</strong>: Ultralytics makes this a one-liner — point it at your labeled dataset and it fine-tunes a YOLO model.</li>
+<li><strong>Export</strong>: Save the weights as a <code>.pt</code> file and pass it to <code>YOLOProcessor(model_path=&#x27;your_weights.pt&#x27;)</code>.</li>
+</ol>
 
-<p>The key technical detail: it uses <code>gemini.Realtime()</code> which handles both screen video and audio input natively, but the agent only outputs text — no TTS module. This keeps it &#x27;invisible&#x27; to the other party.</p>
+<p>The whole process can take a few hours on a decent GPU. Roboflow even offers a hosted training option if you don&#x27;t have a GPU.</p>
 
-<p>Whether you should <em>build</em> this is a different question from whether you <em>can</em>. But the architecture is clean and reusable for less controversial applications like accessibility tools or real-time translation overlays.</p></div>
+<p>This is one of the most powerful aspects of the processor pattern — you can drop in domain-specific detection without changing any other part of your agent.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Gemini vs Gemini Realtime — what&#x27;s the difference?</summary>
+        <div class="reveal-body"><p>In the examples, you&#x27;ll notice two different Gemini configurations:</p>
+
+<ul>
+<li><strong><code>gemini.Realtime(fps=10)</code></strong> — This is Gemini&#x27;s real-time streaming API. It maintains a persistent connection, receives frames continuously, and can respond at any time. It&#x27;s designed for live interaction. Used in the golf coach.</li>
+</ul>
+
+<ul>
+<li><strong><code>gemini.LLM(&#x27;gemini-2.5-flash-lite&#x27;)</code></strong> — This is a standard request/response call to Gemini. You send it a frame (or a few frames), it thinks, it responds. Used in the security camera (where you don&#x27;t need continuous coaching, just alerts).</li>
+</ul>
+
+<p>The Realtime variant is more expensive but gives you that conversational, always-on feel. The standard LLM variant is cheaper and better for event-driven use cases where you only need the AI when something happens.</p></div>
       </details>
       </div>
     </div>
-    <div class="checkpoint">
-      <div class="checkpoint-icon">&#10003;</div>
-      <div>You now understand the full Vision Agents stack: **Edge** for low-latency video transport, **Processors** for fast per-frame detection, **LLMs** for reasoning, and **TTS/STT** for voice interaction. You&#x27;ve seen how the golf coach and security camera examples compose these pieces differently for different use cases.</div>
-    </div>
     <div class="step-section">
       <div class="step-header">
-        <div class="step-number">5</div>
-        <h2>Designing Your Own Vision Agent</h2>
+        <div class="step-number">4</div>
+        <h2>Building a Custom Processor: The Lego Brick Pattern</h2>
       </div>
       <div class="step-body">
-        <p>Here&#x27;s the fun part. Now that you understand the architecture, you can design almost any real-time vision AI application by asking yourself four questions:</p>
+        <p>Now let&#x27;s get to the fun part — understanding how you&#x27;d build your own processor. This is where the framework becomes a tool for <em>your</em> ideas, not just Stream&#x27;s demos.</p>
 
-<ol>
-<li><strong>What needs to be detected fast?</strong> → This is your Processor layer. YOLO for objects/poses, face recognition for identity, custom models for domain-specific detection.</li>
-</ol>
+<p>A Processor in Vision Agents is basically a class with one important method: it takes a video frame in, and returns an annotated frame out. That&#x27;s it. Whatever you do in between — run YOLO, run a custom model, call an API, do some OpenCV magic — is up to you.</p>
 
-<ol>
-<li><strong>What needs to be reasoned about?</strong> → This is your LLM layer. Pattern analysis, rule application, contextual understanding, natural language responses.</li>
-</ol>
+<p>Think of it like a photo filter on Instagram, except instead of making your food look vintage, it&#x27;s drawing bounding boxes around objects or highlighting regions of interest.</p>
 
-<ol>
-<li><strong>How should the agent communicate?</strong> → Voice (TTS/STT), text overlay, API calls, push notifications, posting to social media (like the security camera&#x27;s X integration).</li>
-</ol>
+<p>The framework gives you built-in processors for common tasks (YOLO detection, YOLO pose estimation), but the real power is writing your own. Want to detect specific hand gestures? Count cars in a parking lot? Track a ball in a sports game? You write a processor that does that specific thing, and the rest of the pipeline stays the same.</p>
 
-<ol>
-<li><strong>What are the latency requirements?</strong> → Real-time coaching needs sub-100ms. Security monitoring can tolerate a second or two. This determines your FPS settings and model choices.</li>
-</ol>
-
-<p>The framework&#x27;s genius is that these four decisions map directly to constructor parameters. Once you&#x27;ve answered these questions, the code almost writes itself — which is exactly what we want our AI agent to help with.</p>
+<p>Let&#x27;s get our agent to help us understand the processor interface and sketch one out.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to generate a complete Vision Agent setup for a use case you&#x27;re genuinely interested in — pick something weird and specific
+          Get the agent to explain the Processor interface pattern and help you think through what a custom processor needs.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What&#x27;s a real problem in your life that &#x27;AI watching video&#x27; could solve?</li><li>Start by describing the use case in plain English before asking for code</li><li>What processors does it need? What should the LLM focus on?</li><li>What&#x27;s the right FPS balance between quality and cost?</li></ul>
+          <ul><li>What&#x27;s the minimum interface a Processor must implement — what goes in, what comes out?</li><li>How does a processor communicate what it found to the LLM — through annotations on the frame, or through some other channel?</li><li>If you wanted to build a &#x27;count people in a room&#x27; processor, what would the key steps be?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you an Agent constructor with your specific processors and LLM choice, plus a draft instructions markdown file. The setup should be compact — maybe 10-15 lines of config plus the instructions file. The key thing to evaluate: did the agent pick the right processor types for your use case? Did it set reasonable FPS values? Does the instructions prompt give the LLM enough context to be useful without being overwhelming?</p></div>
+        <div class="reveal-body"><p>The agent should explain that a Processor takes a frame (image array) and returns an annotated frame. The core pattern is:</p>
+
+<ol>
+<li>Receive frame → 2. Run your detection/analysis → 3. Draw annotations (boxes, labels, overlays) → 4. Return annotated frame.</li>
+</ol>
+
+<p>The LLM sees the visual annotations, so your processor communicates through what it draws. For a &#x27;people counter&#x27;, you&#x27;d run YOLO person detection, draw bounding boxes, and add a text overlay like &#x27;People: 7&#x27; in the corner. The LLM would see that number and incorporate it into its reasoning.</p>
+
+<p>The agent should emphasize that processors are stateful — you can track things across frames (like counting unique people who&#x27;ve entered a room over time).</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        When evaluating what your agent gives back, the most important thing to check isn&#x27;t the code — it&#x27;s the <strong>instructions prompt</strong>. That markdown file is where 80% of the agent&#x27;s behavior comes from. A perfectly architected pipeline with a mediocre prompt will give mediocre results. Spend your iteration cycles there.
+        Processors can be stateful! The security camera processor tracks packages across frames — it knows &#x27;that package has been on the porch for 10 minutes&#x27; because it maintains state between frames. This is how you go from &#x27;I see a package&#x27; to &#x27;a package was stolen.&#x27;
       </div>
         
       <details class="reveal">
-        <summary>Custom processors — when YOLO isn&#x27;t enough</summary>
-        <div class="reveal-body"><p>YOLO is great for general object detection and pose estimation, but what if you need something domain-specific? The framework supports custom processors.</p>
+        <summary>What about the fps parameter on processors?</summary>
+        <div class="reveal-body"><p>Processors can specify their own <code>fps</code> — how many frames per second they process. This is separate from the video fps and the LLM fps.</p>
 
-<p>A processor is just a class that receives frames and returns annotated frames. You could build one that:</p>
+<p>Why would you want different rates? Because different tasks need different speeds:</p>
+
 <ul>
-<li>Runs a Roboflow model trained on your specific objects</li>
-<li>Does optical flow analysis to detect sudden movements</li>
-<li>Applies color histogram analysis (useful for detecting fire or smoke)</li>
-<li>Runs OCR on text visible in the frame</li>
-<li>Tracks objects across frames with a simple centroid tracker</li>
+<li><strong>Pose estimation for sports coaching</strong>: High fps (15-30) — you need to catch every moment of a fast swing.</li>
+<li><strong>Package detection for security</strong>: Low fps (2-5) — packages don&#x27;t move fast, and running detection 30 times per second wastes GPU.</li>
+<li><strong>Face recognition</strong>: Very low fps (1-2) — faces don&#x27;t change that fast and recognition is more expensive.</li>
 </ul>
 
-<p>The <code>SecurityCameraProcessor</code> in the repo is a custom processor that wraps YOLO with domain-specific logic for package tracking. That&#x27;s the pattern to follow: wrap a fast model with your business logic, expose it as a processor, and let the framework handle the plumbing.</p></div>
+<p>The framework handles the frame sampling for you. Set <code>fps=5</code> on your processor and it&#x27;ll only run on every 6th frame of a 30fps video. The annotated frames persist between runs, so the visual overlay stays smooth even at low processor fps.</p></div>
       </details>
       </div>
     </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You now understand the full architecture: Edge for transport, Processors for fast per-frame detection, LLMs for reasoning, plus optional TTS/STT for voice. You know how processors compose together and how custom processors plug into the framework. Time to design your own agent!</div>
+    </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You&#x27;re building a real-time AI tutor that watches a student solve math problems on a whiteboard via webcam. Which LLM configuration makes the most sense?</div>
+      <div class="question">You want to build a real-time cooking assistant that watches someone cook and gives advice. You need to detect ingredients, track what&#x27;s on the stove, and provide cooking tips. Which setup makes the most sense?</div>
       
         <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt0">
-          <label for="decision_10_opt0">gemini.Realtime(fps=10) — full multimodal streaming with voice</label>
-          <div class="decision-feedback correct">&#10003; Correct! This is the best fit! A tutor needs to both see the whiteboard AND have a voice conversation with the student. Gemini Realtime handles both video frames and audio natively, so the student can ask &#x27;where did I go wrong?&#x27; and the AI can reference what it sees. 10fps is reasonable since math problems don&#x27;t change frame-to-frame as fast as a golf swing.</div>
+          <input type="radio" name="decision_9" id="decision_9_opt0">
+          <label for="decision_9_opt0">Custom YOLO (trained on food/kitchen items) + Gemini Realtime with cooking instructions</label>
+          <div class="decision-feedback correct">&#10003; Correct! This follows the proven pattern: a fast, domain-specific processor (custom YOLO trained on common ingredients and kitchen tools) paired with a reasoning LLM (Gemini Realtime for continuous conversational coaching). The custom YOLO handles the &#x27;what&#x27;s on the counter&#x27; detection, and Gemini handles the &#x27;you should add salt now&#x27; reasoning. The cooking expertise lives in the instructions markdown file.</div>
         </div>
         <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt1">
-          <label for="decision_10_opt1">gemini.LLM(&#x27;gemini-2.5-flash-lite&#x27;) with separate TTS/STT</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Flash-lite is optimized for speed and cost, but a tutoring session benefits from the richer reasoning of Realtime mode. Also, using separate TTS/STT adds complexity without clear benefit here — you&#x27;re not doing anything special with the audio pipeline that would require separate control.</div>
+          <input type="radio" name="decision_9" id="decision_9_opt1">
+          <label for="decision_9_opt1">Send raw video to GPT-4o at 30fps</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. GPT-4o is great at understanding images, but sending 30 frames per second to a cloud API would be incredibly expensive (think hundreds of dollars per hour), way too slow for real-time feedback, and unnecessary. The two-tier approach with a local YOLO model for detection and an LLM for occasional reasoning is orders of magnitude more practical.</div>
         </div>
         <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt2">
-          <label for="decision_10_opt2">openai.Realtime(fps=30) — maximum frame rate for accuracy</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. 30fps for a whiteboard? That&#x27;s massive overkill — math doesn&#x27;t change 30 times per second. You&#x27;d be burning through API credits for frames that are essentially identical. OpenAI Realtime is also currently more expensive per frame than Gemini. The code comment in the repo literally warns: &#x27;Careful with FPS can get expensive.&#x27;</div>
+          <input type="radio" name="decision_9" id="decision_9_opt2">
+          <label for="decision_9_opt2">YOLO detection only, no LLM</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. YOLO can tell you &#x27;there&#x27;s a tomato and a knife on the counter&#x27; but it can&#x27;t tell you &#x27;you should dice the tomato next because the sauce needs to simmer for 20 minutes.&#x27; The LLM provides the reasoning layer — understanding recipes, timing, technique. Without it, you just have an expensive label maker.</div>
         </div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Design and prompt your agent to build a &#x27;Gym Form Checker&#x27; — a vision agent that watches someone exercise via webcam and gives real-time form corrections with voice feedback</div>
-      <div class="your-turn-context">This is basically a variation of the golf coach, but for general gym exercises. The tricky part: it needs to handle multiple exercise types (squats, deadlifts, push-ups) and switch its analysis based on what it detects the person doing. Think about how the instructions prompt needs to be structured to handle this flexibility.</div>
+      <div class="your-turn-goal">Design a real-time vision agent for a specific use case of YOUR choosing. Get your AI agent to help you plan the architecture — which processors, which LLM configuration, what instructions, and what the user experience looks like.</div>
+      <div class="your-turn-context">You&#x27;ve seen the golf coach (pose estimation + coaching LLM), the security camera (multi-processor + event detection), and the invisible assistant (screen capture + text coaching). Now it&#x27;s your turn to design one. Pick something that excites you — a gym workout tracker, a bird watching identifier, a warehouse inventory monitor, a classroom engagement detector, a pet behavior analyzer... anything where real-time video + AI reasoning would be useful.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What processor do you need to detect body pose during exercises?</li><li>How should the instructions prompt handle different exercises — one giant prompt or a dynamic approach?</li><li>What FPS makes sense for exercise form? (Hint: think about how fast a squat is vs. a golf swing)</li><li>When should the agent speak vs. stay quiet? (Nobody wants interrupted mid-rep)</li></ul>
+        <ul><li>What specific objects or activities does your agent need to detect? This determines your Processor choice.</li><li>Does your agent need to talk (TTS) or listen (STT)? Or is text output enough?</li><li>Should the LLM run continuously (Realtime) or only respond to events (standard LLM)?</li><li>What expertise should go in the instructions file? What does the &#x27;brain&#x27; need to know about your domain?</li></ul>
       </div>
       
       <details class="reveal">
@@ -1159,30 +1166,84 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>Build me a real-time gym form checker using Stream&#x27;s Vision Agents framework. It should:
+            <pre><code>I want to design a real-time vision agent for a home gym workout tracker. Here&#x27;s what I&#x27;m thinking:
 
-1. Use YOLOPoseProcessor to track body keypoints during exercises
-2. Use Gemini Realtime at 5fps for the reasoning and voice coaching
-3. Include an instructions.md that covers: detecting which exercise the user is doing (squat, deadlift, push-up, overhead press), key form cues for each exercise (knee tracking over toes for squats, neutral spine for deadlifts, etc.), a rule to only give feedback between reps — not mid-rep — to avoid breaking concentration, and an encouraging coaching tone
-4. Use Stream&#x27;s edge network for the video transport
+**Use case**: The agent watches someone working out via webcam and provides real-time form correction, rep counting, and workout tracking.
 
-Also write the instructions.md prompt file. The coach should track rep count, acknowledge good form, and only interrupt for safety-critical form breakdowns (like a rounding lower back on deadlifts).</code></pre>
+**Help me design the architecture using Stream&#x27;s Vision Agents framework:**
+1. What Processor(s) do I need? I&#x27;m thinking YOLO Pose for body tracking — is that the right choice? Do I need any custom processors?
+2. Should I use Gemini Realtime (continuous coaching) or a standard LLM (event-triggered feedback)? What fps makes sense?
+3. What should go in my instructions markdown file? What fitness knowledge does the LLM need?
+4. Should I add TTS so it can verbally coach? What about STT for voice commands like &#x27;start set&#x27; or &#x27;switch exercise&#x27;?
+5. Can the processor be stateful to count reps? How would I track the up/down motion of a squat across frames?
+
+Give me the full architecture plan — which components, how they connect, and what the user experience feels like.</code></pre>
           </div>
         </div>
       </details>
     </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>The Bigger Picture: Where Real-Time Vision Agents Are Heading</h2>
+      </div>
+      <div class="step-body">
+        <p>Let&#x27;s zoom out and think about <em>why</em> this matters beyond the cool demos.</p>
+
+<p>We&#x27;re at an interesting inflection point. For years, computer vision and language models existed in separate worlds. CV people built detection models. NLP people built chatbots. The idea of composing them into a single real-time pipeline was technically possible but practically painful — you&#x27;d need to handle video streaming, model serving, frame synchronization, latency optimization... it was a full-time infrastructure job.</p>
+
+<p>Frameworks like Vision Agents collapse that complexity. The Agent class handles the orchestration. The Edge handles the streaming. You just pick your models and write your instructions.</p>
+
+<p>This is the same pattern we saw with web development (React collapsed the UI complexity), mobile development (Flutter/React Native collapsed the cross-platform complexity), and now AI agents (LangChain, CrewAI, and now Vision Agents collapse the multi-model complexity).</p>
+
+<p><strong>Some use cases that become tractable with this pattern:</strong></p>
+
+<ul>
+<li><strong>Assisted living</strong>: An agent that watches an elderly person&#x27;s home, detects falls, and calls for help — with the ability to have a voice conversation about whether they&#x27;re okay.</li>
+<li><strong>Manufacturing QA</strong>: An agent on the assembly line that detects defects in real time and explains what went wrong.</li>
+<li><strong>Wildlife monitoring</strong>: Cameras in nature preserves that identify species, track movements, and alert researchers to unusual behavior.</li>
+<li><strong>Retail analytics</strong>: Understanding customer behavior in stores — where they go, what they look at, how long they browse.</li>
+</ul>
+
+<p>The common thread? <strong>Fast detection + slow reasoning + real-time transport.</strong> That&#x27;s the recipe, and now there&#x27;s a framework for it.</p>
+        
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Real-time video AI raises serious privacy and ethical concerns. Facial recognition, behavior tracking, and automated surveillance are powerful tools that can easily be misused. Before building any vision agent that watches people, think carefully about consent, data storage, and who has access to the system.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Vision Agents is open source but Stream&#x27;s edge network is a commercial product. For local development and testing, everything runs on localhost. For production with real users, you&#x27;ll need a Stream account. The framework IS designed to work with other edge networks too.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does this compare to other approaches?</summary>
+        <div class="reveal-body"><p><strong>vs. Running everything through a multimodal LLM (GPT-4o, Gemini):</strong> Those models can analyze video, but not at real-time speeds or reasonable costs for continuous monitoring. Vision Agents&#x27; two-tier approach is fundamentally more efficient for always-on use cases.</p>
+
+<p><strong>vs. Traditional CV pipelines (OpenCV + custom models):</strong> You can absolutely build real-time detection with OpenCV alone. But you lose the reasoning layer — traditional CV tells you <em>what</em> but not <em>why</em> or <em>what to do about it</em>. Vision Agents adds the LLM layer on top.</p>
+
+<p><strong>vs. Roboflow / other CV platforms:</strong> Roboflow is great for training and deploying detection models. Vision Agents actually integrates with Roboflow as a processor source. They&#x27;re complementary, not competitive.</p>
+
+<p><strong>vs. Building it yourself:</strong> You <em>could</em> wire together YOLO + Gemini + WebRTC + a streaming server. Vision Agents just saves you from writing all that glue code. Whether the abstraction is worth the dependency is a judgment call for your team.</p></div>
+      </details>
+      </div>
+    </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>We just walked through Stream&#x27;s Open Vision Agents framework — a genuinely elegant approach to building AI that can watch, listen, and respond to live video.</p>
+      <div class="recap-body"><h2>What We Explored</h2>
 
-<p>The core architectural pattern is worth remembering even if you never use this specific framework: <strong>fast detection models</strong> (YOLO, face recognition) handle the high-frequency work of tagging what&#x27;s in each frame, while <strong>reasoning LLMs</strong> (Gemini, OpenAI) handle the slower but smarter work of understanding what&#x27;s happening and deciding how to respond. An <strong>edge network</strong> keeps the whole loop under 30ms.</p>
+<p>We dug into Stream&#x27;s <strong>Vision Agents</strong> — an open-source framework for building AI agents that process live video in real time. We understood the three-layer architecture (Edge → Processors → LLM), dissected the golf coaching and security camera examples, learned how custom processors plug into the system, and designed our own vision agent architecture.</p>
 
-<p>What makes Vision Agents compelling isn&#x27;t any single piece — YOLO and Gemini existed before this. It&#x27;s the <strong>composability</strong>. The processor chain pattern means you can stack detection models like building blocks, swap LLMs without changing your pipeline, and add voice interaction with two extra parameters. That&#x27;s the kind of framework design that actually gets used.</p></div>
-      <ul class="takeaways-list"><li>The &#x27;fast eyes + smart brain&#x27; pattern (cheap detection models feeding expensive reasoning LLMs) is the fundamental architecture for real-time AI — and it applies far beyond video</li><li>Processor chains are composable: stack YOLO, face recognition, custom detectors, and domain-specific logic as a pipeline that feeds annotated frames to your LLM</li><li>The instructions prompt (that markdown file) is where 80% of your agent&#x27;s behavior lives — optimizing that prompt matters more than optimizing the code</li><li>FPS settings are your biggest cost lever: YOLO at 30fps is nearly free (runs locally), but sending 30fps to Gemini Realtime will drain your API budget fast</li><li>Multi-modal means more than vision — combining STT, TTS, and video creates agents that can have natural conversations about what they see</li></ul>
+<p>The big idea: <strong>fast, cheap CV models handle the &#x27;what&#x27;s there&#x27; at frame-rate speed, while reasoning LLMs handle the &#x27;what does it mean&#x27; at a lower frequency.</strong> The Agent class composes these layers together, and the Edge network makes it all feel instantaneous to the user.</p>
+
+<p>This isn&#x27;t just about Stream&#x27;s framework — it&#x27;s a pattern that&#x27;s emerging across the AI industry. The ability to compose specialized models into real-time pipelines is becoming a fundamental skill for AI engineers.</p></div>
+      <ul class="takeaways-list"><li>The two-tier architecture (fast CV model + reasoning LLM) is the key design pattern for real-time video AI — each tier runs at its own optimal speed and cost point</li><li>Processors are the reusable building blocks — same YOLO pose detector works for golf, yoga, physical therapy, or dance by swapping the LLM&#x27;s instructions</li><li>The &#x27;instructions as expertise&#x27; pattern means domain knowledge lives in markdown files, not in code — making agents reconfigurable without redeployment</li><li>Multi-modal composition (video + voice + reasoning) is now a configuration choice, not an engineering project — the Agent class handles the orchestration</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Clone the Vision Agents repo and run the golf coach example locally — seeing YOLO pose detection on your own webcam is a &#x27;wow&#x27; moment</li><li>Experiment with the instructions prompt — try making the golf coach give feedback in different styles (drill sergeant, zen master, sports commentator) and see how it changes the experience</li><li>Design a custom processor for a domain you know well — the SecurityCameraProcessor example shows the pattern for wrapping detection models with business logic</li><li>Explore the client SDKs (React, iOS, Android, Flutter) — the Python agent is the backend, but Stream provides native frontends so you can ship real apps</li></ul>
+        <ul><li>Clone the Vision Agents repo and run the golf coach example locally — it&#x27;s the fastest way to see the architecture in action</li><li>Try training a custom YOLO model on Roboflow for objects specific to your use case, then drop the weights into a YOLOProcessor</li><li>Experiment with different LLM configurations — compare Gemini Realtime (continuous) vs standard Gemini (event-driven) for your use case</li><li>Explore the framework&#x27;s client SDKs (React, iOS, Android) to understand how the frontend connects to your vision agent</li></ul>
       </div>
     </div>
     <div class="sources-section">
@@ -1196,7 +1257,7 @@ Also write the instructions.md prompt file. The coach should track rep count, ac
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">666ghj/BettaFish</div>
-            <div class="oa-summary">Multi-agent public opinion analysis tool that collects data, breaks filter bubbles, and predicts trends.</div>
+            <div class="oa-summary">Multi-agent public opinion analysis assistant that collects data, breaks filter bubbles, and predicts trends.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1248,7 +1309,7 @@ Also write the instructions.md prompt file. The coach should track rep count, ac
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">Comfy-Org/ComfyUI</div>
-            <div class="oa-summary">Modular node-based GUI for building and running image generation pipelines with diffusion models.</div>
+            <div class="oa-summary">Modular node-based GUI for building and running diffusion model image generation workflows.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1286,9 +1347,9 @@ Also write the instructions.md prompt file. The coach should track rep count, ac
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
-            <div class="oa-summary">Argues AI coding tools simplify writing code but raise the bar for actual engineering judgment.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">If AI writes code, should the session be part of the commit?</div>
+            <div class="oa-summary">Tool and discussion about including AI coding session transcripts as metadata in git commits.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
@@ -1299,9 +1360,9 @@ Also write the instructions.md prompt file. The coach should track rep count, ac
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">OpenFang</div>
-            <div class="oa-summary">Open-source operating system designed for building, deploying, and managing AI agents.</div>
-            <div class="oa-meta">Product Hunt AI · Mar 1</div>
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Argues that AI coding tools lower the code-writing bar but raise the bar for engineering judgment.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
@@ -1312,9 +1373,9 @@ Also write the instructions.md prompt file. The coach should track rep count, ac
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
-            <div class="oa-summary">AMD demonstrates running a trillion-parameter language model locally using a cluster of Ryzen AI laptops.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">OpenFang</div>
+            <div class="oa-summary">Open-source operating system designed for running and managing AI agents.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
@@ -1330,7 +1391,7 @@ Also write the instructions.md prompt file. The coach should track rep count, ac
     </div>
     <script>
     (function() {
-      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "OpenFang", "tags": "agents,open-source", "source": "Product Hunt AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}];
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "If AI writes code, should the session be part of the commit?", "tags": "coding", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "OpenFang", "tags": "agents,open-source", "source": "Product Hunt AI"}];
       var repo = "coldbrewnosugar/ai-course";
       var track = "general";
       var date = "2026-03-02";

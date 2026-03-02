@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeerFlow 2.0: Build Creative AI Pipelines with Sub-Agent Orchestration — Tinker</title>
+  <title>DeerFlow 2.0: Build a Creative AI Pipeline with Sub-Agents and Sandboxes — Tinker</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 :root {
@@ -771,350 +771,366 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>One Agent Is Cool. A Team of Agents Is a Studio.</h1>
-      <div class="hero-subtitle">DeerFlow 2.0 lets you orchestrate sub-agents, memory, and sandboxed code execution into creative pipelines — and it just hit #1 on GitHub Trending. Let&#x27;s build with it.</div>
+      <h1>DeerFlow 2.0: Your Personal Creative AI Swarm</h1>
+      <div class="hero-subtitle">ByteDance&#x27;s open-source super-agent hit #1 on GitHub Trending. Let&#x27;s set it up and build a visual content pipeline where sub-agents research, generate, and iterate — all inside sandboxed environments.</div>
       <div class="hero-meta">
         <span>40 min</span>
-        <span> <span class="tag">multi-agent</span> <span class="tag">orchestration</span> <span class="tag">creative-pipelines</span> <span class="tag">open-source</span> <span class="tag">sandboxes</span></span>
+        <span> <span class="tag">multi-agent</span> <span class="tag">sandbox</span> <span class="tag">creative-pipelines</span> <span class="tag">open-source</span> <span class="tag">orchestration</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>On February 28th, 2026, ByteDance dropped <strong>DeerFlow 2.0</strong> — a ground-up rewrite of their open-source super-agent harness — and it immediately claimed the #1 spot on GitHub Trending.</p>
+      <p>On February 28th, 2026, <strong>DeerFlow 2.0</strong> claimed the #1 spot on GitHub Trending — and for good reason. ByteDance completely rewrote their open-source agent framework from scratch (zero shared code with v1), turning what was originally a &quot;Deep Research&quot; tool into a full-blown <strong>super-agent harness</strong>.</p>
 
-<p>Here&#x27;s why that matters: most AI agent frameworks give you <em>one</em> agent that does everything. DeerFlow flips that. It&#x27;s an <strong>orchestration layer</strong> — a coordinator that spins up specialized sub-agents, gives them sandboxed environments to execute code safely, plugs in long-term memory, and wires everything together with an extensible skills system.</p>
+<p>Here&#x27;s why this matters for creative work: DeerFlow doesn&#x27;t just call an LLM and return text. It orchestrates <strong>sub-agents</strong> that each have their own specialty — one might research visual references on the web, another might write and execute Python code inside a <strong>sandboxed Docker container</strong> to generate images, and a third might critique the results and suggest refinements. All of this is coordinated through a <strong>skills system</strong> that you can extend, backed by <strong>persistent memory</strong> so the system actually learns from previous runs.</p>
 
-<p>Think of it like the difference between a solo musician and a film production crew. The solo musician is talented, but the crew has a director, a cinematographer, a sound engineer, and an editor — each doing what they&#x27;re best at, coordinated by a shared vision.</p>
-
-<p>Today we&#x27;re going to set up DeerFlow locally, understand its architecture, and build a <strong>creative visual pipeline</strong> where one agent researches references, another generates images via API, and a coordinator iterates on the results. The cool part? You&#x27;ll mostly be <em>talking to your AI agent</em> about what to build, not writing code by hand.</p>
+<p>Think of it like hiring a small creative agency, except every employee is an AI agent and the office is a Docker container. Today we&#x27;re going to set up that agency and give it its first creative brief.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>Get the Mental Model: How DeerFlow Orchestrates Agents</h2>
+        <h2>Get the Lay of the Land: DeerFlow&#x27;s Architecture</h2>
       </div>
       <div class="step-body">
-        <p>Before we touch any config files, let&#x27;s understand what DeerFlow actually <em>is</em> — because honestly, the architecture confused me at first too.</p>
+        <p>Before we touch any code, let&#x27;s understand what DeerFlow actually <em>is</em>. Most people hear &quot;agent framework&quot; and think of a single LLM with tool access. DeerFlow is more like an <strong>orchestra conductor</strong> — it doesn&#x27;t play any instrument itself, but it decides who plays what and when.</p>
 
-<p>Imagine you&#x27;re running a small creative agency. You&#x27;ve got:</p>
+<p>The architecture has five key pieces:</p>
 
 <ul>
-<li><strong>A project manager</strong> (the coordinator agent) who breaks tasks into pieces and assigns them</li>
-<li><strong>Specialists</strong> (sub-agents) — a researcher, an image generator, a copywriter — each with their own desk and tools</li>
-<li><strong>A shared filing cabinet</strong> (memory) so everyone can see past work</li>
-<li><strong>Locked offices</strong> (sandboxes) where specialists can run experiments without messing up the main workspace</li>
-<li><strong>A skills handbook</strong> (the skills system) that defines what each specialist can do</li>
+<li><strong>Sub-agents</strong>: Specialized workers. One might be great at web research, another at writing code, another at analysis. They&#x27;re not generic — each has a focused role.</li>
+<li><strong>Sandbox</strong>: An isolated execution environment (Docker container) where agents can run code without touching your actual machine. This is <em>critical</em> for image generation — you want Python scripts running diffusion models in a container, not loose on your laptop.</li>
+<li><strong>Skills</strong>: Think of these as &quot;plugins&quot; or &quot;recipes&quot; that teach agents new tricks. A skill might be &quot;generate an image using Stable Diffusion&quot; or &quot;create a video storyboard.&quot;</li>
+<li><strong>Memory</strong>: Persistent context that survives across sessions. The system remembers what worked, what didn&#x27;t, and what you prefer.</li>
+<li><strong>Tools</strong>: External capabilities like web search (via Tavily), file I/O, and MCP servers.</li>
 </ul>
 
-<p>DeerFlow&#x27;s architecture maps almost 1:1 to this. The <strong>coordinator</strong> receives a task, decomposes it, and dispatches sub-tasks to <strong>sub-agents</strong>. Each sub-agent has access to <strong>skills</strong> (which are basically tool definitions — &quot;you can search the web,&quot; &quot;you can generate images,&quot; &quot;you can execute Python&quot;). When a sub-agent needs to run code, it does so in a <strong>sandbox</strong> — either a local process or a Docker container — so nothing dangerous touches your actual machine.</p>
+<p>The mental model I like: <strong>sub-agents are the team, skills are their training, sandbox is their workshop, memory is their notebook, and tools are their equipment.</strong></p>
 
-<p>The <strong>memory system</strong> persists context across sessions. If your image-generation agent learned that a certain style prompt works well for product shots last Tuesday, it can recall that next time.</p>
-
-<p>And the whole thing is <strong>event-driven</strong> — agents emit events (&quot;task started,&quot; &quot;image generated,&quot; &quot;error encountered&quot;), and the coordinator reacts. It&#x27;s not a rigid pipeline; it&#x27;s more like a conversation between specialists.</p>
+<p>Let&#x27;s get our AI agent to help us set up the local environment.</p>
         
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to walk you through cloning DeerFlow and generating the initial configuration — tailored to a creative image-generation use case.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What prerequisites does DeerFlow need? (Think: Node.js version, Python tooling, Docker...)</li><li>The README mentions `make config` — what does that actually generate for you?</li><li>We want image generation eventually. Which sandbox mode would make sense for running arbitrary Python code safely?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a step-by-step setup sequence: clone the repo, run <code>make config</code> to generate <code>config.yaml</code> and <code>.env</code> from templates, then run <code>make check</code> to verify prerequisites (Node.js 22+, pnpm, uv, nginx). It should flag that you&#x27;ll want <strong>Docker sandbox mode</strong> since we&#x27;ll be running image-generation code. The key commands are just three lines:</p>
+
+<p>```bash</p>
+<p>git clone https://github.com/bytedance/deer-flow.git</p>
+<p>cd deer-flow</p>
+<p>make config</p>
+<p>```</p>
+
+<p>The agent should explain that <code>make config</code> creates your local config files from example templates — you&#x27;ll edit these next.</p></div>
+      </details>
+      </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        DeerFlow 2.0 is a complete rewrite — it shares zero code with v1. If you&#x27;ve used the original Deep Research framework, forget what you know. The v1 branch is still maintained separately.
+        DeerFlow 2.0 is a complete ground-up rewrite — it shares zero code with v1. If you find old tutorials referencing the <code>1.x</code> branch, that&#x27;s the original &quot;Deep Research&quot; framework. We&#x27;re working with the new hotness.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        You&#x27;ll need Docker Desktop running for sandbox mode. If you&#x27;re on a machine where Docker isn&#x27;t an option, DeerFlow also supports a local execution mode — but you lose the isolation that makes running arbitrary generated code safe.
       </div>
         
       <details class="reveal">
-        <summary>How is this different from just chaining API calls?</summary>
-        <div class="reveal-body"><p>Great question. You <em>could</em> chain API calls yourself — call a search API, pass results to an image API, evaluate the output. But you&#x27;d be writing all the glue code: error handling, retries, state management, context passing between steps.</p>
+        <summary>Why does the sandbox matter so much for creative work?</summary>
+        <div class="reveal-body"><p>Here&#x27;s the thing about image generation pipelines: they involve running <em>generated</em> Python code that imports heavy libraries (torch, diffusers, PIL), downloads model weights, and writes files to disk. Without a sandbox, a hallucinated <code>rm -rf</code> or a corrupted dependency could wreck your system.</p>
 
-<p>DeerFlow gives you that glue as infrastructure. The coordinator handles task decomposition, the sandbox handles safe execution, the memory system handles context. You just define <em>what</em> each agent can do (skills) and <em>what</em> you want done (the task). The orchestration layer figures out the <em>how</em>.</p>
-
-<p>It&#x27;s the difference between building a car from parts vs. driving one. Both get you somewhere, but one lets you focus on the destination.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>What&#x27;s &#x27;event-driven&#x27; actually mean here?</summary>
-        <div class="reveal-body"><p>In a traditional pipeline, Step 1 finishes → Step 2 starts → Step 3 starts. It&#x27;s linear.</p>
-
-<p>In an event-driven system, agents emit <em>events</em> — structured messages like &quot;I found 5 reference images&quot; or &quot;Image generation failed with error X.&quot; The coordinator <em>subscribes</em> to these events and decides what to do next. Maybe it retries. Maybe it asks a different agent. Maybe it adjusts the task.</p>
-
-<p>This is what makes DeerFlow feel more like a team collaborating than a script running. The coordinator can adapt mid-task based on what&#x27;s happening.</p></div>
+<p>Docker sandbox mode means each code execution spins up in an isolated container with its own filesystem. The agent writes code, the sandbox runs it, results come back — and if anything goes wrong, you just throw away the container. It&#x27;s like having a disposable art studio that you can trash and rebuild in seconds.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Stand Up DeerFlow with Docker</h2>
+        <h2>Configure Your Models and API Keys</h2>
       </div>
       <div class="step-body">
-        <p>Alright, let&#x27;s get this thing running. DeerFlow recommends Docker, and honestly it&#x27;s the right call — the sandbox system <em>needs</em> container isolation to be safe, and Docker gives you a consistent environment regardless of your OS.</p>
+        <p>DeerFlow&#x27;s <code>config.yaml</code> is where the magic routing happens. Unlike simpler frameworks where you pick one model and go, DeerFlow lets you configure <strong>multiple models</strong> and assign them to different roles. This is actually a really smart design choice for creative work.</p>
 
-<p>Here&#x27;s where we start talking to our AI agent. Instead of copying commands from a README, let&#x27;s have our agent walk us through the setup with our specific situation in mind.</p>
+<p>Think about it: you might want a fast, cheap model (like GPT-4o-mini or Claude Haiku) handling the research sub-agent that&#x27;s just fetching and summarizing references. But for the actual creative direction — deciding composition, color palette, art style — you probably want your heavy hitter (GPT-4, Claude Opus, etc.).</p>
+
+<p>The config uses <strong>LangChain class paths</strong> under the hood, which means you can plug in basically any model provider: OpenAI, Anthropic, local models via Ollama, whatever. DeerFlow doesn&#x27;t care — it just needs a LangChain-compatible wrapper.</p>
+
+<p>Let&#x27;s get our agent to help us write a config optimized for creative image generation.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your AI agent to generate a complete DeerFlow 2.0 local setup script tailored to your machine — including cloning, config generation, model configuration, and Docker launch.
+          Ask your agent to help you write a config.yaml that sets up two models — a powerful one for creative decisions and a fast one for research — plus the Docker sandbox configuration.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What model provider are you planning to use? OpenAI? Anthropic? A local model? Your agent needs to know this to configure config.yaml correctly.</li><li>Do you already have Docker installed and running? What about Node.js 22+ and pnpm?</li><li>Where do you want to keep your API keys — in a .env file, as environment variables, or hardcoded? (Hint: one of these is a bad idea for production.)</li><li>DeerFlow has multiple sandbox modes. For a first setup, which would be simplest?</li></ul>
+          <ul><li>What goes in each model entry? (name, display_name, use, model, api_key, max_tokens, temperature...)</li><li>For creative work, would you want a higher or lower temperature? Why?</li><li>The sandbox section needs to specify Docker mode — what would your agent need to know about that?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a step-by-step walkthrough customized to your setup. The key pieces are: (1) clone the repo, (2) run <code>make config</code> to generate local config files from templates, (3) edit <code>config.yaml</code> to add your model — the important bit looks like this:</p>
-
-<p>```yaml</p>
-<p>models:</p>
-<ul>
-<li>name: gpt-4</li>
-</ul>
-<p>use: langchain_openai:ChatOpenAI</p>
-<p>model: gpt-4</p>
-<p>api_key: $OPENAI_API_KEY</p>
-<p>```</p>
-
-<p>(4) set your API keys in <code>.env</code>, and (5) run <code>make docker-init</code> then <code>make docker-start</code>. The agent should also mention that <code>docker-init</code> pulls the sandbox image (only needed once) and that the app will be at <code>http://localhost:2026</code>.</p></div>
+        <div class="reveal-body"><p>The agent should give you a <code>config.yaml</code> snippet with two model entries. The key insight is the <code>use</code> field — it&#x27;s a LangChain class path like <code>langchain_openai:ChatOpenAI</code> or <code>langchain_anthropic:ChatAnthropic</code>. For the creative model, temperature around 0.8-0.9 encourages variety. For research, 0.3-0.5 keeps things factual. The sandbox config should point to Docker execution mode. The whole thing is maybe 15 lines of YAML — nothing scary.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-api-key-note">
         <div class="callout-label">API Key Note</div>
-        You&#x27;ll need at least two API keys: one for your LLM provider (OpenAI, Anthropic, etc.) and one for Tavily (web search). DeerFlow uses Tavily for its research agent&#x27;s web searching capability. Grab a free key at tavily.com.
+        DeerFlow needs at minimum two API keys: one for your LLM provider (OpenAI, Anthropic, etc.) and one for <strong>Tavily</strong> (the web search tool that research sub-agents use). Put both in your <code>.env</code> file. Tavily has a free tier that&#x27;s generous enough for this workshop.
       </div>
-      <div class="callout callout-warning">
-        <div class="callout-label">Warning</div>
-        Don&#x27;t put API keys directly in config.yaml for anything beyond local tinkering. Use the .env file or environment variables. If you accidentally commit a key to git, rotate it immediately.
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Use environment variable references (<code>$OPENAI_API_KEY</code>) in your config.yaml instead of pasting raw keys. DeerFlow reads your <code>.env</code> file automatically. Future you will thank present you.
       </div>
         
       <details class="reveal">
-        <summary>What&#x27;s this LangChain class path about?</summary>
-        <div class="reveal-body"><p>Notice the <code>use: langchain_openai:ChatOpenAI</code> line in the config? DeerFlow uses LangChain under the hood as its model abstraction layer. That class path tells DeerFlow <em>which LangChain chat model class</em> to instantiate.</p>
+        <summary>What&#x27;s this LangChain class path thing?</summary>
+        <div class="reveal-body"><p>The <code>use</code> field in each model config (like <code>langchain_openai:ChatOpenAI</code>) tells DeerFlow which Python class to instantiate for that model. It&#x27;s a clever abstraction — DeerFlow itself doesn&#x27;t implement any model integrations. It piggybacks on LangChain&#x27;s massive library of connectors.</p>
 
-<p>This is actually clever — it means you can use <em>any</em> model that has a LangChain integration without DeerFlow needing to know about it specifically. Want to use a local Ollama model? Point it to the Ollama LangChain class. Want to use Anthropic&#x27;s Claude? Use <code>langchain_anthropic:ChatAnthropic</code>. The config becomes the only thing you change.</p>
+<p>This means if you want to use a local model via Ollama, you&#x27;d just set <code>use: langchain_ollama:ChatOllama</code>. Want to use Google&#x27;s Gemini? <code>langchain_google_genai:ChatGoogleGenerativeAI</code>. The DeerFlow team doesn&#x27;t need to support every provider — LangChain already does.</p>
 
-<p>It&#x27;s like a universal power adapter — DeerFlow doesn&#x27;t care what brand your appliance is, as long as it speaks the LangChain interface.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>Docker vs. local sandbox — what&#x27;s the real difference?</summary>
-        <div class="reveal-body"><p>In <strong>local mode</strong>, when a sub-agent needs to execute code (say, a Python script that calls an image API), it runs directly on your machine. Fast, but risky — a buggy or malicious script has access to your filesystem.</p>
-
-<p>In <strong>Docker mode</strong>, that same script runs inside an isolated container. It can&#x27;t touch your files, can&#x27;t access your network in unexpected ways, and gets cleaned up when it&#x27;s done. It&#x27;s slower (container startup overhead) but much safer.</p>
-
-<p>For learning and experimenting, local mode is fine. For anything you&#x27;d show someone else or run with untrusted inputs, use Docker. DeerFlow&#x27;s <code>config.yaml</code> lets you switch between them with a single line change.</p></div>
+<p>The tradeoff? You inherit LangChain&#x27;s dependency weight. But honestly, for a framework that already needs Docker and Node.js 22, a few extra Python packages are a rounding error.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point, you should have DeerFlow running at http://localhost:2026 with at least one model configured. Open it in your browser — you should see the DeerFlow interface. If you&#x27;re stuck on Docker, try `make check` to verify your prerequisites.</div>
+      <div>At this point you should have: (1) DeerFlow cloned locally, (2) `make config` run to generate your config files, (3) `config.yaml` edited with at least one model and Docker sandbox mode, and (4) API keys in your `.env` file. If `make check` passes, you&#x27;re golden. If not, ask your agent to troubleshoot the specific error — it&#x27;s almost always a missing Node.js version or Docker not running.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>Design Your Creative Pipeline: Research → Generate → Iterate</h2>
+        <h2>Launch DeerFlow and Meet Your Sub-Agents</h2>
       </div>
       <div class="step-body">
-        <p>Now for the fun part. We&#x27;re going to build a <strong>creative visual pipeline</strong> — a multi-agent workflow where:</p>
+        <p>Time to spin this thing up. DeerFlow&#x27;s Docker setup is refreshingly straightforward — two <code>make</code> commands and you&#x27;ve got a full agent orchestration system running on <code>localhost:2026</code>.</p>
 
-<ol>
-<li><strong>Research Agent</strong> — searches for visual references and style inspiration based on a creative brief</li>
-<li><strong>Generator Agent</strong> — takes the research and produces images using an API (like DALL-E or Stability AI) inside a sandbox</li>
-<li><strong>Coordinator Agent</strong> — evaluates the results, decides if they&#x27;re good enough, and either ships them or sends feedback for another round</li>
-</ol>
+<p>But before we launch, let&#x27;s talk about what&#x27;s actually happening when you hit that URL. DeerFlow&#x27;s web UI isn&#x27;t just a chatbot interface — it&#x27;s a <strong>mission control</strong> where you can:</p>
 
-<p>This is where DeerFlow&#x27;s skills system shines. Each agent gets different skills — the researcher gets web search, the generator gets sandboxed code execution and image API access, and the coordinator gets evaluation and routing logic.</p>
+<ul>
+<li>See each sub-agent&#x27;s status and what it&#x27;s working on</li>
+<li>Watch sandbox code execution in real-time</li>
+<li>Browse the system&#x27;s memory and see what it&#x27;s learned</li>
+<li>Define and trigger skills</li>
+</ul>
 
-<p>Let&#x27;s have our AI agent help us design the skill definitions.</p>
+<p>The sub-agent orchestration is the star of the show. When you give DeerFlow a task like &quot;create a cyberpunk cityscape illustration,&quot; it doesn&#x27;t just fire off one prompt. The <strong>coordinator agent</strong> breaks the task down, assigns pieces to specialized sub-agents, and manages the flow between them. One agent researches reference images. Another writes the image-generation code. Another executes it in the sandbox. Another critiques the result.</p>
+
+<p>It&#x27;s honestly a bit like watching a relay race where each runner has a different specialty.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your AI agent to design the skill definitions for a three-agent creative pipeline in DeerFlow — a researcher, an image generator, and a coordinator.
+          Get your agent to explain the Docker launch sequence and what each service does, then have it help you verify everything&#x27;s running correctly.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What does each agent need to be *able* to do? Think about the tools each specialist needs on their desk.</li><li>The generator agent needs to call an external image API from inside a sandbox. What does that imply about network access and API key handling?</li><li>How should the coordinator decide if an image is &#x27;good enough&#x27;? What criteria could it evaluate?</li><li>DeerFlow skills are defined declaratively. What information does a skill definition need — a name, a description, input/output schemas?</li></ul>
+          <ul><li>There are two make commands for Docker — what does each one do?</li><li>What&#x27;s the &#x27;provisioner&#x27; service, and when does it start?</li><li>Once it&#x27;s running, how would you verify all services are healthy?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you three skill definitions described in plain language with their config structure. The <strong>researcher</strong> skill needs web search (Tavily) and the ability to return structured reference data — mood boards, color palettes, style keywords. The <strong>generator</strong> skill needs sandboxed Python execution with network access to call an image generation API, taking a prompt and style parameters as input and returning image URLs. The <strong>coordinator</strong> skill is the interesting one — it needs access to a vision model to evaluate generated images against the original brief, returning a score and specific feedback. The agent should explain that skills are registered in DeerFlow&#x27;s config and mapped to sub-agents, so the coordinator knows who can do what.</p></div>
+        <div class="reveal-body"><p>The agent should explain: <code>make docker-init</code> pulls the sandbox Docker image (one-time setup), and <code>make docker-start</code> launches all services. It should note that the provisioner service only starts if your config.yaml uses the <code>AioSandboxProvider</code> — which is the container-based sandbox mode we want. Once running, hit <code>http://localhost:2026</code> and you should see DeerFlow&#x27;s web dashboard. The agent might suggest checking <code>docker ps</code> to confirm all containers are up.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Skills in DeerFlow are like job descriptions — they tell the coordinator what each sub-agent is capable of without revealing implementation details. The coordinator doesn&#x27;t need to know HOW the generator makes images, just that it CAN and what inputs/outputs to expect.
+        First launch pulls a decent-sized Docker image for the sandbox. Grab some coffee — on a typical connection it takes 2-5 minutes. Subsequent starts are fast because the image is cached.
       </div>
         
       <details class="reveal">
-        <summary>Why sandboxed execution for image generation?</summary>
-        <div class="reveal-body"><p>You might wonder — why not just call the DALL-E API directly from the coordinator? Why bother with a sandbox?</p>
+        <summary>How does sub-agent orchestration actually work under the hood?</summary>
+        <div class="reveal-body"><p>DeerFlow&#x27;s orchestration follows a pattern called <strong>hierarchical task decomposition</strong>. The coordinator agent receives your high-level request, then:</p>
 
-<p>Two reasons. First, <strong>isolation</strong>. The image generation code might need to install Python packages, manipulate files, do retries with backoff — messy operational stuff you don&#x27;t want leaking into the coordinator&#x27;s clean orchestration logic.</p>
+<ol>
+<li><strong>Plans</strong>: Breaks the task into sub-tasks with dependencies (&quot;research must finish before code generation can start&quot;)</li>
+<li><strong>Assigns</strong>: Routes each sub-task to the best-suited sub-agent based on its capabilities</li>
+<li><strong>Monitors</strong>: Watches progress and handles failures (if the code agent&#x27;s sandbox execution fails, it can retry with modified code)</li>
+<li><strong>Synthesizes</strong>: Combines results from all sub-agents into a coherent output</li>
+</ol>
 
-<p>Second, <strong>flexibility</strong>. Today you&#x27;re calling DALL-E. Tomorrow you might want to run a local Stable Diffusion model, which means loading a 4GB model into GPU memory and running inference. That&#x27;s <em>definitely</em> something you want in a container, not in your coordinator process.</p>
-
-<p>The sandbox is like giving each specialist their own workshop. They can make a mess in there — as long as they hand back clean results.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>How does the coordinator &#x27;see&#x27; generated images?</summary>
-        <div class="reveal-body"><p>This is the cool part. The coordinator uses a <strong>vision-capable model</strong> (like GPT-4o or Claude) to actually look at the generated images and evaluate them against the original brief.</p>
-
-<p>It&#x27;s not just checking if the API returned a 200 status. It&#x27;s asking: Does this image match the style references? Is the composition right? Are the colors on-brand? It can articulate <em>specific</em> feedback — &#x27;the lighting is too warm, try cooler tones&#x27; — and send that back to the generator for another round.</p>
-
-<p>This is genuinely new behavior that wasn&#x27;t practical before multimodal models. You&#x27;re building a creative director that can actually <em>see</em>.</p></div>
+<p>This is conceptually similar to how a project manager works — they don&#x27;t do the individual tasks, but they make sure the right people do them in the right order. The key difference from simpler &quot;agent chain&quot; approaches is that DeerFlow&#x27;s coordinator can dynamically re-plan if something goes wrong, rather than just failing on the first error.</p></div>
       </details>
       </div>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">Your generator agent needs to call an image API from inside a DeerFlow sandbox. How should the API key get into the sandbox?</div>
+      <div class="question">You want DeerFlow to generate an image using a diffusion model. The code agent writes a Python script that imports `torch` and `diffusers`. Where should this script execute?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt0">
-          <label for="decision_6_opt0">Pass it through DeerFlow&#x27;s environment config so it&#x27;s injected into the sandbox at runtime</label>
-          <div class="decision-feedback correct">&#10003; Correct! Correct! DeerFlow&#x27;s sandbox system supports environment variable injection from the host&#x27;s .env file. The API key lives securely on the host and gets passed into the container at runtime — it&#x27;s never hardcoded in the skill definition or the generated code. This is the same pattern Docker uses for secrets.</div>
+          <label for="decision_6_opt0">In the Docker sandbox container</label>
+          <div class="decision-feedback correct">&#10003; Correct! Correct! The sandbox container is pre-configured with GPU passthrough (if available) and isolated from your host filesystem. Running arbitrary generated code — especially code that downloads large model weights and manipulates tensors — is exactly what the sandbox is built for. If the script crashes or does something unexpected, the container is disposable.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt1">
-          <label for="decision_6_opt1">Hardcode it in the skill&#x27;s Python code that runs inside the sandbox</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Never hardcode API keys in code — especially code that gets generated dynamically by an AI agent. If the code gets logged, cached, or shared, your key is exposed. DeerFlow&#x27;s environment injection exists specifically to avoid this.</div>
+          <label for="decision_6_opt1">Directly on the host machine in local execution mode</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This technically works, but it&#x27;s risky. The code agent generates Python scripts dynamically — which means bugs, hallucinated imports, or unintended file operations could affect your host system. Local execution mode is fine for trusted, simple scripts, but image generation code with heavy dependencies belongs in a sandbox.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt2">
-          <label for="decision_6_opt2">Have the coordinator agent pass it as a parameter in the task assignment</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Close, but risky. Task parameters often get logged in DeerFlow&#x27;s event system for debugging. Passing secrets through the task chain means they show up in logs and memory. Environment injection keeps secrets out of the data plane entirely.</div>
+          <label for="decision_6_opt2">In a separate cloud VM via API</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. DeerFlow doesn&#x27;t have a built-in cloud VM execution mode. You could technically set up something like this via MCP or a custom skill, but the Docker sandbox is the designed solution for this exact use case. Don&#x27;t over-engineer it when the framework already has what you need.</div>
         </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>Wire It Up: Configuring the Coordinator and Memory</h2>
+        <h2>Build a Creative Pipeline: Research → Generate → Iterate</h2>
       </div>
       <div class="step-body">
-        <p>We&#x27;ve got our skill definitions designed. Now we need to tell DeerFlow&#x27;s coordinator how to actually <em>run</em> this pipeline — what order to try things, when to iterate, and when to stop.</p>
+        <p>Alright, the fun part. We&#x27;ve got DeerFlow running — now let&#x27;s actually use it for something creative.</p>
 
-<p>This is where DeerFlow&#x27;s <strong>context engineering</strong> comes in. The coordinator isn&#x27;t following a rigid flowchart. It&#x27;s an LLM that receives a system prompt describing the pipeline, the available sub-agents and their skills, and rules for when to iterate. Think of it less like programming and more like writing a project brief for a very capable intern.</p>
+<p>Here&#x27;s the workflow we&#x27;re going to build: a <strong>visual content pipeline</strong> where DeerFlow coordinates multiple sub-agents to go from a vague creative brief to an actual generated image. The flow looks like this:</p>
 
-<p>The <strong>memory system</strong> adds another layer. As your pipeline runs, DeerFlow stores results, feedback, and decisions in long-term memory. Next time you run a similar creative brief, the coordinator can recall what worked — &quot;last time we did product photography, the client preferred muted earth tones over bright primaries.&quot;</p>
+<ol>
+<li><strong>Research agent</strong> searches the web for visual references, art styles, and composition ideas related to your prompt</li>
+<li><strong>Planning agent</strong> synthesizes the research into a specific image generation plan (dimensions, style parameters, model choice, prompt engineering)</li>
+<li><strong>Code agent</strong> writes a Python script that uses a diffusion model to generate the image, runs it inside the sandbox</li>
+<li><strong>Critique agent</strong> evaluates the result and suggests improvements</li>
+<li><strong>Loop</strong>: The code agent revises and re-generates based on the critique</li>
+</ol>
+
+<p>The beautiful thing is you don&#x27;t need to wire this up manually. DeerFlow&#x27;s skill system lets you define this as a <strong>reusable pipeline</strong> — kind of like saving a recipe that your agent kitchen can cook anytime.</p>
+
+<p>The key concept here is that <strong>memory ties it all together</strong>. When the research agent finds that &quot;cyberpunk art typically uses neon colors against dark backgrounds,&quot; that insight gets stored in DeerFlow&#x27;s memory. The next time you ask for cyberpunk anything, the system already knows this — it doesn&#x27;t start from zero.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to generate a coordinator system prompt and DeerFlow memory configuration for your creative pipeline — including iteration rules, quality thresholds, and what to remember across sessions.
+          Ask your agent to help you craft the initial creative prompt for DeerFlow and explain how to structure it so the sub-agent orchestration kicks in effectively.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>How many iteration rounds should the coordinator allow before accepting the best result? What prevents infinite loops?</li><li>What should the coordinator&#x27;s system prompt emphasize — speed, quality, variety? This shapes its decision-making personality.</li><li>What&#x27;s worth remembering across sessions? Style preferences? Successful prompts? Failed approaches?</li><li>How should the coordinator handle errors — like the image API being down or returning unexpected results?</li></ul>
+          <ul><li>What makes a good prompt for a multi-agent system vs. a single LLM? (Think about what each sub-agent needs...)</li><li>Should you be specific about the end output format, or leave room for the research agent to discover options?</li><li>How might you mention that you want iterative refinement — not just one shot?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you two things. First, a <strong>coordinator system prompt</strong> written in natural language — something like &#x27;You are a creative director coordinating a visual production pipeline. You have access to a researcher and an image generator. For each brief, first dispatch research to gather style references, then use those references to craft a detailed image generation prompt. Evaluate results against the brief. Allow up to 3 iterations. If quality score exceeds 8/10, deliver. If still below after 3 rounds, deliver the best with a note about what could improve.&#x27;</p>
-
-<p>Second, a <strong>memory configuration</strong> that tells DeerFlow what to persist — successful prompt templates, style preferences per project, and common failure patterns. The agent should explain that memory entries are tagged and searchable, so the coordinator can query &#x27;what worked for product photography&#x27; in future sessions.</p></div>
+        <div class="reveal-body"><p>The agent should explain that DeerFlow prompts work best when you give a <strong>clear creative intent</strong> but leave room for the sub-agents to contribute. Something like: &quot;Research cyberpunk cityscape art styles, then generate an image using a diffusion model in the sandbox. I want neon-heavy, rain-slicked streets. Iterate at least twice based on composition critique.&quot; The agent should note that mentioning &quot;research,&quot; &quot;sandbox,&quot; and &quot;iterate&quot; are signal words that help DeerFlow&#x27;s coordinator activate the right sub-agents. It&#x27;s like writing a creative brief for a team, not a precise instruction for a single person.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The coordinator&#x27;s system prompt IS your pipeline definition. Spend time getting it right. A well-written prompt with clear rules will make the coordinator behave predictably. A vague prompt will make it creative but unpredictable — sometimes that&#x27;s what you want, sometimes it isn&#x27;t.
+        DeerFlow&#x27;s memory means your second and third creative sessions get dramatically better. After the first run, the system has learned what models work well for your style, what prompt patterns produce good results, and what critique patterns are most useful. It&#x27;s like breaking in a new pair of shoes — awkward at first, great after.
       </div>
         
       <details class="reveal">
-        <summary>What is &#x27;context engineering&#x27; in DeerFlow?</summary>
-        <div class="reveal-body"><p>Context engineering is a term the DeerFlow team uses for the practice of carefully designing what information each agent sees at each point in the workflow.</p>
-
-<p>It&#x27;s not just &#x27;give the agent all the context.&#x27; It&#x27;s <em>curating</em> context. The researcher doesn&#x27;t need to see previous image generation failures — that would distract it. The generator doesn&#x27;t need to see every search result — just the synthesized style brief. The coordinator sees everything but at different levels of detail.</p>
-
-<p>Think of it like a well-run meeting. Everyone doesn&#x27;t need every email thread. They need a briefing document tailored to their role. DeerFlow&#x27;s skill and sub-agent system lets you control exactly what context each agent receives, which dramatically improves output quality.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>How does long-term memory actually work?</summary>
-        <div class="reveal-body"><p>DeerFlow&#x27;s memory system is essentially a <strong>vector store with metadata tagging</strong>. When the coordinator decides something is worth remembering — a successful prompt, a style preference, a learned pattern — it writes a memory entry with:</p>
+        <summary>How do DeerFlow skills work for creative workflows?</summary>
+        <div class="reveal-body"><p>Skills in DeerFlow are essentially <strong>packaged capabilities</strong> that teach the system how to perform specific tasks. They&#x27;re more structured than just a prompt — a skill includes:</p>
 
 <ul>
-<li><strong>Content</strong>: the actual thing to remember</li>
-<li><strong>Tags</strong>: searchable labels (project name, client, style, etc.)</li>
-<li><strong>Relevance score</strong>: how important this is for future recall</li>
+<li><strong>Trigger conditions</strong>: When should this skill activate? (e.g., &quot;when the user asks for image generation&quot;)</li>
+<li><strong>Sub-agent configuration</strong>: Which agents are involved and what are their roles?</li>
+<li><strong>Tool requirements</strong>: What external tools does the skill need? (e.g., sandbox access, specific Python libraries)</li>
+<li><strong>Memory hooks</strong>: What should the system remember from this skill&#x27;s execution?</li>
 </ul>
 
-<p>When a new task comes in, the coordinator queries memory with the task&#x27;s context and gets back relevant past experiences, ranked by similarity and recency. It&#x27;s like how you might think &#x27;oh, this reminds me of that project we did for Client X — we learned that...&#x27;</p>
+<p>For creative work, you might define a skill like &quot;style-transfer-pipeline&quot; that knows it needs a research agent to find the source style, a code agent with sandbox access to run the transfer model, and a critique agent to evaluate results. Once defined, you can invoke this skill by name in future sessions.</p>
 
-<p>The memory persists across sessions, so your pipeline genuinely gets better over time. That&#x27;s a meaningful difference from starting from scratch every run.</p></div>
+<p>The extensibility is the real power move — the DeerFlow community is already publishing skills as shareable packages. Imagine a plugin marketplace, but for agent capabilities.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What models can the sandbox actually run?</summary>
+        <div class="reveal-body"><p>The sandbox is a Docker container, so theoretically anything that runs in Docker runs in the sandbox. In practice, for image generation you&#x27;d typically use:</p>
+
+<ul>
+<li><strong>Stable Diffusion</strong> (via the <code>diffusers</code> library) — the workhorse for most generation tasks</li>
+<li><strong>SDXL</strong> — higher resolution, better at complex scenes</li>
+<li><strong>ControlNet variants</strong> — when you need structural control over the output</li>
+</ul>
+
+<p>The catch: the sandbox container needs to have GPU passthrough configured if you want reasonable generation times. CPU-only diffusion is <em>possible</em> but painfully slow (minutes per image vs. seconds). DeerFlow&#x27;s Docker setup supports NVIDIA GPU passthrough if you have the right drivers installed.</p>
+
+<p>For this workshop, even CPU generation works fine — the images just take longer. The architectural patterns are the same regardless.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">5</div>
-        <h2>Run the Pipeline and Watch Agents Collaborate</h2>
+        <h2>Extend the Pipeline: Adding MCP Tools and Custom Skills</h2>
       </div>
       <div class="step-body">
-        <p>Everything&#x27;s configured. Let&#x27;s fire this thing up and give it a real creative brief.</p>
+        <p>Here&#x27;s where DeerFlow gets really interesting — and honestly, this is the part that made me go &quot;oh, this is different from the other agent frameworks.&quot;</p>
 
-<p>This is the moment where DeerFlow&#x27;s architecture pays off. You give the coordinator <em>one task</em> — a creative brief — and it decomposes it, dispatches sub-tasks, collects results, evaluates, and iterates. You watch from the DeerFlow UI at <code>localhost:2026</code> as events stream in from each agent.</p>
+<p>DeerFlow supports <strong>MCP (Model Context Protocol) servers</strong> as a first-class integration. If you&#x27;ve been following the MCP ecosystem, you know it&#x27;s becoming the USB-C of AI tool connections — a standard way for AI systems to connect to external data sources and capabilities.</p>
 
-<p>It&#x27;s honestly kind of mesmerizing the first time. You see the researcher fire off web searches, the coordinator synthesize references into a generation prompt, the generator spin up a sandbox and call the image API, then the coordinator <em>look at</em> the result and decide whether to iterate.</p>
+<p>What this means for our creative pipeline: you can plug in MCP servers for things like:</p>
+<ul>
+<li><strong>Figma access</strong> — let the research agent pull design references directly from your Figma files</li>
+<li><strong>Image hosting</strong> — automatically upload generated images to S3 or Cloudinary</li>
+<li><strong>Version control</strong> — track iterations of generated images with metadata</li>
+</ul>
 
-<p>Let&#x27;s craft our first creative brief and run it.</p>
+<p>But the <em>real</em> extensibility play is the <strong>skill system</strong>. Skills are DeerFlow&#x27;s answer to &quot;how do I teach this thing new tricks without modifying the core code?&quot; You define a skill as a structured configuration, and DeerFlow&#x27;s coordinator learns when and how to use it.</p>
+
+<p>Think of skills like apps on your phone. The phone (DeerFlow) provides the platform. Each app (skill) adds a new capability. You don&#x27;t need to understand the phone&#x27;s operating system to install a new app.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your AI agent to write a rich creative brief that will exercise all three agents in your pipeline — including specific style requirements, reference concepts, and quality criteria.
+          Ask your agent to explain how you&#x27;d create a custom DeerFlow skill for a &#x27;mood board generator&#x27; — something that researches visual styles, collects reference images, and organizes them with annotations.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What kind of image are you generating? A product shot? Album art? A game asset? The more specific, the better the research agent can focus.</li><li>What style references should the researcher look for? Think about artists, aesthetics, color palettes, moods.</li><li>What quality criteria will help the coordinator evaluate results objectively? Think beyond &#x27;looks good.&#x27;</li><li>Should the brief specify any constraints — aspect ratio, color restrictions, brand guidelines?</li></ul>
+          <ul><li>What would the skill&#x27;s trigger conditions look like?</li><li>Which sub-agents would be involved, and what would each one do?</li><li>How would memory help this skill improve over time?</li><li>Would this skill need sandbox access, or is it more of a research-and-organize task?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a creative brief formatted for DeerFlow&#x27;s task input. Something like: &#x27;Create a hero image for a sustainable fashion brand. Style: editorial photography meets Studio Ghibli color warmth. Mood: optimistic, grounded, human. Research: look for examples of fashion editorial with natural textures, earth-tone palettes, soft directional lighting. Generate at 16:9 aspect ratio. Quality criteria: composition follows rule of thirds, color palette has max 5 dominant colors all in warm earth range, no synthetic/plastic textures, image should feel aspirational but approachable. Iterate until score exceeds 8/10 or 3 rounds complete.&#x27;</p>
-
-<p>The agent should also explain how to submit this through the DeerFlow UI or via the API endpoint at <code>localhost:2026</code>.</p></div>
+        <div class="reveal-body"><p>The agent should walk you through the conceptual structure of a DeerFlow skill: you&#x27;d define trigger conditions (keywords like &#x27;mood board&#x27; or &#x27;visual references&#x27;), specify which sub-agents participate (research agent for finding images, analysis agent for categorizing them, a code agent if you want to generate a visual collage in the sandbox), and configure memory hooks so the system remembers your style preferences. The key insight: this skill probably doesn&#x27;t need heavy sandbox access — it&#x27;s mostly research and organization, with maybe a lightweight code step to arrange images into a grid. The agent should emphasize that skills are <em>declarative</em> — you describe what you want, not how to implement it.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Watch the DeerFlow event stream in the UI while the pipeline runs. You&#x27;ll see each agent&#x27;s thought process, tool calls, and results in real time. This is incredibly useful for debugging — if something goes wrong, you&#x27;ll see exactly where and why.
-      </div>
-      <div class="callout callout-warning">
-        <div class="callout-label">Warning</div>
-        Image generation APIs cost money per call. Each iteration round generates at least one image. A 3-round max with one image per round is manageable, but be mindful if you set higher limits or generate multiple variants per round.
+        DeerFlow&#x27;s MCP integration means you can connect it to any MCP-compatible server. The ecosystem is growing fast — check the MCP server registry for tools that might fit your creative workflow. Image analysis, font identification, color palette extraction — there&#x27;s probably already an MCP server for it.
       </div>
         
       <details class="reveal">
-        <summary>What if I want to use a free/local image generation model?</summary>
-        <div class="reveal-body"><p>Absolutely possible — and this is where the sandbox architecture shines. Instead of calling DALL-E&#x27;s API, your generator skill can spin up a local Stable Diffusion instance inside the Docker sandbox.</p>
+        <summary>DeerFlow vs. other agent frameworks — what&#x27;s actually different?</summary>
+        <div class="reveal-body"><p>Fair question. There are a LOT of agent frameworks right now. Here&#x27;s what makes DeerFlow&#x27;s architecture distinct:</p>
 
-<p>The trade-off is setup complexity and hardware requirements. You&#x27;ll need a GPU-capable Docker setup (NVIDIA Container Toolkit) and enough VRAM to load the model. But once configured, your pipeline runs entirely locally with zero per-image cost.</p>
+<p><strong>vs. AutoGen/CrewAI</strong>: Those frameworks focus on conversational agent teams. DeerFlow adds sandboxed execution and persistent memory as core primitives, not afterthoughts. The sandbox is deeply integrated — agents can write code, execute it, see the results, and iterate, all within the orchestration loop.</p>
 
-<p>To do this, modify your generator skill to pull a Stable Diffusion Docker image instead of calling an external API. Ask your AI agent to help you write a generator skill that uses <code>diffusers</code> library with a local model — it&#x27;s a great exercise in customizing DeerFlow skills.</p></div>
+<p><strong>vs. LangGraph</strong>: LangGraph gives you lower-level graph-based workflow control. DeerFlow is more opinionated — it provides the orchestration patterns out of the box. Less flexible at the edges, but way faster to get productive.</p>
+
+<p><strong>vs. OpenAI Assistants</strong>: DeerFlow is fully open-source and model-agnostic. You can use any LLM provider, run everything locally, and inspect every step. No black boxes.</p>
+
+<p>The real differentiator is the <strong>skill + memory + sandbox</strong> triangle. Skills define capabilities, memory accumulates context over time, and sandboxes provide safe execution. That combination is uniquely powerful for creative workflows where you&#x27;re iterating toward a subjective goal.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You should now have a working creative pipeline that researches, generates, and iterates. Run your creative brief through the DeerFlow UI and watch the agents collaborate. If images aren&#x27;t generating, check: (1) your image API key is in .env, (2) the sandbox has network access, (3) the generator skill&#x27;s Python code is correct in the sandbox logs.</div>
+      <div>You should now have DeerFlow running on `localhost:2026` with Docker sandbox mode, at least one model configured, and you&#x27;ve sent your first creative prompt through the system. You&#x27;ve seen how the coordinator breaks tasks into sub-agent assignments, how the sandbox executes generated code, and how memory persists between interactions. If something went sideways, check `docker logs` for the specific failing service — DeerFlow&#x27;s logging is pretty decent.</div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Extend your pipeline with a fourth agent: a &#x27;Style Transfer&#x27; specialist that takes a generated image and applies artistic style modifications based on the research agent&#x27;s reference findings.</div>
-      <div class="your-turn-context">Right now your pipeline generates images from scratch based on a text prompt. But what if the coordinator could also *modify* existing images — applying the color palette from a reference photo, mimicking the brushstroke texture of a specific artist, or compositing elements from multiple generations? A style transfer agent would give your coordinator a whole new capability to reach quality targets.</div>
+      <div class="your-turn-goal">Create a DeerFlow prompt that uses the research sub-agent to find three distinct art movements (e.g., Art Deco, Bauhaus, Vaporwave), then has the code agent generate a comparison grid showing a simple landscape rendered in each style — all inside the sandbox.</div>
+      <div class="your-turn-context">This challenges you to think about multi-step orchestration: the research phase must complete before the generation phase, and the code agent needs to produce a single composite image rather than three separate ones. It&#x27;s a great test of how well you can steer DeerFlow&#x27;s sub-agent coordination through your prompt.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What new skill does this agent need? Think about what inputs it takes (a source image + style parameters) and what it outputs.</li><li>Should this agent run in the same sandbox as the generator, or its own? What are the trade-offs?</li><li>How does the coordinator decide when to use the style transfer agent vs. just re-generating from scratch?</li><li>What happens to your iteration logic now that there are two ways to improve an image?</li></ul>
+        <ul><li>How do you signal to DeerFlow that the research step should happen BEFORE the generation step? (Think about dependency language...)</li><li>What should you tell the code agent about the output format — a grid, not separate images?</li><li>Should you name the specific art movements, or let the research agent discover interesting ones?</li><li>How might you ask for iteration — maybe the critique agent should suggest which style worked best?</li></ul>
       </div>
       
       <details class="reveal">
@@ -1123,53 +1139,49 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>I need to add a style transfer sub-agent to my DeerFlow creative pipeline. Here&#x27;s what I want:
+            <pre><code>Research three visually distinctive art movements that have strong, recognizable characteristics (surprise me — don&#x27;t just pick the obvious ones). For each movement, summarize the key visual elements: color palettes, line styles, composition patterns, and typical subject treatment.
 
-1. A new skill definition for a &#x27;style_transfer&#x27; agent that takes two inputs: a source image URL and a style specification object (containing color palette, texture keywords, and an optional reference image URL). It should output a modified image URL.
+Then, using the sandbox, write a Python script that generates a 3-panel comparison grid showing the same simple landscape scene (rolling hills, a sunset, a single tree) rendered in each of the three art styles. Use a diffusion model with style-specific prompts derived from the research phase. The output should be a single composite image, not three separate files.
 
-2. The skill should run in a Docker sandbox with GPU access if available, falling back to a CPU-based approach using the Stability AI style transfer API.
-
-3. Update my coordinator&#x27;s system prompt to include a decision rule: after the first generation round, if the quality score is between 5-7, try style transfer before re-generating from scratch. Only re-generate from scratch if the score is below 5 or style transfer didn&#x27;t improve the score.
-
-4. Add memory entries for successful style transfer parameters so the coordinator can recall &#x27;this color palette mapping worked well for fashion photography&#x27; in future runs.
-
-Please give me the skill config YAML, the updated coordinator prompt section, and explain how the coordinator&#x27;s iteration logic changes.</code></pre>
+After generation, critique the result: which style was most faithfully represented? Which one would benefit from prompt refinement? Iterate once on the weakest panel.</code></pre>
           </div>
         </div>
       </details>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">Your creative pipeline sometimes produces great images on round 1 but then &#x27;over-iterates&#x27; — the coordinator keeps tweaking until the result is worse. What&#x27;s the best fix?</div>
+      <div class="question">You notice DeerFlow&#x27;s research sub-agent is producing great visual references, but the code agent&#x27;s generated images don&#x27;t match the researched styles well. What&#x27;s the most likely fix?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt0">
-          <label for="decision_11_opt0">Add a &#x27;high-water mark&#x27; rule: always keep the best result so far and only replace it if a new iteration scores higher</label>
-          <div class="decision-feedback correct">&#10003; Correct! This is the right pattern. By tracking the best result across iterations, the coordinator can explore without risk of regression. If iteration 2 is worse than iteration 1, you still deliver iteration 1. This is essentially the &#x27;best-so-far&#x27; optimization strategy, and it works because image quality evaluation isn&#x27;t monotonically improving — sometimes the generator gets lucky on round 1.</div>
+          <label for="decision_11_opt0">Improve the handoff — make the research agent output structured style parameters that the code agent can directly use in its diffusion prompts</label>
+          <div class="decision-feedback correct">&#10003; Correct! Bingo. The problem is usually in the *translation* between sub-agents. If the research agent writes a beautiful prose description of Art Deco style, the code agent still has to figure out how to turn that into effective diffusion model parameters. By asking the research agent to output structured attributes (color hex codes, line weight descriptions, composition rules), you give the code agent concrete inputs to work with. This is a core principle of multi-agent design: optimize the interfaces between agents, not just the agents themselves.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt1">
-          <label for="decision_11_opt1">Reduce max iterations to 1 so it never over-iterates</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This throws the baby out with the bathwater. Sometimes iteration genuinely improves results — especially when the coordinator gives specific, actionable feedback. You don&#x27;t want to remove iteration entirely; you want to make it safe. A high-water mark lets you iterate aggressively while guaranteeing you never deliver worse than your best.</div>
+          <label for="decision_11_opt1">Switch to a more powerful model for the code agent</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. A more powerful model might write slightly better code, but the real bottleneck is the information flow between agents, not the code generation ability. If the code agent doesn&#x27;t receive clear, actionable style parameters from the research phase, even GPT-5 would struggle to faithfully reproduce a specific art style. Fix the interface first, then upgrade the model if needed.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt2">
-          <label for="decision_11_opt2">Increase the quality threshold so only clearly better images pass</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Raising the bar doesn&#x27;t solve the core problem. If iteration 2 scores 7.5 and iteration 1 scored 8.0, a higher threshold might reject iteration 2 — but then what? You&#x27;ve used an iteration round and have nothing to show for it. The real issue is that the coordinator doesn&#x27;t remember its best result. A high-water mark addresses the root cause.</div>
+          <label for="decision_11_opt2">Skip the research agent and hardcode the style descriptions</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This works as a quick fix but defeats the purpose of the multi-agent pipeline. The whole point is that the research agent can discover nuances you wouldn&#x27;t think to hardcode — like the fact that Art Deco uses specific geometric proportions, not just &#x27;geometric shapes.&#x27; Hardcoding trades short-term convenience for long-term capability.</div>
         </div>
     </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>Let&#x27;s step back and appreciate what we just built. We started with a single GitHub repo and ended up with a <strong>multi-agent creative production system</strong> — a coordinator that breaks down creative briefs, a researcher that gathers visual references from the web, a generator that produces images in a sandboxed environment, and an iteration loop guided by a vision model that can actually <em>see</em> and critique the results.</p>
+      <div class="recap-body"><p>We went from zero to a running DeerFlow 2.0 instance with a creative image-generation pipeline. But more importantly, we explored a <em>fundamentally different</em> way of thinking about AI-assisted creative work.</p>
 
-<p>But the bigger takeaway isn&#x27;t the specific pipeline. It&#x27;s the <strong>pattern</strong>. DeerFlow&#x27;s architecture — coordinator + specialized sub-agents + sandboxed execution + memory — is a general-purpose framework for building any multi-step AI workflow. Swap out the image generator for a code writer. Replace the research agent with a data analyst. The orchestration pattern stays the same.</p>
+<p>Instead of one model doing everything, we orchestrated a <strong>team of specialized sub-agents</strong> — each contributing what it&#x27;s best at. The research agent finds references. The code agent writes generation scripts. The sandbox runs them safely. The critique agent drives iteration. And memory means the whole system gets smarter over time.</p>
 
-<p>And here&#x27;s what I think is genuinely exciting: the memory system means your pipelines <strong>get better over time</strong>. Every successful run teaches the system something. That&#x27;s not just automation — it&#x27;s accumulating institutional knowledge in an AI-native way.</p></div>
-      <ul class="takeaways-list"><li>Multi-agent orchestration isn&#x27;t about having more AI — it&#x27;s about having the RIGHT agent for each sub-task, with clear boundaries and communication protocols. A specialist beats a generalist when you can coordinate effectively.</li><li>Sandboxed execution is the unlock that makes AI agents safe to give real tools to. Without isolation, you can&#x27;t let an agent run code, call APIs, or manipulate files without constant supervision. The sandbox is what makes autonomous operation practical.</li><li>Memory-augmented agents bridge the gap between one-shot AI interactions and genuine workflows. When agents can recall what worked before, they move from &#x27;impressive demo&#x27; to &#x27;useful tool that improves with use.&#x27;</li><li>The coordinator&#x27;s system prompt IS your pipeline logic. Getting good at writing coordinator prompts — clear rules, specific criteria, explicit iteration bounds — is the core skill for building reliable multi-agent systems.</li><li>DeerFlow&#x27;s extensible skills system means you&#x27;re never locked in. Today it&#x27;s image generation; tomorrow you add video, 3D, or music — same orchestration layer, new capabilities.</li></ul>
+<p>This is the direction creative AI tooling is heading: not bigger models, but <strong>better orchestration</strong> of specialized capabilities. DeerFlow 2.0 is one of the first open-source frameworks to make this pattern accessible.</p>
+
+<p>The skill system is what gives this legs beyond a single workshop. Once you&#x27;ve defined a creative pipeline as a skill, it becomes a reusable capability — like adding a new tool to your creative toolbox that gets better every time you use it.</p></div>
+      <ul class="takeaways-list"><li>Multi-agent orchestration (research → generate → critique → iterate) produces better creative results than single-shot prompting, because each sub-agent can focus on what it does best</li><li>Sandboxed code execution is non-negotiable for image generation pipelines — Docker containers give you safe, disposable environments where generated code can run without risk to your system</li><li>The interface between agents matters more than the agents themselves — structured handoffs (style parameters, composition rules) beat prose descriptions every time</li><li>Persistent memory transforms one-off generation into an improving creative partnership — DeerFlow remembers what works and builds on it across sessions</li><li>DeerFlow&#x27;s skill system turns ad-hoc workflows into reusable, shareable capabilities — today&#x27;s experiment becomes tomorrow&#x27;s reliable tool</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Add an MCP (Model Context Protocol) server to DeerFlow — this lets external tools and services plug into your pipeline as first-class skills, dramatically expanding what your agents can do</li><li>Build a second pipeline that&#x27;s completely different — maybe a code review system or a data analysis workflow — to see how the same orchestration patterns apply across domains</li><li>Experiment with different models for different agents — use a fast, cheap model for the researcher, a powerful model for the coordinator, and a specialized model for generation. DeerFlow&#x27;s config lets you assign different models per agent.</li><li>Explore DeerFlow&#x27;s community skills library — other people have already built skills for web scraping, PDF analysis, database queries, and more. Installing a community skill is like hiring a new specialist for your team.</li></ul>
+        <ul><li>Define a custom DeerFlow skill for your most common creative workflow — whether that&#x27;s thumbnail generation, style exploration, or visual prototyping</li><li>Explore DeerFlow&#x27;s MCP integration to connect external tools (Figma, image hosting, asset libraries) into your creative pipeline</li><li>Experiment with different model assignments — try using a vision model for the critique agent to get visual (not just textual) feedback on generated images</li><li>Check out the DeerFlow community&#x27;s shared skill library — other creators are publishing reusable pipelines you can plug into your instance</li></ul>
       </div>
     </div>
     <div class="sources-section">
@@ -1183,7 +1195,7 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">666ghj/BettaFish</div>
-            <div class="oa-summary">Multi-agent public opinion analysis assistant that collects data, breaks filter bubbles, and predicts trends.</div>
+            <div class="oa-summary">Multi-agent public opinion analysis assistant that collects, analyzes, and predicts trends in online discourse.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1209,7 +1221,7 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">datawhalechina/hello-agents</div>
-            <div class="oa-summary">Chinese open-source tutorial teaching how to build AI agents from scratch, covering theory and practice.</div>
+            <div class="oa-summary">Chinese-language tutorial teaching how to build AI agents from scratch, covering theory and practice.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1248,7 +1260,7 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">EbookFoundation/free-programming-books</div>
-            <div class="oa-summary">Massive curated list of free programming books and learning resources in many languages.</div>
+            <div class="oa-summary">Curated list of freely available programming books and learning resources in many languages.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1273,9 +1285,9 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
-            <div class="oa-summary">Argues AI coding tools lower the coding bar but raise the bar for real engineering judgment.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">If AI writes code, should the session be part of the commit?</div>
+            <div class="oa-summary">Tool and discussion about including AI conversation transcripts as metadata in git commits.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
@@ -1286,8 +1298,8 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
-            <div class="oa-summary">AMD demonstrates running a one-trillion-parameter language model locally on their Ryzen AI Max+ hardware.</div>
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Argues that AI coding tools simplify writing code but increase the complexity of engineering decisions.</div>
             <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
@@ -1299,9 +1311,9 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Claude hits #1 on the App Store as users rally behind Anthropic</div>
-            <div class="oa-summary">Claude reaches top App Store spot as users support Anthropic amid a government-related controversy.</div>
-            <div class="oa-meta">Hacker News AI · Mar 2</div>
+            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
+            <div class="oa-summary">AMD demonstrates running a trillion-parameter language model locally using a cluster of Ryzen AI Max+ systems.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
@@ -1317,7 +1329,7 @@ Please give me the skill config YAML, the updated coordinator prompt section, an
     </div>
     <script>
     (function() {
-      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}, {"title": "Claude hits #1 on the App Store as users rally behind Anthropic", "tags": "", "source": "Hacker News AI"}];
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "If AI writes code, should the session be part of the commit?", "tags": "coding", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}];
       var repo = "coldbrewnosugar/ai-course";
       var track = "image-gen";
       var date = "2026-03-02";

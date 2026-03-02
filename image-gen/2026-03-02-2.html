@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GUI-Owl 1.5: Multi-Platform Vision Agent Models You Can Run Today — Tinker</title>
+  <title>GUI-Owl 1.5: Multi-Platform Vision Agent Models You Can Run Locally — Tinker</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 :root {
@@ -771,295 +771,363 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
-      <h1>Teach a Model to See Your Screen — Then Click Things</h1>
-      <div class="hero-subtitle">GUI-Owl 1.5 is a family of vision models that can look at any interface and actually operate it. Let&#x27;s pull one down and put it to work.</div>
+      <h1>Teach a Model to See Your Screen — Then Let It Drive</h1>
+      <div class="hero-subtitle">We&#x27;re pulling Alibaba&#x27;s brand-new GUI-Owl 1.5 weights, running them locally, and building a vision agent that can actually watch a screen and take actions. No cloud APIs required.</div>
       <div class="hero-meta">
         <span>40 min</span>
-        <span> <span class="tag">vision-models</span> <span class="tag">gui-agents</span> <span class="tag">qwen3-vl</span> <span class="tag">huggingface</span> <span class="tag">automation</span></span>
+        <span> <span class="tag">vision-models</span> <span class="tag">gui-automation</span> <span class="tag">qwen3-vl</span> <span class="tag">open-weights</span> <span class="tag">multi-platform</span></span>
       </div>
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <p>Two weeks ago, Alibaba&#x27;s Tongyi Lab released <strong>GUI-Owl 1.5</strong> — and it&#x27;s kind of a big deal. Here&#x27;s the short version:</p>
+      <p>Two weeks ago (February 14, 2026), Alibaba&#x27;s Tongyi Lab dropped <strong>GUI-Owl 1.5</strong> — a family of open-weight vision models purpose-built for GUI automation. The lineup runs from a tiny 2B model you can squeeze onto a laptop all the way up to a 235B beast.</p>
 
-<p>Most vision models can <em>describe</em> what&#x27;s on a screen. GUI-Owl can describe it, understand the UI structure, locate specific elements by coordinates, and <em>tell you what to click next</em> to accomplish a task. It&#x27;s a purpose-built GUI automation brain.</p>
+<p>Why should you care? Because until now, getting a model to <em>look at a screen</em> and <em>do something useful</em> meant either paying per-call for GPT-4o or cobbling together fragile screenshot-plus-OCR pipelines. GUI-Owl 1.5 changes the game: these models natively understand UI elements across <strong>desktop, mobile, and browser</strong> — and they&#x27;re open-weight, sitting right there on HuggingFace.</p>
 
-<p>The model family ranges from a tiny <strong>2B</strong> version (runs on a laptop) all the way up to <strong>235B</strong> (you&#x27;ll need a cluster for that one). They&#x27;re all built on top of <strong>Qwen3-VL</strong>, Alibaba&#x27;s vision-language architecture, and the weights are sitting right there on HuggingFace.</p>
+<p>They&#x27;re built on <strong>Qwen3-VL</strong> (Alibaba&#x27;s latest vision-language foundation model), and they come in two flavors: <strong>Instruct</strong> (fast, follows directions) and <strong>Thinking</strong> (slower, reasons step-by-step before acting). They hit state-of-the-art on over 20 GUI benchmarks, and they support MCP tool calling out of the box — meaning you can wire them into real automation pipelines.</p>
 
-<p>What makes this interesting isn&#x27;t just the model — it&#x27;s the ecosystem. GUI-Owl powers <strong>Mobile-Agent-v3.5</strong>, a multi-agent framework where one agent plans, another perceives the screen, and another reflects on whether things are going right. Think of it as a team of AI coworkers who can actually use a computer.</p>
+<p>On top of the raw models, the team also shipped <strong>Mobile-Agent-v3</strong>, a multi-agent framework that orchestrates planning, reflection, and memory on top of GUI-Owl. Think of it as the difference between giving someone eyes (the model) vs. giving them eyes <em>plus</em> a brain that can make multi-step plans.</p>
 
-<p>The models come in two flavors: <strong>Instruct</strong> (fast, direct answers) and <strong>Thinking</strong> (chain-of-thought reasoning before acting). They hit state-of-the-art on 20+ GUI benchmarks, including grounding, tool calling, MCP integration, and long-horizon memory tasks.</p>
-
-<p>Today we&#x27;re going to pull down the <strong>7B Instruct</strong> model — big enough to be capable, small enough to actually run — and explore what it can do.</p>
+<p>Today we&#x27;ll go from zero to a working local vision agent. Let&#x27;s get into it.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>Get the Model Running Locally</h2>
+        <h2>Pick Your Model Size and Get It Running</h2>
       </div>
       <div class="step-body">
-        <p>Before we do anything fancy, we need GUI-Owl sitting on our machine and responding to prompts. The model is built on Qwen3-VL, which means it plays nicely with the <code>transformers</code> library and <code>vLLM</code> for faster inference.</p>
+        <p>First things first — we need to actually download and load a GUI-Owl model. The family has five sizes: <strong>2B, 4B, 8B, 32B, and 235B</strong>. For this workshop, the sweet spot is the <strong>8B Instruct</strong> variant. It&#x27;s small enough to run on a single GPU with 24GB VRAM (like an RTX 4090 or A5000), but capable enough to handle real GUI tasks.</p>
 
-<p>Here&#x27;s the mental model: GUI-Owl is a <strong>vision-language model</strong> (VLM). You feed it an image (a screenshot) plus a text prompt (&quot;what&#x27;s on this screen?&quot; or &quot;where should I click to open Settings?&quot;), and it gives you back text — descriptions, coordinates, action plans.</p>
+<p>Here&#x27;s a useful mental model: think of model sizes like camera resolutions. The 2B is your phone camera — quick and good enough for most shots. The 32B is a DSLR — noticeably better, but heavier to carry. The 235B is a medium-format film camera — incredible results, but you need a whole studio (read: a multi-GPU server) to use it.</p>
 
-<p>Think of it like giving someone a photograph and asking them a question about it. Except this someone has been trained on millions of UI screenshots and knows what buttons, text fields, and menus look like across desktop, mobile, and web.</p>
+<p>The models live on HuggingFace under the <strong>Alibaba-NLP</strong> org. They&#x27;re standard Qwen3-VL architecture, which means the <code>transformers</code> library knows how to load them natively — no custom code needed.</p>
+
+<p>Let&#x27;s get your agent to set up the environment and load the model.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to write you a setup script that downloads GUI-Owl-7B from HuggingFace and runs a basic inference — send it a screenshot and get a description back.
+          Get the agent to create a Python environment and write a script that downloads and loads GUI-Owl-1.5-8B-Instruct from HuggingFace, ready for inference.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What libraries does a Qwen3-VL-based model need? (Think HuggingFace ecosystem.)</li><li>The model needs to handle both images and text — what kind of processor does that require?</li><li>Where does the model live on HuggingFace? The repo names follow a pattern like `X-PLUG/GUI-Owl-7B`.</li><li>How will you feed it an image? Think about loading a local screenshot file.</li></ul>
+          <ul><li>What libraries do you need? (Think: HuggingFace transformers, plus any vision-specific dependencies for Qwen3-VL)</li><li>How do you typically load a vision-language model from HuggingFace? What&#x27;s the processor&#x27;s role vs. the model&#x27;s role?</li><li>The model is big — what dtype and device settings make sense for fitting it in GPU memory?</li><li>What&#x27;s the actual HuggingFace model ID going to look like for a model from Alibaba-NLP?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a Python script that does three things: (1) installs the needed packages (<code>transformers</code>, <code>torch</code>, <code>accelerate</code>, <code>Pillow</code>), (2) loads the GUI-Owl-7B model and its processor from HuggingFace using <code>AutoModelForVision2Seq</code> and <code>AutoProcessor</code>, and (3) takes a screenshot file path, loads the image, builds a chat-style prompt with the image embedded, and runs inference. The key pattern looks something like:</p>
-
-<p>```python</p>
-<p>from transformers import AutoProcessor, AutoModelForVision2Seq</p>
-<p>model = AutoModelForVision2Seq.from_pretrained(</p>
-<p>&quot;X-PLUG/GUI-Owl-7B&quot;, torch_dtype=torch.bfloat16,</p>
-<p>device_map=&quot;auto&quot;</p>
-<p>)</p>
-<p>processor = AutoProcessor.from_pretrained(&quot;X-PLUG/GUI-Owl-7B&quot;)</p>
-<p>```</p>
-
-<p>The actual inference uses the Qwen3-VL chat template format with an image token and your text query. The agent should handle the image preprocessing and tokenization for you.</p></div>
+        <div class="reveal-body"><p>The agent should give you a setup script with two parts. First, the pip installs — <code>transformers</code>, <code>torch</code>, <code>accelerate</code>, and <code>qwen-vl-utils</code> (a small helper library Alibaba publishes for image preprocessing). Second, a short loading script that uses <code>AutoModelForVision2Seq</code> and <code>AutoProcessor</code> from transformers, pointed at something like <code>Alibaba-NLP/GUI-Owl-1.5-8B-Instruct</code>. The key detail is loading in <code>bfloat16</code> with <code>device_map=&quot;auto&quot;</code> so it fits in memory. The whole loading bit is maybe 5-6 lines — processor, model, done.</p></div>
       </details>
       </div>
         
         
-      <div class="callout callout-warning">
-        <div class="callout-label">Warning</div>
-        The 7B model needs about <strong>16GB of VRAM</strong> in bfloat16. If you&#x27;re on a laptop GPU, try the 2B or 4B variant instead — just swap the model name. On a Mac with Apple Silicon, you can use <code>device_map=&#x27;mps&#x27;</code> but expect slower speeds.
-      </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        If you want faster inference, ask your agent to set it up with <strong>vLLM</strong> instead of raw transformers. vLLM handles batching and memory management much better for serving. But for experimenting, transformers is simpler.
+        If you only have 8GB VRAM (or no GPU at all), ask your agent about the <strong>2B</strong> or <strong>4B</strong> variants instead, or about running in 4-bit quantization with <code>bitsandbytes</code>. The 2B can even run on a MacBook with MPS.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The 8B model is roughly 16GB on disk. Make sure you have enough storage before downloading. HuggingFace caches models in <code>~/.cache/huggingface/</code> by default.
       </div>
         
       <details class="reveal">
-        <summary>What&#x27;s the difference between Instruct and Thinking variants?</summary>
-        <div class="reveal-body"><p><strong>Instruct</strong> models give you a direct answer — &quot;click at coordinates (450, 320)&quot;. Fast, efficient, great for simple tasks.</p>
+        <summary>Instruct vs. Thinking — what&#x27;s the difference?</summary>
+        <div class="reveal-body"><p><strong>Instruct</strong> variants are trained to follow instructions directly — you say &quot;click the search bar&quot; and they output the coordinates. Fast and predictable.</p>
 
-<p><strong>Thinking</strong> models do chain-of-thought reasoning first — &quot;I see a settings icon in the top right. The user wants to change their password. I should click on Settings first, then navigate to Security.&quot; Slower, but much better for complex multi-step tasks where the model needs to plan.</p>
+<p><strong>Thinking</strong> variants add a chain-of-thought step before acting. The model first reasons about what it sees (&quot;I see a search bar at the top of the page, a navigation menu on the left...&quot;) and <em>then</em> decides what to do. This is slower but significantly better for complex, multi-step tasks where the model needs to plan ahead.</p>
 
-<p>For our workshop, Instruct is perfect. But if you later build something that needs to handle ambiguous instructions like &quot;book me a flight to Tokyo,&quot; the Thinking variant will be dramatically better at figuring out the steps.</p></div>
+<p>For our workshop, Instruct is the right pick. Once you&#x27;re comfortable, try swapping in the Thinking variant and comparing outputs — you&#x27;ll literally see the model&#x27;s reasoning process in the output.</p></div>
       </details>
       <details class="reveal">
-        <summary>Why Qwen3-VL as the base?</summary>
-        <div class="reveal-body"><p>Qwen3-VL is Alibaba&#x27;s latest vision-language architecture, and it has a killer feature for GUI work: <strong>dynamic resolution support</strong>. Instead of resizing every image to a fixed size (which destroys tiny text and small UI elements), Qwen3-VL can process images at their native resolution by splitting them into tiles.</p>
+        <summary>What is Qwen3-VL and why does it matter?</summary>
+        <div class="reveal-body"><p>Qwen3-VL is Alibaba&#x27;s latest vision-language foundation model. Think of it as the &quot;engine&quot; that GUI-Owl 1.5 is built on top of. Qwen3-VL handles the core ability to understand images and text together. GUI-Owl then fine-tunes that engine specifically for GUI understanding — recognizing buttons, text fields, menus, and other UI elements.</p>
 
-<p>This matters enormously for screenshots. A toolbar icon might be 24×24 pixels in a 1920×1080 screenshot. A model that squishes everything to 224×224 would literally not be able to see it. Qwen3-VL keeps that detail intact.</p></div>
+<p>This matters because it means GUI-Owl inherits all the general visual understanding of Qwen3-VL (it can describe photos, read text in images, etc.) but <em>adds</em> specialized skills for GUI interaction. It&#x27;s like taking a car engine and tuning it specifically for off-road driving — the base is solid, the specialization makes it excel at its job.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>GUI Grounding: From &#x27;Find the Search Bar&#x27; to Pixel Coordinates</h2>
+        <h2>Feed It a Screenshot and See What It Sees</h2>
       </div>
       <div class="step-body">
-        <p>Here&#x27;s where GUI-Owl gets interesting. Most vision models can tell you <em>what&#x27;s</em> on screen. GUI-Owl can tell you <em>where</em> things are — as exact pixel coordinates.</p>
+        <p>Now for the fun part — let&#x27;s give the model a screenshot and see if it can actually understand what&#x27;s on screen.</p>
 
-<p>This capability is called <strong>GUI grounding</strong>. You say &quot;where is the search bar?&quot; and instead of &quot;it&#x27;s at the top of the page&quot; you get <code>(734, 52)</code>. That&#x27;s the kind of output you can actually feed into a mouse-click automation script.</p>
+<p>GUI-Owl&#x27;s core capability is <strong>grounding</strong> — it doesn&#x27;t just describe what&#x27;s in an image, it can point to specific UI elements with coordinates. Ask it &quot;where&#x27;s the submit button?&quot; and it gives you <code>(x, y)</code> pixel coordinates. This is the secret sauce that makes it useful for automation: the model doesn&#x27;t just <em>see</em>, it can <em>point</em>.</p>
 
-<p>Think of it like the difference between asking someone for directions and getting &quot;it&#x27;s near the park&quot; versus getting exact GPS coordinates. Both are helpful, but only one lets you write an autopilot.</p>
+<p>The way you talk to GUI-Owl is through a structured prompt format. You give it an image plus a text instruction, and it responds with either a description, coordinates, or an action plan. The prompt format follows Qwen3-VL&#x27;s chat template — your agent can handle the specifics.</p>
 
-<p>GUI-Owl was specifically trained on grounding tasks across desktop, mobile, and browser UIs. It knows what a hamburger menu looks like on Android, what a close button looks like on macOS, and where to find the address bar in Chrome.</p>
+<p>Let&#x27;s take a screenshot of something simple (like a browser with a search engine open) and ask the model to identify elements on the page.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to build a grounding demo: take a screenshot, ask GUI-Owl to locate a specific UI element, and visualize the result by drawing a bounding box on the original image.
+          Get the agent to write an inference function that takes a screenshot file path and a natural-language question, sends them to GUI-Owl, and returns the model&#x27;s response — including any grounding coordinates.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>How should you phrase the grounding prompt? GUI-Owl expects specific task formats — think about how you&#x27;d ask it to *locate* vs. *describe*.</li><li>The model returns coordinates — but in what format? Normalized 0-1 values? Raw pixels? You need to know to draw the box correctly.</li><li>What library would you use to draw a rectangle on an image? (Think simple Python image manipulation.)</li><li>What happens if the element isn&#x27;t on screen? How should your script handle that?</li></ul>
+          <ul><li>How does a vision-language model receive images? (Think about the processor&#x27;s job — turning pixels into tokens.)</li><li>What kind of questions should we ask to test grounding? Something like &#x27;Where is the search box?&#x27; vs &#x27;What do you see?&#x27;</li><li>How does the model format its coordinate output? Does it use pixel values, percentages, or bounding boxes?</li><li>What chat template format does the Qwen3-VL family expect?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a script that: (1) loads a screenshot, (2) sends it to GUI-Owl with a grounding prompt like <code>&lt;grounding&gt;Find the element: search bar&lt;/grounding&gt;</code>, (3) parses the coordinate output from the model&#x27;s response, and (4) uses Pillow to draw a colored rectangle at those coordinates and save the annotated image.</p>
-
-<p>The key insight is the prompt format — GUI-Owl uses special tokens like <code>&lt;grounding&gt;</code> to switch into coordinate-output mode. The response comes back with bounding box coordinates that you parse out. Your agent should also add a fallback for when the model says it can&#x27;t find the element.</p></div>
+        <div class="reveal-body"><p>The agent should give you a function that loads an image (using PIL), builds a chat-format message with the image and your question, runs it through the processor and model, and decodes the output. The key insight is the message format: it&#x27;s a list of <code>{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: [...]}</code> where content includes both an image block and a text block. When you ask a grounding question like &quot;Where is the search box?&quot;, the model returns coordinates in a format like <code>&lt;box&gt;(x1, y1, x2, y2)&lt;/box&gt;</code> — a bounding box around the element, typically in normalized coordinates (0-1000 scale). The whole function is maybe 10-12 lines, but the interesting part is how the message is structured.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Try this on different types of screenshots — a desktop app, a mobile screenshot, a web page. You&#x27;ll notice GUI-Owl handles all three because it was trained on all three platforms. Most other vision models are heavily biased toward web content.
+        Take a screenshot right now of whatever&#x27;s on your screen — that&#x27;s your test image. Real-world messiness (multiple windows, notifications, dark mode) is actually a great test of the model&#x27;s robustness.
       </div>
         
       <details class="reveal">
-        <summary>How does grounding actually work under the hood?</summary>
-        <div class="reveal-body"><p>During training, GUI-Owl saw millions of screenshots paired with element annotations — &quot;the Login button is at coordinates [x1, y1, x2, y2]&quot;. Over time, it learned to associate visual patterns (button shapes, text labels, icon styles) with spatial locations.</p>
+        <summary>How does GUI grounding actually work under the hood?</summary>
+        <div class="reveal-body"><p>When you send GUI-Owl a screenshot, here&#x27;s what happens inside:</p>
 
-<p>The clever bit is that coordinates are encoded as <strong>text tokens</strong>. The model doesn&#x27;t have a separate &quot;pointing&quot; head — it literally generates the numbers as part of its text output, like saying &quot;the button is at (234, 567)&quot;. This is elegant because it means the same model architecture handles both understanding and locating, and it can reason about spatial relationships in natural language.</p>
+<ol>
+<li><strong>The image gets chopped into patches</strong> — the model divides your screenshot into a grid of small tiles (like puzzle pieces), each becoming a visual token.</li>
+<li><strong>Visual tokens meet text tokens</strong> — your question (&quot;Where is the search box?&quot;) gets tokenized normally and concatenated with the visual tokens. The model processes them together.</li>
+<li><strong>Attention does the heavy lifting</strong> — the transformer&#x27;s attention mechanism learns which visual patches correspond to which words. When it sees &quot;search box,&quot; it attends to the patches that contain the search input field.</li>
+<li><strong>Coordinates come out as text</strong> — this is the clever bit. The model doesn&#x27;t have a special &quot;coordinate head.&quot; It literally generates the bounding box coordinates as text tokens: <code>&lt;box&gt;(234, 89, 567, 112)&lt;/box&gt;</code>. It learned to do this during fine-tuning on millions of GUI screenshots with labeled elements.</li>
+</ol>
 
-<p>This is different from older approaches like OWL-ViT that had specialized detection heads. The text-based approach is more flexible — you can ask compound questions like &quot;find the submit button that&#x27;s below the email field&quot; and the model reasons about spatial relationships naturally.</p></div>
+<p>This is why GUI-Owl can handle arbitrary UIs — it&#x27;s not looking for hardcoded patterns like &quot;a white rectangle with a magnifying glass icon.&quot; It genuinely understands the <em>concept</em> of a search box across different designs.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point, you should have GUI-Owl running locally, able to take a screenshot and (1) describe what&#x27;s on it, and (2) locate specific UI elements with coordinates. If you&#x27;re getting reasonable descriptions but weird coordinates, double-check that you&#x27;re using the grounding prompt format — the special tokens matter.</div>
+      <div>At this point, you should have GUI-Owl loaded locally and be able to send it a screenshot with a question like &quot;Where is the submit button?&quot; — getting back bounding box coordinates. If the model is loading but responses are garbled, double-check that you&#x27;re using the right chat template and that images are being processed through the processor (not just raw-loaded).</div>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You want to build an automation that fills out a web form. Which approach should you use?</div>
+      <div class="question">You want to build an automation pipeline that opens a browser, searches for something, and clicks the first result. Which approach makes more sense?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_5" id="decision_5_opt0">
-          <label for="decision_5_opt0">Send the full page screenshot and ask GUI-Owl to plan all the steps at once</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. This sounds efficient, but GUI-Owl (Instruct) works best on single-step queries. The screen changes after each action — after you click a text field, it gets focus and the cursor appears. You need to re-screenshot after each step to see the updated state. This is exactly why the Mobile-Agent framework uses a perception-action loop rather than one-shot planning.</div>
+          <label for="decision_5_opt0">Use GUI-Owl in a loop: screenshot → ask model → parse coordinates → simulate click → repeat</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the core pattern for vision-based GUI automation. Each iteration is: capture the screen, ask the model what to do next (or where a specific element is), parse the coordinates from the response, simulate a mouse click at those coordinates, then screenshot again to see the result. It&#x27;s simple, robust, and works across any application — the model sees pixels, not DOM elements.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_5" id="decision_5_opt1">
-          <label for="decision_5_opt1">Build a loop: screenshot → ask GUI-Owl what to do next → execute the action → screenshot again</label>
-          <div class="decision-feedback correct">&#10003; Correct! This is the perception-action loop pattern that Mobile-Agent-v3.5 uses. Each cycle gives the model the current state of the screen, so it can react to changes (a dropdown opening, a dialog appearing, a page loading). It&#x27;s more API calls, but it&#x27;s how real GUI automation works — the screen is dynamic, not static.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_5" id="decision_5_opt2">
-          <label for="decision_5_opt2">Use OCR to extract all text first, then use a text-only LLM to plan the clicks</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. You&#x27;d lose all the visual context — where buttons are, what&#x27;s clickable vs. what&#x27;s just a label, spatial relationships between elements. GUI-Owl&#x27;s whole point is that it understands UI *visually*, not just textually. A text-only model wouldn&#x27;t know where to click.</div>
+          <label for="decision_5_opt1">Use GUI-Owl once to generate a complete script of all actions, then execute them all at once</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This sounds efficient but it&#x27;s brittle. GUIs are dynamic — a page might load slowly, a popup might appear, layout might shift. If you pre-generate all actions without checking the screen between steps, you&#x27;ll click on the wrong things. The screenshot-act-screenshot loop is essential because it gives the model fresh visual feedback after every action, just like a human glances at the screen between clicks.</div>
         </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>Build the Perception-Action Loop</h2>
+        <h2>Build the See-Think-Act Loop</h2>
       </div>
       <div class="step-body">
-        <p>Now we&#x27;re getting to the good stuff. A model that can see a screen and locate elements is useful, but what we really want is a <strong>loop</strong>: look at the screen, decide what to do, do it, look again.</p>
-
-<p>This is the core pattern behind every GUI agent, and it&#x27;s conceptually simple:</p>
+        <p>Now we&#x27;re getting to the really cool part. We&#x27;re going to build what I call the <strong>see-think-act loop</strong> — the core pattern behind every vision-based GUI agent:</p>
 
 <ol>
-<li><strong>Perceive</strong> — take a screenshot</li>
-<li><strong>Think</strong> — send it to GUI-Owl with the task (&quot;I need to open the Settings app&quot;)</li>
-<li><strong>Act</strong> — execute whatever GUI-Owl says (click at coordinates, type text, scroll)</li>
-<li><strong>Repeat</strong> — take a new screenshot and check if we&#x27;re done</li>
+<li><strong>See</strong>: Take a screenshot</li>
+<li><strong>Think</strong>: Send it to GUI-Owl with the current goal</li>
+<li><strong>Act</strong>: Parse the model&#x27;s response and simulate the action (click, type, scroll)</li>
+<li><strong>Repeat</strong> until the task is done</li>
 </ol>
 
-<p>It&#x27;s like giving someone directions one turn at a time. &quot;What do you see now? Okay, turn left. What do you see now? Okay, go straight.&quot; Each step is simple — the intelligence is in the model&#x27;s ability to understand the current screen and map it to the right next action.</p>
+<p>This is honestly how humans use computers too — you look at the screen, decide what to click, click it, then look again to see what happened. We&#x27;re just automating that cycle.</p>
 
-<p>The action execution part uses standard desktop automation — <code>pyautogui</code> on desktop, ADB commands on Android, Playwright or Selenium for browsers.</p>
+<p>For the &quot;act&quot; part, we need a way to simulate mouse clicks and keyboard input. On macOS that&#x27;s <code>pyautogui</code>, on Linux it&#x27;s <code>pyautogui</code> or <code>xdotool</code>, on Windows it&#x27;s <code>pyautogui</code> again. The screenshot capture can use <code>Pillow</code> with <code>ImageGrab</code> or <code>mss</code> for speed.</p>
+
+<p>The tricky design question is: how does the model know what it&#x27;s <em>supposed</em> to be doing? We need to give it context — the overall goal, plus what step we&#x27;re on. This is where a simple system prompt does a lot of heavy lifting.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to build a simple perception-action loop that takes a task description, then repeatedly screenshots the screen, asks GUI-Owl for the next action, and executes it.
+          Get the agent to build a simple automation loop that takes a high-level task (like &#x27;open the calculator app and compute 42 × 17&#x27;), captures screenshots, sends them to GUI-Owl with the task context, parses the action from the response, and executes it using pyautogui.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What library handles taking screenshots and simulating mouse clicks on desktop? (There&#x27;s a popular one that does both.)</li><li>How should you structure the prompt to GUI-Owl so it gives back *actionable* output — not just a description, but &#x27;click at (x, y)&#x27; or &#x27;type hello&#x27;?</li><li>When should the loop stop? Think about how the model would signal that the task is complete.</li><li>What&#x27;s a reasonable safety limit so the loop doesn&#x27;t run forever if something goes wrong?</li></ul>
+          <ul><li>What information does the model need in each iteration? Just the screenshot, or also the history of what it&#x27;s already done?</li><li>How do you parse the model&#x27;s output? It might say &#x27;click at (234, 567)&#x27; or &#x27;type hello&#x27; — what&#x27;s the output format?</li><li>When should the loop stop? How does the model signal &#x27;I&#x27;m done&#x27;?</li><li>What safety measures should you include? (Think: what if the model tries to click somewhere dangerous?)</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a script with a main loop that: (1) uses <code>pyautogui.screenshot()</code> to capture the current screen, (2) sends it to GUI-Owl with a prompt like &quot;Task: {user_task}. Current screen is shown. What is the next action? Respond with one of: CLICK(x,y), TYPE(text), SCROLL(direction), or DONE.&quot;, (3) parses the model&#x27;s response to extract the action type and parameters, (4) executes the action using <code>pyautogui</code>, and (5) loops until it gets DONE or hits a max-step limit (something like 20 steps).</p>
-
-<p>The script should include a small delay between actions (half a second or so) to let the UI update, and ideally a confirmation mode where it shows you what it&#x27;s about to do before doing it. The agent should also add error handling for when the model&#x27;s output doesn&#x27;t match the expected action format.</p></div>
+        <div class="reveal-body"><p>The agent should give you a class or set of functions implementing the loop. The key pieces are: (1) a <code>capture_screen()</code> function using <code>mss</code> or <code>PIL.ImageGrab</code>, (2) a <code>ask_model()</code> function that formats the screenshot + task + action history into a GUI-Owl prompt and gets back a structured response, (3) an <code>execute_action()</code> function that takes the model&#x27;s output (like <code>click(234, 567)</code> or <code>type(&quot;hello&quot;)</code> or <code>scroll(down)</code>) and calls the corresponding <code>pyautogui</code> function, and (4) a main loop that ties them together with a max-steps safety limit. The model&#x27;s output format typically looks like <code>&lt;action&gt;click&lt;/action&gt;&lt;coords&gt;(x, y)&lt;/coords&gt;</code> or similar structured tags. A critical detail: add a confirmation step or a <code>pyautogui.FAILSAFE = True</code> so moving your mouse to the corner kills the automation if something goes wrong.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        <strong>Real talk about safety:</strong> This loop is going to simulate mouse clicks and keyboard input on your actual machine. Start with something harmless like opening Calculator and typing <code>2+2</code>. Do NOT let it loose on your email or anything with delete buttons until you&#x27;ve added confirmation prompts. Always include a max-step limit and a keyboard shortcut to kill the script.
+        <strong>Safety first!</strong> Any script that controls your mouse and keyboard is potentially dangerous. Always include: (1) a max iteration limit, (2) <code>pyautogui.FAILSAFE = True</code> so you can abort by slamming your mouse into a screen corner, and (3) a short <code>pyautogui.PAUSE</code> delay between actions so you can see what&#x27;s happening.
       </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Add a <code>--dry-run</code> flag that shows what the model <em>would</em> do without actually clicking anything. This is invaluable for debugging — you can see if the model is locating elements correctly without risking accidental clicks.
+        Start with a dead-simple task — like opening Calculator and typing <code>2+2</code>. Once that works reliably, scale up to multi-step tasks. Debugging a 15-step browser workflow when you can&#x27;t even get a single click right is no fun.
       </div>
         
       <details class="reveal">
-        <summary>How Mobile-Agent-v3.5 takes this further</summary>
-        <div class="reveal-body"><p>Our simple loop is one agent doing everything. Mobile-Agent-v3.5 splits this into <strong>three specialized agents</strong>:</p>
+        <summary>How is this different from Selenium or Playwright?</summary>
+        <div class="reveal-body"><p>Great question. Traditional automation tools like Selenium and Playwright work by manipulating the <strong>DOM</strong> — the underlying HTML structure of a web page. They find elements by CSS selectors, XPaths, or IDs.</p>
 
-<ol>
-<li><strong>Planning Agent</strong> — breaks the high-level task into sub-goals (&quot;to send an email: open mail app → compose → fill in recipient → write body → send&quot;)</li>
-<li><strong>Perception Agent</strong> (GUI-Owl) — looks at the current screen and determines the exact action for the current sub-goal</li>
-<li><strong>Reflection Agent</strong> — checks whether the action was successful by comparing before/after screenshots, and triggers replanning if something went wrong</li>
-</ol>
+<p>GUI-Owl-based automation works by looking at <strong>pixels</strong> — the actual visual appearance of the screen. This has huge trade-offs:</p>
 
-<p>There&#x27;s also a <strong>memory module</strong> for long-horizon tasks — it remembers what happened 15 steps ago so the agent doesn&#x27;t go in circles. This multi-agent architecture is why Mobile-Agent can handle complex tasks like &quot;book a restaurant on Yelp and add it to my calendar&quot; that involve multiple apps and dozens of steps.</p></div>
+<p><strong>Pixel-based wins:</strong></p>
+<ul>
+<li>Works on <em>any</em> application (desktop apps, mobile, games, remote desktops) — not just browsers</li>
+<li>Never breaks because a developer changed a CSS class name</li>
+<li>Handles dynamic UIs, Canvas-based apps, and anything that renders to screen</li>
+</ul>
+
+<p><strong>DOM-based wins:</strong></p>
+<ul>
+<li>Way faster (no model inference per step)</li>
+<li>More precise (exact element references, not approximate coordinates)</li>
+<li>Can interact with hidden elements or read element properties</li>
+</ul>
+
+<p>The trend in 2026 is converging the two: models like GUI-Owl can also consume accessibility trees and DOM info alongside screenshots, getting the best of both worlds. But the pure vision approach is what makes GUI-Owl special — it works everywhere.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>Make It Actually Useful: Task-Specific Prompting</h2>
+        <h2>Level Up: Mobile-Agent-v3&#x27;s Multi-Agent Brain</h2>
       </div>
       <div class="step-body">
-        <p>You&#x27;ve got the loop running, but honestly, the quality of GUI-Owl&#x27;s output depends hugely on <strong>how you prompt it</strong>. This is where the &quot;agent-first&quot; mindset really pays off — you&#x27;re not coding the intelligence, you&#x27;re shaping the conversation with the model.</p>
+        <p>Our see-think-act loop works, but honestly, it&#x27;s kind of dumb. It has no memory of what happened five steps ago, no ability to plan ahead, and no way to recover when something goes wrong. It&#x27;s like giving someone amazing eyesight but no short-term memory.</p>
 
-<p>There are a few prompt patterns that make a big difference:</p>
+<p>This is exactly what <strong>Mobile-Agent-v3</strong> solves. It&#x27;s a multi-agent framework that wraps around GUI-Owl and adds three critical capabilities:</p>
 
-<p><strong>Be specific about the platform.</strong> Saying &quot;I&#x27;m on macOS Sonoma, using Chrome&quot; helps the model predict UI patterns — where the address bar is, what right-click menus look like, how notifications appear.</p>
+<ul>
+<li><strong>Planning Agent</strong>: Before doing anything, it breaks the high-level task into a step-by-step plan. &quot;To book a flight, I need to: 1) open the browser, 2) go to the airline site, 3) enter departure city...&quot; etc.</li>
+<li><strong>Reflection Agent</strong>: After each action, it checks whether the result matches what was expected. If the page didn&#x27;t load right or a popup appeared, it can adapt the plan.</li>
+<li><strong>Memory Agent</strong>: It maintains a running summary of what&#x27;s been accomplished and what&#x27;s left. This prevents the loop from getting stuck repeating the same action or forgetting what it already did.</li>
+</ul>
 
-<p><strong>Describe the current goal, not just the end goal.</strong> Instead of &quot;send an email to Bob&quot; every single step, say &quot;I need to click the Compose button to start a new email&quot; for the current step. The model performs better with focused, immediate goals.</p>
+<p>Think of it like this: GUI-Owl is the <strong>eyes and hands</strong>. Mobile-Agent-v3 is the <strong>prefrontal cortex</strong> — the part that plans, remembers, and course-corrects.</p>
 
-<p><strong>Ask for structured output.</strong> Free-form responses like &quot;you should probably click the button in the upper right&quot; are useless for automation. Constrain the output format so you can parse it reliably.</p>
-
-<p>Let&#x27;s refine our loop with better prompting.</p>
+<p>The framework&#x27;s code is open-source in the same GitHub repo. Let&#x27;s get your agent to set it up.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to create a prompt template system — a set of reusable prompts for different GUI tasks (navigation, form filling, information extraction) that produce consistent, parseable output from GUI-Owl.
+          Get the agent to explain the Mobile-Agent-v3 architecture and help you set up a simple multi-agent pipeline using its planning and reflection capabilities on top of your local GUI-Owl model.
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What are the distinct *types* of GUI actions? (Clicking, typing, scrolling, reading — each might need a different prompt structure.)</li><li>How can you make the model&#x27;s output format consistent enough to parse with simple string matching?</li><li>Should the prompt include the task history (what steps we&#x27;ve already taken), or just the current goal?</li><li>What about including a system-level instruction about the platform and screen resolution?</li></ul>
+          <ul><li>Mobile-Agent-v3 is in the X-PLUG/MobileAgent GitHub repo. What does the project structure look like?</li><li>How do the three agents (planning, acting, reflecting) communicate? Is it a pipeline, or do they run in parallel?</li><li>Can you use your local GUI-Owl model as the backbone, or does it expect an API?</li><li>What config or setup does the framework need — model paths, screen capture settings, action space definitions?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should give you a prompt template module with 3-4 templates: one for <strong>element location</strong> (&quot;find X on screen, return coordinates&quot;), one for <strong>action planning</strong> (&quot;given this screen and task, what&#x27;s the single next action?&quot;), one for <strong>screen description</strong> (&quot;describe what&#x27;s visible on this screen in structured format&quot;), and one for <strong>task completion check</strong> (&quot;is the task complete based on what you see?&quot;).</p>
-
-<p>Each template should enforce a specific output format — like <code>ACTION: click | COORDS: 450, 320 | CONFIDENCE: high</code> — so your loop can parse it without fragile regex. The agent should also build in a system prompt that specifies the platform, resolution, and rules like &quot;always give exactly one action&quot; and &quot;say DONE when the task appears complete.&quot;</p></div>
+        <div class="reveal-body"><p>The agent should walk you through cloning the MobileAgent repo and explain its structure: there&#x27;s a main orchestrator that coordinates three sub-agents. The <strong>planning agent</strong> takes the user&#x27;s task and current screenshot, producing a step-by-step plan. The <strong>action agent</strong> (powered by GUI-Owl) executes one step at a time. The <strong>reflection agent</strong> compares the expected outcome of each step with the actual screenshot result and flags mismatches. Configuration typically involves pointing to your local model path, setting the screen capture method, and defining the action space (click, type, scroll, etc.). The key insight is that it&#x27;s essentially our simple loop from Step 3, but with two extra model calls per iteration — one to update the plan, one to verify the result.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The Thinking variant of GUI-Owl shines here. For complex tasks, it&#x27;ll reason through ambiguity — &quot;I see two &#x27;Submit&#x27; buttons, but based on the form context, the user probably means the one at the bottom of the payment section.&quot; If you&#x27;re hitting accuracy issues with Instruct, try swapping in the Thinking variant for the action-planning step.
+        You don&#x27;t <em>have</em> to use all three agents. For simple tasks, you can just use the planning + action agents and skip reflection. Each extra agent adds latency (another model forward pass per step), so there&#x27;s a real speed/reliability trade-off.
       </div>
         
       <details class="reveal">
-        <summary>MCP tool calling — the next frontier</summary>
-        <div class="reveal-body"><p>GUI-Owl 1.5 was specifically benchmarked on <strong>MCP (Model Context Protocol) tool calling</strong>. This means instead of just clicking pixels on screen, it can invoke structured tools — &quot;call the <code>file_search</code> tool with query=&#x27;quarterly report&#x27;&quot;, or &quot;use the <code>browser_navigate</code> tool to go to gmail.com&quot;.</p>
+        <summary>MCP Tool Calling — what&#x27;s that about?</summary>
+        <div class="reveal-body"><p>GUI-Owl 1.5 supports <strong>Model Context Protocol (MCP)</strong> tool calling. MCP is a standard for letting models invoke external tools — think of it as function calling, but with a standardized protocol that works across different model providers.</p>
 
-<p>This is a hybrid approach: use MCP tools when they&#x27;re available (faster, more reliable), fall back to visual grounding when they&#x27;re not. It&#x27;s like the difference between using an API and using the website — the API is better when it exists, but the visual approach works for everything.</p>
+<p>In the GUI automation context, this means GUI-Owl doesn&#x27;t <em>have</em> to simulate mouse clicks for everything. If you wire up MCP tools for things like &quot;open URL in browser,&quot; &quot;read clipboard contents,&quot; or &quot;launch application,&quot; the model can call those tools directly instead of laboriously navigating the GUI to accomplish the same thing.</p>
 
-<p>If you&#x27;re building a serious automation system, this hybrid approach is the way to go. Ask your agent to help you set up MCP tool definitions that GUI-Owl can invoke alongside its visual capabilities.</p></div>
+<p>Alibaba even released <strong>OSWorld-MCP</strong>, a benchmark specifically for evaluating how well models use MCP tools in real GUI scenarios. This is the direction things are heading — models that can seamlessly mix pixel-level GUI interaction with direct API/tool calls, choosing whichever is more efficient for each sub-task.</p>
+
+<p>To set this up, you&#x27;d define your MCP tools as a JSON schema and include the tool descriptions in the system prompt. The model outputs tool calls in its response, which your orchestrator parses and executes.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How much VRAM do I need for the multi-agent setup?</summary>
+        <div class="reveal-body"><p>Here&#x27;s the thing that might not be obvious: you don&#x27;t need three separate models for three agents. You use the <strong>same GUI-Owl model</strong> for all three roles — you just change the system prompt.</p>
+
+<p>The planning agent gets a prompt like: &quot;Given this task and screenshot, create a step-by-step plan.&quot; The action agent gets: &quot;Given this plan step and screenshot, what action should I take?&quot; The reflection agent gets: &quot;Given the expected outcome and this screenshot, did the action succeed?&quot;</p>
+
+<p>So your VRAM requirement is the same as running one model — you&#x27;re just doing more inference calls per loop iteration. With the 8B model, you&#x27;re looking at ~16GB VRAM. The 32B is ~64GB (doable on an A100 or two consumer GPUs with tensor parallelism).</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You should now have a working perception-action loop with structured prompts. Test it on something simple — open Calculator, type a math problem, read the result. If the model is clicking in the wrong places, your prompt format is probably the issue. If it&#x27;s clicking in the right places but the wrong order, you might need to add task history to the prompt so the model knows what it&#x27;s already done.</div>
+      <div>You should now have the full picture: GUI-Owl handles vision and grounding, your see-think-act loop handles the automation cycle, and Mobile-Agent-v3 adds planning and reflection on top. If you&#x27;ve been running code along the way, you should be able to give a natural-language task and watch the agent attempt it on your screen. If you&#x27;ve been reading along, you understand the architecture well enough to build it when you&#x27;re ready.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Make It Practical: Prompt Engineering for GUI Agents</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s something that honestly confused me at first: even though GUI-Owl is fine-tuned for GUI tasks, the <em>way you prompt it</em> matters enormously. A vague instruction like &quot;do my email&quot; will get you nowhere. A specific instruction like &quot;open Gmail in Chrome and compose a new email to alice@example.com with subject &#x27;Meeting Tomorrow&#x27; and body &#x27;Can we move our 2pm to 3pm?&#x27;&quot; will work surprisingly well.</p>
+
+<p>There are a few prompt patterns that make a big difference:</p>
+
+<p><strong>Be specific about the target application and platform.</strong> &quot;Click the search bar&quot; is ambiguous if there are three search bars on screen. &quot;Click the Google search bar in the center of the Chrome browser window&quot; is unambiguous.</p>
+
+<p><strong>Describe visual landmarks when helpful.</strong> If the UI is complex, help the model orient: &quot;In the left sidebar, under the &#x27;Settings&#x27; heading, click &#x27;Account&#x27;.&quot;</p>
+
+<p><strong>State the success condition.</strong> &quot;Keep going until you see the confirmation page that says &#x27;Order placed&#x27;.&quot; This gives the reflection agent something to check against.</p>
+
+<p>Let&#x27;s get your agent to help you craft an effective prompt template for GUI automation tasks.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to help you design a reusable system prompt template for GUI-Owl that includes the task description, platform context, action format specification, and success criteria — something you can fill in for any automation task.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What context does the model need upfront? (Operating system, screen resolution, which app is open...)</li><li>How should you format the action output so it&#x27;s easy to parse programmatically?</li><li>What should the model do when it encounters something unexpected — like a popup or an error message?</li><li>How do you tell the model to signal that the task is complete?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a system prompt template with clear sections: a <strong>role definition</strong> (&quot;You are a GUI automation agent operating on [platform]&quot;), a <strong>task description</strong> slot, an <strong>action format specification</strong> (defining the exact output format — like <code>&lt;action&gt;click&lt;/action&gt;&lt;position&gt;(x,y)&lt;/position&gt;</code> or <code>&lt;action&gt;type&lt;/action&gt;&lt;text&gt;hello&lt;/text&gt;</code>), <strong>special instructions</strong> for handling errors/popups, and a <strong>completion signal</strong> (like outputting <code>&lt;action&gt;done&lt;/action&gt;</code> when the task is finished). The template should be platform-aware and include the screen resolution so coordinate outputs are meaningful. It&#x27;s basically a fill-in-the-blanks document, not code.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Test your prompts on static screenshots before running them in a live loop. Take 4-5 screenshots from different stages of a task and run them through the model one at a time. This lets you debug prompt issues without waiting for the full automation cycle.
+      </div>
+        
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re building a GUI agent to automate filling out a multi-page form. The form has 4 pages. Which strategy will be most reliable?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt0">
+          <label for="decision_10_opt0">Give the model the entire form task at once and let it handle page navigation naturally</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. While GUI-Owl with the Thinking variant can handle this, it&#x27;s risky. The model might lose track of which page it&#x27;s on, forget which fields it already filled, or get confused if a page takes longer to load. Multi-page tasks are where the see-think-act loop is most likely to go off the rails without explicit state tracking.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt1">
+          <label for="decision_10_opt1">Break it into 4 sub-tasks (one per page), with explicit checkpoints between pages</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the Mobile-Agent-v3 philosophy in action. By breaking the task into sub-goals with clear success conditions (&quot;Page 2 should show the address form&quot;), you give the reflection agent something concrete to verify at each stage. If something goes wrong on page 2, you can retry just that page instead of restarting the entire form. This is also easier to debug — you can see exactly where things went sideways.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt2">
+          <label for="decision_10_opt2">Use DOM-based automation (Selenium/Playwright) instead of GUI-Owl for forms</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This is a reasonable instinct — forms are very DOM-friendly. But the question asked about the best strategy *using a GUI agent*. In practice, you might actually use a hybrid: GUI-Owl for navigation and visual verification, DOM tools for precise form filling. But if you&#x27;re committed to the vision approach, sub-task decomposition is the way to go.</div>
+        </div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Build a screenshot-to-accessibility-report tool: give GUI-Owl a screenshot of any app and have it generate a structured report of all interactive elements it can find — buttons, links, text fields, dropdowns — with their locations and labels.</div>
-      <div class="your-turn-context">This flips the script — instead of using GUI-Owl to *do* things, you&#x27;re using its perception abilities to *analyze* interfaces. This is genuinely useful for accessibility auditing, UI testing, and building sitemaps of applications you don&#x27;t have source code for. Think of it as reverse-engineering a UI just from looking at it.</div>
+      <div class="your-turn-goal">Build a &#x27;Screen Narrator&#x27; — an accessibility tool that takes a screenshot every 5 seconds and generates a plain-English description of what&#x27;s happening on screen, highlighting any changes since the last screenshot.</div>
+      <div class="your-turn-context">This is a practical application of GUI-Owl&#x27;s visual understanding that doesn&#x27;t require mouse/keyboard automation — making it safer to experiment with. It&#x27;s also genuinely useful: imagine a tool that narrates screen activity for visually impaired users, or creates an automatic log of what you did during a work session.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What categories of UI elements should you ask the model to identify? Think about interactive vs. display-only elements.</li><li>What output format would be most useful — JSON with element types, labels, and bounding boxes? A markdown table?</li><li>Should you process the whole screen at once, or split it into regions for more detail?</li><li>How would you validate that the model found everything? What about comparing its output to the actual accessibility tree on desktop?</li></ul>
+        <ul><li>What prompt would make the model describe the screen in accessible, human-friendly language instead of outputting coordinates?</li><li>How would you detect and describe *changes* between consecutive screenshots? Does the model need to see both images, or can you diff them first?</li><li>What output format makes sense — raw text, structured JSON with regions, or something else?</li><li>How would you handle the 5-second loop? Think about threading, async, or just a simple while loop with a sleep.</li></ul>
       </div>
       
       <details class="reveal">
@@ -1068,120 +1136,34 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>Build me a Python script that takes a screenshot file path as input and uses GUI-Owl-7B to generate an accessibility report. The script should: (1) Load the screenshot, (2) Send it to GUI-Owl with a prompt asking it to identify ALL interactive UI elements — buttons, links, text inputs, dropdowns, checkboxes, toggles — and for each one return the element type, visible label/text, and bounding box coordinates as [x1, y1, x2, y2]. (3) Output the results as a JSON array. (4) Optionally save an annotated version of the screenshot with colored boxes around each element (different colors for different element types). Include error handling for cases where the model can&#x27;t identify any elements.</code></pre>
+            <pre><code>Build me a Python script called screen_narrator.py that: (1) Takes a screenshot every 5 seconds using mss. (2) Sends each screenshot to my local GUI-Owl-1.5-8B-Instruct model with the prompt &#x27;Describe what is currently shown on this screen in 2-3 plain English sentences, focusing on the active application and any notable UI elements. If I also provide a previous screenshot, briefly note what changed.&#x27; (3) Keeps track of the previous screenshot and sends both current and previous to the model after the first iteration. (4) Prints each description to the terminal with a timestamp. (5) Runs until I hit Ctrl+C. Keep it simple — no GUI, just terminal output. Use the same model loading code we already have.</code></pre>
           </div>
         </div>
       </details>
     </div>
-    <div class="decision-point">
-      <h3>Quick Check</h3>
-      <div class="question">You need a GUI agent that can handle a 30-step task like &#x27;research flights to Tokyo and save the cheapest option to a spreadsheet.&#x27; Which model configuration should you choose?</div>
-      
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt0">
-          <label for="decision_10_opt0">GUI-Owl-7B Instruct for every step</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. The Instruct variant is fast but doesn&#x27;t do well with long-horizon planning. By step 15, it&#x27;s lost context on the overall goal and might start repeating actions or going down wrong paths. You need reasoning for complex tasks.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt1">
-          <label for="decision_10_opt1">GUI-Owl-7B Thinking for every step</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Better reasoning, but the Thinking variant is significantly slower. Using it for every single step — including trivial ones like &#x27;click OK on this dialog&#x27; — wastes compute. You&#x27;d be waiting 10+ seconds per step for 30 steps.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt2">
-          <label for="decision_10_opt2">Instruct for simple actions, Thinking for planning and ambiguous steps</label>
-          <div class="decision-feedback correct">&#10003; Correct! This is the hybrid approach Mobile-Agent-v3.5 uses. Use the fast Instruct model for clear, unambiguous actions (click a button, type text). Switch to the Thinking variant when the model needs to plan ahead, handle unexpected dialogs, or choose between multiple possible actions. You get speed where it&#x27;s safe and reasoning where it matters.</div>
-        </div>
-        <div class="decision-option">
-          <input type="radio" name="decision_10" id="decision_10_opt3">
-          <label for="decision_10_opt3">GUI-Owl-32B Instruct for everything</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Throwing a bigger model at it helps with accuracy but kills latency and requires serious hardware (64GB+ VRAM). The 7B hybrid approach will be faster and nearly as accurate. Scale up model size only when the 7B is genuinely failing on your use case, not as a default.</div>
-        </div>
-    </div>
-    <div class="step-section">
-      <div class="step-header">
-        <div class="step-number">5</div>
-        <h2>Going Multi-Agent: Adding Planning and Reflection</h2>
-      </div>
-      <div class="step-body">
-        <p>Our single-model loop works, but it&#x27;s like driving with only your windshield — you can see what&#x27;s right in front of you, but you have no map and no rearview mirror.</p>
-
-<p>The Mobile-Agent-v3.5 architecture adds two more &quot;perspectives&quot;:</p>
-
-<p><strong>The Planner</strong> breaks your high-level goal into a checklist of sub-tasks. &quot;Send an email to Bob about the meeting&quot; becomes: (1) open email app, (2) click compose, (3) enter Bob&#x27;s address, (4) write subject, (5) write body, (6) click send. This gives the perception agent something focused to work on at each step.</p>
-
-<p><strong>The Reflector</strong> compares the before and after screenshots to verify that the action actually worked. Did clicking that button actually open a menu? Did typing the text actually appear in the field? If not, it flags the failure and the planner can adjust.</p>
-
-<p>This is honestly where the architecture gets elegant. Each agent is simple and focused, but together they handle failures and edge cases that would completely derail our naive loop.</p>
-        
-      <div class="agent-interaction">
-        <div class="agent-goal">
-          <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to refactor your single-loop script into a three-agent architecture: a planner that breaks tasks into steps, a perceiver (GUI-Owl) that executes each step, and a reflector that verifies success after each action.
-        </div>
-        
-        <div class="agent-hints">
-          <div class="agent-hints-label">Think about it</div>
-          <ul><li>The planner doesn&#x27;t need to be GUI-Owl — it could be any good language model. What information does it need to create a plan?</li><li>How does the reflector compare &#x27;before&#x27; and &#x27;after&#x27;? Does it need both screenshots, or just the &#x27;after&#x27; plus the expected outcome?</li><li>What should happen when the reflector says an action failed? Retry? Replan? Ask the user?</li><li>How do the three agents communicate? Think about a shared state object that tracks the current plan, completed steps, and failures.</li></ul>
-        </div>
-        
-      <details class="reveal">
-        <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>The agent should restructure your code into three modules or classes:</p>
-
-<ol>
-<li><strong>Planner</strong> — takes the user&#x27;s task and generates a numbered list of sub-steps. It can use GUI-Owl (Thinking) or even a text-only LLM. It re-plans when the reflector reports failures.</li>
-</ol>
-
-<ol>
-<li><strong>Perceiver</strong> — this is your existing loop step, but now it works on one sub-task at a time instead of the whole goal. Uses GUI-Owl Instruct for speed.</li>
-</ol>
-
-<ol>
-<li><strong>Reflector</strong> — takes the before/after screenshots and the intended action, asks GUI-Owl &quot;did this action succeed?&quot; and returns a yes/no with explanation.</li>
-</ol>
-
-<p>The orchestrator ties them together: plan → for each step: perceive → act → reflect → if failed: replan. The agent should include a shared state dict that tracks <code>current_plan</code>, <code>completed_steps</code>, <code>current_step</code>, and <code>failures</code> so all three agents stay coordinated.</p></div>
-      </details>
-      </div>
-        
-        
-      <div class="callout callout-tip">
-        <div class="callout-label">Tip</div>
-        The planner doesn&#x27;t need to be a local model at all. You could use Claude or GPT-4 as the planner (they&#x27;re great at breaking tasks into steps) and only use GUI-Owl locally for the visual perception. This hybrid local+cloud approach gives you the best of both worlds — strong reasoning from the cloud, fast visual grounding locally.
-      </div>
-        
-      <details class="reveal">
-        <summary>The memory problem — and how Mobile-Agent solves it</summary>
-        <div class="reveal-body"><p>After 20+ steps, your context window fills up with screenshots and action history. This is a real problem — the model starts forgetting what happened early on, and might revisit screens it&#x27;s already handled.</p>
-
-<p>Mobile-Agent-v3.5 addresses this with a <strong>long-horizon memory module</strong>. Instead of stuffing every screenshot into the prompt, it maintains a compressed summary: &quot;We&#x27;ve completed the email composition. We&#x27;re now in the Calendar app trying to create an event.&quot;</p>
-
-<p>The practical implementation is straightforward — after each reflection step, generate a one-sentence summary of what happened and add it to a running log. Feed this log (not the full screenshot history) to the planner when replanning. This keeps the context window manageable even for 50+ step tasks.</p>
-
-<p>Ask your agent to add a <code>memory</code> list to your shared state that stores these summaries, and modify the planner to use them.</p></div>
-      </details>
-      </div>
-    </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><p>We started with a model that can look at a screenshot, and ended with a multi-agent system that can plan, perceive, act, and self-correct across any GUI. Let&#x27;s step back and think about what we actually built.</p>
+      <div class="recap-body"><p>We just went from &quot;what even is GUI-Owl&quot; to having a locally-running vision agent that can see your screen and take actions. Let&#x27;s recap the architecture:</p>
 
-<p><strong>GUI-Owl 1.5</strong> isn&#x27;t just another vision model — it&#x27;s a foundation model specifically designed for the perception layer of GUI automation. The fact that it ships in sizes from 2B to 235B means you can run a capable version on a laptop, which is unusual for models with this much specialized training.</p>
+<p><strong>GUI-Owl 1.5</strong> is the eyes — a fine-tuned vision-language model that understands UI elements across desktop, mobile, and browser. It can describe what it sees, point to specific elements with bounding boxes, and output structured actions.</p>
 
-<p>The bigger insight is the <strong>architecture pattern</strong>: separating planning, perception, and reflection into distinct agents. This pattern shows up everywhere in AI systems right now, and GUI automation is one of the most tangible examples. Each agent is simple; the intelligence emerges from their coordination.</p>
+<p><strong>The see-think-act loop</strong> is the skeleton — screenshot, ask the model, execute the action, repeat. Simple but powerful.</p>
 
-<p>And honestly? We barely scratched the surface. We didn&#x27;t touch MCP tool calling, the cross-app memory system, or the browser-specific capabilities. But you now have the foundation to explore all of that.</p></div>
-      <ul class="takeaways-list"><li>GUI-Owl 1.5 does GUI <em>grounding</em> — it returns pixel coordinates, not just descriptions. This is what makes it usable for actual automation, not just analysis.</li><li>The perception-action loop (screenshot → model → action → repeat) is the fundamental pattern for all GUI agents. Everything else — planning, reflection, memory — is optimization on top of this loop.</li><li>Instruct vs. Thinking variants serve different roles: use Instruct for fast, unambiguous actions and Thinking for planning and complex decisions. The hybrid approach gives you both speed and accuracy.</li><li>Multi-agent architectures (planner + perceiver + reflector) handle failures gracefully in ways that a single-model loop cannot. The reflection step is what makes the system robust.</li><li>You can run meaningful GUI automation with the 7B model on consumer hardware — you don&#x27;t need a 235B parameter model or cloud API for every use case.</li></ul>
+<p><strong>Mobile-Agent-v3</strong> is the brain — adding planning (break the task into steps), reflection (did that step work?), and memory (what have we done so far?) on top of the raw vision model.</p>
+
+<p>The biggest takeaway? <strong>Open-weight vision models have crossed the usefulness threshold for GUI automation.</strong> You no longer need cloud APIs or proprietary tools to build an agent that watches your screen and does useful work. A 24GB GPU and some good prompting gets you surprisingly far.</p>
+
+<p>And this is just the beginning — MCP tool integration, hybrid vision+DOM approaches, and RL-tuned variants (like the OSWorld checkpoint) are all active frontiers. This stuff is moving fast.</p></div>
+      <ul class="takeaways-list"><li>GUI-Owl 1.5 is a family of open-weight vision models (2B-235B) that natively understand UI elements and can output grounding coordinates — no OCR pipeline needed.</li><li>The core automation pattern is a see-think-act loop: screenshot → model inference → action execution → repeat. It works across any application because it operates on pixels, not DOM elements.</li><li>Mobile-Agent-v3 adds a planning/reflection/memory layer on top, turning a simple reactive loop into a genuine agent that can handle multi-step tasks and recover from errors.</li><li>Prompt engineering matters as much for GUI agents as it does for chatbots — specific tasks, clear action formats, and explicit success conditions make the difference between a demo and something useful.</li><li>The 8B Instruct model on a single consumer GPU is the sweet spot for experimentation. Scale up to 32B when you need more reliability on complex tasks.</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Try the <strong>Thinking variant</strong> of GUI-Owl for complex multi-app tasks and compare its reasoning quality to Instruct</li><li>Explore <strong>MCP tool calling</strong> — set up tool definitions that GUI-Owl can invoke alongside visual grounding for a hybrid automation approach</li><li>Build a <strong>browser-specific agent</strong> using Playwright for screenshots and actions — web automation is the most practical starting point for real use cases</li><li>Check out the full <strong>Mobile-Agent-v3.5 codebase</strong> on GitHub to see how Alibaba implements the multi-agent framework at production scale</li><li>Benchmark GUI-Owl against other vision models (GPT-4o, Gemini) on your specific UI — the SOTA results are on standard benchmarks, but your app might be different</li></ul>
+        <ul><li>Try the Thinking variant of GUI-Owl and compare its step-by-step reasoning with the Instruct variant&#x27;s direct outputs — it&#x27;s fascinating to see what the model &#x27;thinks about&#x27; before acting.</li><li>Wire up MCP tools (file operations, browser bookmarks, clipboard access) and see how the model learns to mix GUI actions with direct tool calls.</li><li>Explore the OSWorld and AndroidWorld benchmarks in the MobileAgent repo — they&#x27;re full evaluation environments that let you systematically test your agent on real tasks.</li><li>Try running two GUI-Owl instances: one as the actor and one as a critic that evaluates whether each action was correct. This self-play pattern can dramatically improve reliability.</li></ul>
       </div>
     </div>
     <div class="sources-section">
       <h3>Sources</h3>
-      <ul class="sources-list"><li><a href="https://github.com/X-PLUG/MobileAgent" target="_blank" rel="noopener">X-PLUG/MobileAgent — GUI-Owl 1.5 &amp; Mobile-Agent-v3.5</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+      <ul class="sources-list"><li><a href="https://github.com/X-PLUG/MobileAgent" target="_blank" rel="noopener">X-PLUG/MobileAgent — GUI-Owl 1.5 &amp; Mobile-Agent-v3</a> <span class="source-name">(GitHub)</span></li></ul>
     </div>
     <div class="other-articles">
       <h3>What else was in the news</h3>
@@ -1242,7 +1224,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">Comfy-Org/ComfyUI</div>
-            <div class="oa-summary">Modular node-based GUI for building and running image-generation workflows with diffusion models.</div>
+            <div class="oa-summary">Modular node-based GUI for building and running diffusion model image generation workflows.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1255,7 +1237,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">EbookFoundation/free-programming-books</div>
-            <div class="oa-summary">Community-curated list of thousands of free programming books and learning resources in many languages.</div>
+            <div class="oa-summary">Community-curated list of free programming books and learning resources in many languages.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1280,9 +1262,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
-            <div class="oa-summary">Argues AI coding tools simplify writing code but raise the bar for real engineering judgment.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">If AI writes code, should the session be part of the commit?</div>
+            <div class="oa-summary">Tool and discussion about recording AI coding sessions as metadata alongside git commits.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
@@ -1293,8 +1275,8 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
-            <div class="oa-summary">AMD demonstrates running a trillion-parameter language model locally on a cluster of Ryzen AI laptops.</div>
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Argues AI handles syntax but makes higher-level engineering judgment and system design more critical.</div>
             <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
@@ -1306,9 +1288,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Claude hits #1 on the App Store as users rally behind Anthropic</div>
-            <div class="oa-summary">Claude reaches top App Store spot as users support Anthropic amid a government contract dispute.</div>
-            <div class="oa-meta">Hacker News AI · Mar 2</div>
+            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
+            <div class="oa-summary">AMD demonstrates running a trillion-parameter language model locally using Ryzen AI Max+ hardware.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
@@ -1324,7 +1306,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     </div>
     <script>
     (function() {
-      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}, {"title": "Claude hits #1 on the App Store as users rally behind Anthropic", "tags": "", "source": "Hacker News AI"}];
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "If AI writes code, should the session be part of the commit?", "tags": "coding", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}];
       var repo = "coldbrewnosugar/ai-course";
       var track = "image-gen";
       var date = "2026-03-02";

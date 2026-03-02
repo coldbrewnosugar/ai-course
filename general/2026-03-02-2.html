@@ -772,7 +772,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     <div class="session-hero">
       <div class="hero-tag">Workshop</div>
       <h1>Build a Super Agent with DeerFlow 2.0</h1>
-      <div class="hero-subtitle">ByteDance&#x27;s open-source framework just hit #1 on GitHub Trending. Let&#x27;s spin it up and see what all the fuss is about.</div>
+      <div class="hero-subtitle">Clone, configure, and run ByteDance&#x27;s trending multi-agent framework — then understand how it orchestrates sub-agents, sandboxes, and memory under the hood</div>
       <div class="hero-meta">
         <span>40 min</span>
         <span> <span class="tag">multi-agent</span> <span class="tag">orchestration</span> <span class="tag">sandboxes</span> <span class="tag">open-source</span></span>
@@ -780,320 +780,334 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     </div>
     <div class="context-block">
       <h2>What's happening</h2>
-      <h2>What just happened?</h2>
+      <p><strong>What happened:</strong> On February 28th, 2026, ByteDance dropped DeerFlow 2.0 — a complete ground-up rewrite of their open-source agent framework — and it immediately claimed the #1 spot on GitHub Trending.</p>
 
-<p>On February 28th, 2026, ByteDance dropped <strong>DeerFlow 2.0</strong> — a ground-up rewrite of their open-source agent framework — and it immediately rocketed to <strong>#1 on GitHub Trending</strong>.</p>
+<p><strong>Why it matters:</strong> Most &quot;agent frameworks&quot; give you one agent with a bunch of tools bolted on. DeerFlow is different. It&#x27;s a <em>super agent harness</em> — think of it like a conductor leading an orchestra. The conductor (DeerFlow) doesn&#x27;t play every instrument. Instead, it orchestrates <strong>sub-agents</strong> that each have their own specialties: one researches, one codes, one creates content. They share <strong>long-term memory</strong>, run code in <strong>sandboxes</strong> so nothing blows up your machine, and can learn new tricks through an <strong>extensible skills system</strong>.</p>
 
-<p>Here&#x27;s why that matters: most AI agent frameworks give you one agent that tries to do everything. DeerFlow takes a fundamentally different approach. It&#x27;s a <strong>super agent harness</strong> — think of it like a project manager that delegates work to specialized sub-agents, each with their own skills, their own sandbox to run code in, and access to shared long-term memory.</p>
+<p>The 2.0 rewrite shares zero code with v1 (which was more of a &quot;deep research&quot; tool). This version is about doing <em>almost anything</em> autonomously — research, write code, generate reports, create artifacts — by breaking big tasks into smaller ones and handing them to the right sub-agent.</p>
 
-<p>The name stands for <strong>D</strong>eep <strong>E</strong>xploration and <strong>E</strong>fficient <strong>R</strong>esearch <strong>Flow</strong>, but version 2.0 has evolved well beyond research. It can research, code, create content, run analysis — basically anything you can break into sub-tasks.</p>
-
-<p>The key ingredients:</p>
-<ul>
-<li><strong>Sub-agent orchestration</strong> — multiple agents working together, not one agent doing everything</li>
-<li><strong>Extensible skills</strong> — plug in new capabilities without touching the core</li>
-<li><strong>Sandboxed code execution</strong> — agents can write and run code safely (Docker or local)</li>
-<li><strong>Long-term memory</strong> — agents remember context across sessions</li>
-<li><strong>LangChain model integration</strong> — swap in GPT-4, Claude, Gemini, or open-source models</li>
-</ul>
-
-<p>And it&#x27;s fully open-source. Let&#x27;s get it running.</p>
+<p><strong>What we&#x27;re doing today:</strong> We&#x27;ll get DeerFlow running locally, understand how its architecture connects the pieces, and learn to think about multi-agent systems by prompting our AI agent to help us every step of the way.</p>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">1</div>
-        <h2>Clone and configure DeerFlow</h2>
+        <h2>Get the Lay of the Land — Clone and Configure</h2>
       </div>
       <div class="step-body">
-        <p>First things first — we need to get DeerFlow on our machine and tell it which AI model to talk to.</p>
+        <p>Before we spin anything up, let&#x27;s understand what we&#x27;re working with. DeerFlow uses a pretty standard setup flow: clone the repo, run a config generator, then fill in your API keys and model preferences.</p>
 
-<p>DeerFlow uses a <code>config.yaml</code> file as its brain configuration. This is where you define which models are available, how they behave, and what API keys to use. Think of it like setting up a new phone — before it does anything useful, it needs to know your accounts.</p>
+<p>The key file is <code>config.yaml</code> — this is where you tell DeerFlow which LLM to use. The cool part? It uses <strong>LangChain class paths</strong> to specify models, which means you can plug in basically any model provider (OpenAI, Anthropic, local models, whatever) as long as there&#x27;s a LangChain integration for it.</p>
 
-<p>The setup is refreshingly simple: clone, run a config generator, edit one file. The <code>make config</code> command creates local config files from templates so you don&#x27;t accidentally commit your API keys to GitHub (we&#x27;ve all been there).</p>
+<p>Think of <code>config.yaml</code> as the brain transplant menu. You&#x27;re choosing which brain your super agent gets.</p>
+
+<p>Let&#x27;s get your AI agent to help us understand the setup and generate our config.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to walk you through the DeerFlow setup and help you create a proper config.yaml for your preferred model provider
+          Get your agent to walk you through cloning DeerFlow and explain what `make config` generates
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What model provider do you want to use — OpenAI, Anthropic, or something else?</li><li>DeerFlow uses LangChain under the hood. What does that mean for how models are specified?</li><li>Where should API keys live — hardcoded in config, or somewhere safer?</li></ul>
+          <ul><li>What does the repo need before it can run? Think: code, configuration, dependencies...</li><li>What would `make config` do — why not just ship the config files directly?</li><li>Why would a project use template files instead of committing real configs to git?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>Your agent should walk you through the three commands (<code>git clone</code>, <code>cd deer-flow</code>, <code>make config</code>) and then help you fill in <code>config.yaml</code>. The key part is the model definition — it needs a LangChain class path, a model identifier, and an API key reference. Here&#x27;s what one model entry looks like:</p>
-
-<p>```yaml</p>
-<p>models:</p>
-<ul>
-<li>name: gpt-4</li>
-</ul>
-<p>display_name: GPT-4</p>
-<p>use: langchain_openai:ChatOpenAI</p>
-<p>model: gpt-4</p>
-<p>api_key: $OPENAI_API_KEY</p>
-<p>max_tokens: 4096</p>
-<p>```</p>
-
-<p>The <code>use</code> field is the magic — it&#x27;s a LangChain class path, meaning you can swap in any LangChain-compatible model provider.</p></div>
+        <div class="reveal-body"><p>Your agent should explain the three-step setup: <code>git clone</code>, <code>cd deer-flow</code>, then <code>make config</code>. It&#x27;ll explain that <code>make config</code> copies example template files into real local config files (like <code>config.yaml</code> and <code>.env</code>) — this pattern keeps your secrets out of version control. The templates have placeholder values you fill in with your actual API keys and model choices.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-api-key-note">
         <div class="callout-label">API Key Note</div>
-        You&#x27;ll need at least one model provider API key (OpenAI, Anthropic, etc.) and a <strong>Tavily API key</strong> for the search/research capabilities. Tavily has a free tier that&#x27;s plenty for experimenting. Set these in a <code>.env</code> file in the project root — never hardcode keys in <code>config.yaml</code> for anything beyond local tinkering.
+        You&#x27;ll need at least one LLM API key (OpenAI, Anthropic, etc.) and a <strong>Tavily API key</strong> for web search capabilities. Tavily has a generous free tier — grab one at tavily.com before proceeding.
       </div>
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        The <code>use: langchain_openai:ChatOpenAI</code> syntax is a LangChain class path. This means DeerFlow supports <em>any</em> model that LangChain supports — including local models via Ollama. Ask your agent how to configure a local model if you want to go that route.
+        DeerFlow 2.0 is a complete rewrite — it shares zero code with v1. If you&#x27;ve used DeerFlow before, forget everything. The old Deep Research version lives on the <code>1.x</code> branch.
       </div>
         
       <details class="reveal">
-        <summary>What&#x27;s the deal with LangChain class paths?</summary>
-        <div class="reveal-body"><p>The <code>use</code> field in <code>config.yaml</code> follows the pattern <code>module_path:ClassName</code>. So <code>langchain_openai:ChatOpenAI</code> means &quot;from the <code>langchain_openai</code> package, use the <code>ChatOpenAI</code> class.&quot; This is DeerFlow&#x27;s way of being model-agnostic without writing adapter code for every provider.</p>
+        <summary>What&#x27;s a LangChain class path?</summary>
+        <div class="reveal-body"><p>When you see <code>use: langchain_openai:ChatOpenAI</code> in the config, that&#x27;s a LangChain class path. It&#x27;s like an address that says &quot;go to the <code>langchain_openai</code> package, find the <code>ChatOpenAI</code> class, and use that as the model interface.&quot;</p>
 
-<p>For Anthropic models, you&#x27;d use <code>langchain_anthropic:ChatAnthropic</code>. For Google, <code>langchain_google_genai:ChatGoogleGenerativeAI</code>. If a LangChain integration exists for a model, DeerFlow can use it.</p>
+<p>This is clever because DeerFlow doesn&#x27;t need to know about every LLM provider. It just says &quot;give me a LangChain-compatible chat model&quot; and the class path tells it which one. Want to use Anthropic? Change it to <code>langchain_anthropic:ChatAnthropic</code>. Local model via Ollama? <code>langchain_ollama:ChatOllama</code>. The framework doesn&#x27;t care — it just needs something that speaks the LangChain chat interface.</p>
 
-<p>This is a genuinely clever design decision — instead of building their own model abstraction layer, they piggyback on LangChain&#x27;s massive ecosystem of integrations.</p></div>
+<p>It&#x27;s like how a USB port doesn&#x27;t care if you plug in a keyboard or a mouse — it just needs something that speaks USB.</p></div>
       </details>
       </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Launch DeerFlow with Docker</h2>
+        <h2>Configure Your Model — The Brain Transplant</h2>
       </div>
       <div class="step-body">
-        <p>Now let&#x27;s actually run this thing. DeerFlow gives you two options: Docker (recommended) or local development. We&#x27;re going with Docker because it handles all the dependencies, sets up the sandbox environment, and gets you a consistent setup regardless of what&#x27;s on your machine.</p>
+        <p>Here&#x27;s where it gets fun. The <code>config.yaml</code> file is DeerFlow&#x27;s master control panel. You define one or more models, and DeerFlow can assign different models to different sub-agents (imagine giving your researcher a fast cheap model and your coder a powerful expensive one).</p>
 
-<p>Here&#x27;s a mental model for what happens when you start DeerFlow: imagine spinning up a small office. The <strong>main app</strong> is the receptionist — it takes your requests through a web UI at <code>localhost:2026</code>. Behind the scenes, there&#x27;s a <strong>provisioner</strong> service that manages sandbox containers (think: disposable workspaces where agents can safely run code). The Docker setup wires all of this together.</p>
+<p>Each model entry needs a few things: a name, which LangChain class to use, the actual model identifier, your API key, and some generation parameters like temperature and max tokens.</p>
 
-<p>The interesting bit: <code>make docker-start</code> is smart enough to read your <code>config.yaml</code> and only spin up the provisioner if you&#x27;ve configured DeerFlow to use container-based sandboxing. No wasted resources.</p>
+<p>Let&#x27;s get your agent to help you write a solid config.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to explain the Docker startup process and help you troubleshoot any issues
+          Ask your agent to generate a `config.yaml` model entry for your preferred LLM provider
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What&#x27;s the difference between `docker-init` and `docker-start`? When do you run each?</li><li>What prerequisites does your machine need for this to work?</li><li>What should you see when everything is running correctly?</li></ul>
+          <ul><li>Which model provider do you actually have an API key for?</li><li>What parameters matter for an agent that needs to reason carefully vs. one that needs to be creative?</li><li>Why would you use an environment variable reference like `$OPENAI_API_KEY` instead of pasting the key directly?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>Your agent should explain the two-step process: <code>make docker-init</code> pulls the sandbox image (one-time setup), then <code>make docker-start</code> launches the services. It should mention that you need Docker installed and running, and that the app will be available at <code>http://localhost:2026</code>. If you hit issues, common fixes include making sure Docker Desktop is running, checking that port 2026 isn&#x27;t already in use, and ensuring your <code>.env</code> file has valid API keys.</p></div>
+        <div class="reveal-body"><p>The agent should give you a YAML snippet — around 8 lines — defining a model with <code>name</code>, <code>display_name</code>, <code>use</code> (the LangChain class path), <code>model</code>, <code>api_key</code> (referencing an env var), <code>max_tokens</code>, and <code>temperature</code>. It should explain that <code>$OPENAI_API_KEY</code> syntax means DeerFlow reads from your environment, keeping secrets out of the config file. If you ask for Anthropic, the <code>use</code> field changes to <code>langchain_anthropic:ChatAnthropic</code>.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        Prefer running locally without Docker? Run <code>make check</code> first to verify you have Node.js 22+, pnpm, uv, and nginx installed. Then <code>make dev</code> starts everything. But honestly, Docker saves you from dependency headaches — especially with the sandbox setup.
+        Temperature tip: for agent tasks, stick with <strong>0.3–0.7</strong>. Too low and the agent becomes rigid. Too high and it starts hallucinating tool calls. The default 0.7 is a solid starting point.
       </div>
       <div class="callout callout-warning">
         <div class="callout-label">Warning</div>
-        If <code>make docker-start</code> hangs or errors, check that Docker Desktop is running and has enough allocated memory (at least 4GB recommended). Also verify your <code>.env</code> file exists and has valid API keys — DeerFlow won&#x27;t start properly without at least one configured model.
+        Never paste raw API keys into <code>config.yaml</code> if you might push this to git. Use the <code>.env</code> file or environment variables — DeerFlow&#x27;s <code>$VAR_NAME</code> syntax makes this painless.
       </div>
         
       <details class="reveal">
-        <summary>What&#x27;s this &#x27;provisioner&#x27; thing?</summary>
-        <div class="reveal-body"><p>The provisioner is DeerFlow&#x27;s container manager for sandboxed code execution. When a sub-agent needs to run code (say, a Python script to analyze some data), the provisioner spins up a fresh Docker container, runs the code inside it, captures the output, and tears the container down.</p>
+        <summary>Can I use multiple models at once?</summary>
+        <div class="reveal-body"><p>Yes! This is one of DeerFlow&#x27;s superpowers. You can define multiple models in your <code>config.yaml</code> and assign them to different roles. The <code>models</code> field is an array, so you can list as many as you want.</p>
 
-<p>This is crucial for safety — you don&#x27;t want an AI agent running arbitrary code directly on your machine. The sandbox is like giving the agent a disposable laptop: it can install packages, write files, run scripts, but when it&#x27;s done, everything gets thrown away. Your host machine stays clean.</p>
+<p>Why would you? Cost optimization. Your research sub-agent might just need to summarize web pages — a smaller, cheaper model handles that fine. But your coding sub-agent needs to write correct, complex code — you want your best model there.</p>
 
-<p>The provisioner only starts if your <code>config.yaml</code> specifies <code>src.community.aio_sandbox:AioSandboxProvider</code> with a <code>provisioner_url</code>. Otherwise, DeerFlow uses local execution mode, which runs code directly on your host (faster but less isolated).</p></div>
+<p>This is like hiring a team where you don&#x27;t pay senior engineer rates for someone doing data entry. Right tool for the right job.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>At this point, you should have DeerFlow running and accessible at `http://localhost:2026`. Open it in your browser — you should see a clean chat interface. If you see a connection error, double-check that your Docker containers are running (`docker ps`) and that your API keys are set correctly.</div>
+      <div>At this point, you should have the DeerFlow repo cloned, `make config` run, and your `config.yaml` set up with at least one model. Your `.env` file should have your API keys (Tavily + your LLM provider). We haven&#x27;t started anything yet — we&#x27;re just wired up and ready to go.</div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">3</div>
-        <h2>Understand the sub-agent architecture</h2>
+        <h2>Fire It Up — Docker vs. Local Dev</h2>
       </div>
       <div class="step-body">
-        <p>Okay, this is where DeerFlow gets genuinely interesting. Most agent frameworks work like a solo contractor — one agent, one brain, trying to juggle everything. DeerFlow works like a <strong>general contractor with specialized subcontractors</strong>.</p>
+        <p>DeerFlow gives you two ways to run: <strong>Docker</strong> (recommended) or <strong>local development</strong>. Honestly, Docker is the way to go here — not just because it&#x27;s easier, but because DeerFlow&#x27;s sandbox feature <em>uses</em> Docker containers to isolate code execution. So you kinda need Docker anyway.</p>
 
-<p>Here&#x27;s the mental model: when you give DeerFlow a complex task (say, &quot;research the latest trends in solar energy and create a report with charts&quot;), the <strong>orchestrator</strong> breaks it into sub-tasks and delegates each one to the right sub-agent. One agent handles web research. Another writes the report. Another generates charts by writing and executing Python code in a sandbox.</p>
+<p>Here&#x27;s the mental model: when DeerFlow&#x27;s coding sub-agent writes and runs code, you probably don&#x27;t want that code running directly on your machine. What if the agent decides to <code>rm -rf</code> something? The sandbox runs that code inside a Docker container — a little sealed-off mini-computer that can&#x27;t touch your real files. It&#x27;s like giving a toddler finger paint but putting newspaper on the floor first.</p>
 
-<p>Each sub-agent has its own <strong>skills</strong> — think of these as the agent&#x27;s toolbox. A research agent has search tools. A coding agent has sandbox access. A writing agent has formatting tools. The orchestrator knows which agent has which skills and routes work accordingly.</p>
-
-<p>The clever part? These sub-agents can talk to each other. The research agent&#x27;s findings get passed to the writing agent. The writing agent can ask the coding agent to generate a visualization. It&#x27;s collaborative, not just parallel.</p>
-
-<p>Honestly, this part confused me at first too. The key insight is that DeerFlow isn&#x27;t just running multiple agents independently — it&#x27;s <strong>orchestrating</strong> them. The orchestrator maintains a shared context so sub-agents aren&#x27;t working in the dark.</p>
+<p>The Docker setup has two commands: one to pull the sandbox image (one-time thing), and one to start everything.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to explain DeerFlow&#x27;s sub-agent architecture and how the orchestrator decides which sub-agent handles what
+          Ask your agent to explain the DeerFlow Docker startup process and what each `make` command does
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>How does the orchestrator decide which sub-agent to use for a given sub-task?</li><li>What happens when one sub-agent needs output from another?</li><li>How is this different from just running multiple API calls in sequence?</li></ul>
+          <ul><li>What&#x27;s the difference between `make docker-init` and `make docker-start`?</li><li>Why would you only need to run one of them once?</li><li>What port does the app run on, and what should you see when it&#x27;s working?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>Your agent should explain that DeerFlow uses a planning-then-execution pattern. The orchestrator first creates a task plan (breaking the request into sub-tasks), then assigns each sub-task to the appropriate sub-agent based on required skills. Sub-agents communicate through a shared context/memory layer — not direct messages. The orchestrator manages dependencies (&quot;don&#x27;t start the chart generation until the data analysis is done&quot;). This is fundamentally different from a simple chain because the orchestrator can adapt the plan mid-execution if a sub-agent discovers something unexpected.</p></div>
+        <div class="reveal-body"><p>Your agent should explain that <code>make docker-init</code> pulls the sandbox Docker image (you only run this once, or when the image updates) and <code>make docker-start</code> boots the actual services. It should mention that <code>docker-start</code> is smart — it reads your <code>config.yaml</code> and only starts the provisioner service if you&#x27;re using the provisioner sandbox mode. Once running, you hit <code>http://localhost:2026</code> in your browser. The agent might also mention <code>make check</code> if you&#x27;re going the local dev route — that verifies you have Node.js 22+, pnpm, uv, and nginx installed.</p></div>
       </details>
       </div>
         
         
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        If you go the local dev route instead, <code>make check</code> will tell you exactly what prerequisites you&#x27;re missing. You need Node.js 22+, pnpm, uv, and nginx. Then <code>make dev</code> starts everything.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Port 2026 — not the usual 3000 or 8080. If you&#x27;re staring at a blank page, double-check you&#x27;re hitting the right port.
+      </div>
         
       <details class="reveal">
-        <summary>Skills vs. Tools — what&#x27;s the difference?</summary>
-        <div class="reveal-body"><p>In DeerFlow&#x27;s terminology, <strong>tools</strong> are atomic capabilities — a single function like &quot;search the web&quot; or &quot;read a file.&quot; <strong>Skills</strong> are higher-level packages of behavior that might use multiple tools.</p>
+        <summary>Deep dive: How sandbox modes work</summary>
+        <div class="reveal-body"><p>DeerFlow supports multiple sandbox execution modes, and this is worth understanding because it&#x27;s core to how the agent safely runs code:</p>
 
-<p>Think of it like cooking: a tool is a knife. A skill is &quot;prep vegetables&quot; — it involves using the knife, a cutting board, knowing how to julienne, etc.</p>
+<p><strong>Local Execution</strong> — Code runs directly on your host machine. Fast, but dangerous. Only use this for trusted tasks or development.</p>
 
-<p>DeerFlow&#x27;s skills are extensible — you can write your own and plug them in. This is one of the main reasons the framework is getting attention. Instead of forking the whole project to add a capability, you just define a new skill.</p></div>
-      </details>
-      <details class="reveal">
-        <summary>How does this compare to CrewAI or AutoGen?</summary>
-        <div class="reveal-body"><p>If you&#x27;ve played with other multi-agent frameworks, here&#x27;s the key differentiator: DeerFlow bundles <strong>sandboxed execution</strong> and <strong>persistent memory</strong> directly into the orchestration layer. CrewAI focuses on role-based agent collaboration but doesn&#x27;t include built-in sandboxing. AutoGen excels at conversational agent patterns but takes a different approach to task decomposition.</p>
+<p><strong>Docker Execution</strong> — Code runs in isolated Docker containers. Each execution gets a fresh container, so nothing persists or leaks. This is the default and recommended mode.</p>
 
-<p>DeerFlow&#x27;s sandbox integration means agents can safely write and run code as a first-class operation, not an afterthought. And the long-term memory means agents get smarter across sessions — they remember what worked before. That combo is what makes it a &quot;super agent harness&quot; rather than just another multi-agent framework.</p></div>
+<p><strong>Provisioner Mode</strong> — A more advanced setup where a separate provisioner service manages container lifecycle. This is for production-scale deployments where you need better resource management.</p>
+
+<p>The sandbox isn&#x27;t just about safety — it also gives the agent a <strong>file system</strong> to work with. The agent can write files, run scripts, install packages — all inside the container. When it&#x27;s done, results get extracted back out. It&#x27;s like giving the agent its own temporary laptop to work on.</p></div>
       </details>
       </div>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You want DeerFlow to analyze a CSV dataset and create visualizations. Which sandbox mode should you use?</div>
+      <div class="question">You&#x27;re configuring DeerFlow and want your research sub-agent to use a cheap, fast model while your coding sub-agent uses a powerful one. Where do you set this up?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt0">
-          <label for="decision_6_opt0">Docker Execution mode</label>
-          <div class="decision-feedback correct">&#10003; Correct! Correct! Docker execution runs code in isolated containers. For data analysis, the agent will install pandas, matplotlib, and whatever else it needs — all inside a disposable container. When it&#x27;s done, you get the output (charts, summaries) without any packages polluting your host machine. This is especially important when agents are writing and running code autonomously — you want that safety net.</div>
+          <label for="decision_6_opt0">Define multiple models in config.yaml&#x27;s models array</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly right. The `models` field in config.yaml is an array — you list multiple models with different names, and DeerFlow can assign them to different sub-agents based on the task. This is one of DeerFlow&#x27;s key architectural choices: model routing isn&#x27;t hardcoded, it&#x27;s configurable.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt1">
-          <label for="decision_6_opt1">Local Execution mode</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Local execution runs code directly on your host machine. While it&#x27;s faster (no container overhead), letting an AI agent install packages and run arbitrary Python scripts directly on your machine is risky. For quick experiments where you trust the task, local mode is fine. But for autonomous data analysis where the agent decides what code to run? Docker is the safer bet.</div>
+          <label for="decision_6_opt1">Create separate .env files for each sub-agent</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. The `.env` file holds API keys, not model assignments. All sub-agents share the same `.env`. Model routing happens in `config.yaml` where you define the models array and DeerFlow maps them to different agent roles.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_6" id="decision_6_opt2">
-          <label for="decision_6_opt2">Disable sandboxing entirely</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Without sandboxing, the coding sub-agent can&#x27;t execute any code at all — it can only write it. You&#x27;d lose the ability to generate actual charts or run analysis. DeerFlow&#x27;s power comes from agents that can write code AND run it to verify results. Always have at least one sandbox mode enabled.</div>
+          <label for="decision_6_opt2">Edit each sub-agent&#x27;s source code to hardcode the model</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. That&#x27;s the old-school way and defeats the whole purpose of a configurable harness. DeerFlow&#x27;s architecture deliberately separates model configuration (in config.yaml) from agent logic (in code). You should never need to touch source code just to change which model a sub-agent uses.</div>
         </div>
     </div>
     <div class="step-section">
       <div class="step-header">
         <div class="step-number">4</div>
-        <h2>Explore memory and context engineering</h2>
+        <h2>Understand the Architecture — Sub-Agents, Skills, and Memory</h2>
       </div>
       <div class="step-body">
-        <p>Here&#x27;s something that separates DeerFlow from a lot of agent frameworks: <strong>long-term memory</strong>.</p>
+        <p>Okay, DeerFlow is running. Let&#x27;s slow down and understand what&#x27;s actually happening under the hood, because this is the really interesting part.</p>
 
-<p>Most AI agents have the memory of a goldfish. Every conversation starts fresh. DeerFlow&#x27;s agents can remember things across sessions — what you asked for before, what strategies worked, what your preferences are.</p>
+<p>DeerFlow&#x27;s architecture has five core pillars:</p>
 
-<p>Think of it like the difference between calling a random customer service rep every time versus having a dedicated account manager who knows your history. The first interaction might be similar, but by the fifth time, the agent with memory is dramatically more useful.</p>
+<p><strong>1. Sub-Agents</strong> — Instead of one mega-agent trying to do everything, DeerFlow breaks tasks into pieces and hands them to specialized sub-agents. One researches, one codes, one writes. The main orchestrator decides who gets what.</p>
 
-<p>DeerFlow calls this broader concept <strong>context engineering</strong> — it&#x27;s not just about stuffing things into the prompt window. It&#x27;s about strategically deciding what context each sub-agent needs, when to pull from long-term memory, and how to keep the shared context clean as a complex task unfolds.</p>
+<p><strong>2. Skills &amp; Tools</strong> — Skills are like plugins the agents can use. A skill might be &quot;search the web,&quot; &quot;run Python code,&quot; or &quot;generate an image.&quot; The extensible skills system means you can add new capabilities without rewriting agent logic.</p>
 
-<p>This is one of those features that doesn&#x27;t sound flashy until you experience it. The first time DeerFlow references something you told it three sessions ago without you having to repeat it — that&#x27;s when it clicks.</p>
+<p><strong>3. Sandbox &amp; File System</strong> — When an agent needs to run code, it gets a sandboxed environment. This is huge for safety and reproducibility.</p>
+
+<p><strong>4. Context Engineering</strong> — This is DeerFlow&#x27;s fancy term for managing what information each sub-agent sees. Not every agent needs every piece of context. Good context engineering = efficient token usage = cheaper and faster.</p>
+
+<p><strong>5. Long-Term Memory</strong> — Agents can remember things across sessions. Ask it to research something today, and it can recall that research tomorrow.</p>
+
+<p>Let&#x27;s get your AI agent to help us map this architecture.</p>
         
       <div class="agent-interaction">
         <div class="agent-goal">
           <div class="agent-goal-label">Ask your agent</div>
-          Ask your agent to explain how DeerFlow&#x27;s memory system works and how context gets shared between sub-agents
+          Ask your agent to explain how DeerFlow&#x27;s orchestrator decides which sub-agent handles which part of a task
         </div>
         
         <div class="agent-hints">
           <div class="agent-hints-label">Think about it</div>
-          <ul><li>What&#x27;s the difference between short-term context (within a task) and long-term memory (across sessions)?</li><li>How does the orchestrator decide what context to give each sub-agent? Does every agent see everything?</li><li>What kinds of things get stored in long-term memory?</li></ul>
+          <ul><li>If you give DeerFlow a big task like &#x27;research competitor pricing and build me a comparison chart,&#x27; how might it break that down?</li><li>What&#x27;s the difference between a &#x27;tool&#x27; and a &#x27;skill&#x27; in this context?</li><li>How does the orchestrator know when a sub-agent is done and what to do with its output?</li></ul>
         </div>
         
       <details class="reveal">
         <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>Your agent should explain that DeerFlow has two layers of memory: <strong>working context</strong> (shared state during a task execution, like a team&#x27;s shared document) and <strong>long-term memory</strong> (persistent storage across sessions, like a knowledge base). The orchestrator curates what each sub-agent sees — a research agent gets different context than a coding agent. Long-term memory stores things like user preferences, successful strategies, and domain knowledge accumulated over time. This prevents the &#x27;Groundhog Day&#x27; problem where every session starts from zero.</p></div>
+        <div class="reveal-body"><p>Your agent should describe a flow where the main orchestrator receives a task, decomposes it into subtasks (research → analyze → visualize), and routes each subtask to the appropriate sub-agent. It should explain that skills are higher-level capabilities (like &#x27;web research&#x27;) composed of multiple tools (search API + browser + summarizer). The orchestrator tracks subtask status and chains outputs — the researcher&#x27;s findings become the coder&#x27;s input. Think of it like a project manager breaking down a sprint into tickets and assigning them to the right developer.</p></div>
       </details>
       </div>
         
         
       <div class="callout callout-tip">
         <div class="callout-label">Tip</div>
-        DeerFlow also supports <strong>MCP (Model Context Protocol) servers</strong> — this means you can plug in external tools and data sources that sub-agents can access. If you&#x27;ve used MCP with Claude Desktop, the same concept applies here but across multiple collaborating agents.
+        DeerFlow also supports <strong>MCP (Model Context Protocol) servers</strong> — this means you can extend it with any MCP-compatible tool. If you&#x27;ve been building MCP tools for Claude Desktop or other clients, they plug right in.
       </div>
         
       <details class="reveal">
-        <summary>What is &#x27;context engineering&#x27; really?</summary>
-        <div class="reveal-body"><p>Context engineering is the practice of carefully managing what information goes into an AI&#x27;s prompt window. It&#x27;s become a hot term in 2026 because as agent systems get more complex, naive approaches (&quot;just dump everything into the context&quot;) break down fast.</p>
+        <summary>What is &#x27;context engineering&#x27; and why should I care?</summary>
+        <div class="reveal-body"><p>Context engineering is arguably the most underrated concept in agent design. Here&#x27;s the problem: LLMs have context windows (the amount of text they can process at once). If you dump <em>everything</em> into every agent&#x27;s context, you waste tokens, slow things down, and actually hurt performance — the model gets confused by irrelevant information.</p>
 
-<p>Imagine you&#x27;re managing a team of five people working on a project. You wouldn&#x27;t CC everyone on every email — the designer doesn&#x27;t need the database migration details, and the backend dev doesn&#x27;t need the color palette discussion. You&#x27;d curate who gets what information.</p>
+<p>DeerFlow&#x27;s context engineering means each sub-agent only sees what it needs. The researcher sees the original query and search results. The coder sees the researcher&#x27;s summary and a task description, but not the raw search results. The writer sees the coder&#x27;s output and the original brief.</p>
 
-<p>That&#x27;s context engineering for agents. DeerFlow&#x27;s orchestrator decides: what does this specific sub-agent need to know to complete its sub-task? What from long-term memory is relevant? What from the current conversation matters? It assembles a focused context window for each agent, keeping them efficient and on-task rather than drowning in irrelevant information.</p></div>
+<p>It&#x27;s like a relay race — each runner only carries the baton, not the entire team&#x27;s equipment. This makes each agent faster, cheaper, and more focused.</p>
+
+<p>This matters to you because as these systems get more complex, naive &#x27;throw everything in the prompt&#x27; approaches will hit walls. Context engineering is how you scale.</p></div>
       </details>
-      </div>
-    </div>
-    <div class="step-section">
-      <div class="step-header">
-        <div class="step-number">5</div>
-        <h2>Give DeerFlow a real multi-step task</h2>
-      </div>
-      <div class="step-body">
-        <p>Time to see the whole system work together. Let&#x27;s give DeerFlow a task that actually requires multiple sub-agents collaborating.</p>
-
-<p>A good test is something that involves <strong>research + analysis + output creation</strong> — that forces the orchestrator to use at least three different sub-agents and coordinate their work.</p>
-
-<p>Go to <code>localhost:2026</code> and try giving it a complex request. Watch how the UI shows you the task being decomposed, sub-agents being assigned, and results flowing between them. This is the payoff for all the setup.</p>
-
-<p>The key thing to observe: DeerFlow doesn&#x27;t just run things in parallel for speed. It runs things in the <strong>right order</strong> — respecting dependencies. The analysis agent waits for the research agent. The report writer waits for the analysis. But independent sub-tasks DO run in parallel when possible.</p>
-        
-      <div class="agent-interaction">
-        <div class="agent-goal">
-          <div class="agent-goal-label">Ask your agent</div>
-          Get your agent to help you craft a good multi-step prompt for DeerFlow that will exercise the full sub-agent pipeline
-        </div>
-        
-        <div class="agent-hints">
-          <div class="agent-hints-label">Think about it</div>
-          <ul><li>What kind of task naturally requires research, coding/analysis, AND content creation?</li><li>How specific should your prompt be? Should you tell DeerFlow HOW to break it into sub-tasks, or let it decide?</li><li>What would make it obvious that sub-agents are collaborating vs. working independently?</li></ul>
-        </div>
-        
       <details class="reveal">
-        <summary>What the agent gives back</summary>
-        <div class="reveal-body"><p>Your agent should suggest a prompt like: &quot;Research the top 5 open-source AI agent frameworks released in 2026, compare their architectures and star counts, create a comparison table, and generate a summary report with your recommendations.&quot; This works because it requires web search (research agent), data gathering and comparison (analysis agent), possibly code execution for fetching GitHub stats (sandbox agent), and report writing (content agent). The agent might also suggest watching DeerFlow&#x27;s task decomposition panel in the UI to see how it plans the work.</p></div>
-      </details>
-      </div>
-        
-        
-      <div class="callout callout-tip">
-        <div class="callout-label">Tip</div>
-        Pro tip: start with a deliberately complex task. DeerFlow&#x27;s orchestration shines when there&#x27;s real coordination needed. A simple &quot;summarize this article&quot; won&#x27;t show you much — it&#x27;ll just hand it to a single agent. Give it something messy and multi-faceted.
-      </div>
-        
-      <details class="reveal">
-        <summary>What models work best with DeerFlow?</summary>
-        <div class="reveal-body"><p>DeerFlow&#x27;s docs recommend using capable models for the orchestrator (it&#x27;s doing the hardest job — planning and coordination) and potentially lighter models for simpler sub-agents. GPT-4, Claude 3.5 Sonnet/Opus, and Gemini Pro are all solid choices for the orchestrator.</p>
+        <summary>How does long-term memory work?</summary>
+        <div class="reveal-body"><p>Long-term memory in DeerFlow means agents can persist information across sessions. Without it, every conversation starts from zero — like talking to someone with amnesia.</p>
 
-<p>An interesting optimization: you can configure different models for different roles in <code>config.yaml</code>. Use a heavy model for orchestration and a faster, cheaper model for straightforward sub-tasks like formatting or simple searches. This keeps costs down without sacrificing quality where it matters.</p>
+<p>The memory system typically works by:</p>
+<ol>
+<li><strong>Extracting</strong> key facts and decisions from a session</li>
+<li><strong>Storing</strong> them in a structured way (usually a vector database or similar)</li>
+<li><strong>Retrieving</strong> relevant memories when a new session starts or a related topic comes up</li>
+</ol>
 
-<p>The LangChain integration means you can even mix providers — Claude for orchestration, GPT-4 for coding tasks, a local Ollama model for simple classification. DeerFlow doesn&#x27;t care, as long as LangChain can talk to it.</p></div>
+<p>So if you ask DeerFlow to research competitor pricing on Monday, then on Wednesday ask it to &#x27;update the pricing comparison,&#x27; it can recall the Monday research instead of starting over. This is especially powerful for ongoing projects where context builds over time.</p>
+
+<p>Think of it like a team wiki that the agents maintain and consult automatically.</p></div>
       </details>
       </div>
     </div>
     <div class="checkpoint">
       <div class="checkpoint-icon">&#10003;</div>
-      <div>You should have successfully given DeerFlow a multi-step task and watched it decompose, delegate, and coordinate across sub-agents. You&#x27;ve seen the orchestrator plan the work, sub-agents execute their pieces, and results flow together into a final output. If the task completed but felt underwhelming, try something more complex — DeerFlow&#x27;s sweet spot is tasks that would take YOU 30-60 minutes of tab-switching and copy-pasting.</div>
+      <div>You should now have DeerFlow running at `localhost:2026` and a solid mental model of the five pillars: sub-agents, skills, sandboxes, context engineering, and memory. You understand that it&#x27;s an orchestrator pattern — one conductor, many specialized musicians.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Give It a Real Task — Watch the Orchestra Play</h2>
+      </div>
+      <div class="step-body">
+        <p>Now for the fun part. Let&#x27;s actually use DeerFlow and watch how it decomposes a task and coordinates sub-agents.</p>
+
+<p>A good test task is something that requires multiple skills: research, reasoning, and producing an artifact. Something like <em>&quot;Research the top 5 open-source agent frameworks released in 2026, compare their architectures, and generate a summary table.&quot;</em></p>
+
+<p>This forces DeerFlow to:</p>
+<ul>
+<li>Use its <strong>research</strong> sub-agent to search the web</li>
+<li>Use its <strong>analysis</strong> capabilities to compare findings</li>
+<li>Use its <strong>sandbox</strong> to potentially run code for generating the table</li>
+<li>Use <strong>context engineering</strong> to pass the right info between steps</li>
+</ul>
+
+<p>Watch the UI at <code>localhost:2026</code> — you&#x27;ll see the task decomposition in real time.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your AI agent to suggest 3 good test tasks that would exercise different DeerFlow capabilities (research, coding, multi-step reasoning)
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What kind of task would force DeerFlow to use its sandbox (code execution)?</li><li>What task would test the handoff between a research sub-agent and a coding sub-agent?</li><li>Think about tasks that would be genuinely hard for a single agent but natural for a team...</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>Your agent should suggest diverse tasks like: (1) a research + visualization task (e.g., &#x27;research Y Combinator&#x27;s latest batch and create a chart of company categories&#x27;), (2) a pure coding task that requires iteration (e.g., &#x27;build a Python script that scrapes and summarizes the top HN posts&#x27;), and (3) a multi-step creative task (e.g., &#x27;research how RAG works, then write a beginner-friendly tutorial with code examples&#x27;). The key insight is that good test tasks cross skill boundaries — they&#x27;re not something a single tool call can handle.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Start with a simpler task first to make sure everything is wired up correctly. &quot;Summarize the top 3 stories on Hacker News right now&quot; is a good smoke test — it exercises web search and summarization without needing the sandbox.
+      </div>
+        
+      <details class="reveal">
+        <summary>What to watch for in the DeerFlow UI</summary>
+        <div class="reveal-body"><p>When you give DeerFlow a task, watch the UI carefully. You should see:</p>
+
+<ol>
+<li><strong>Task decomposition</strong> — The orchestrator breaks your request into subtasks. This is the &quot;planning&quot; phase.</li>
+<li><strong>Sub-agent assignment</strong> — Each subtask gets routed to a specialist. You&#x27;ll see which agent is handling what.</li>
+<li><strong>Tool/skill usage</strong> — Watch for web searches, code execution, file creation. Each one is a skill being invoked.</li>
+<li><strong>Handoffs</strong> — The output of one sub-agent becomes the input for another. This is the context engineering in action.</li>
+<li><strong>Final synthesis</strong> — The orchestrator collects all sub-agent outputs and assembles the final response.</li>
+</ol>
+
+<p>If something goes wrong, it&#x27;s usually at the handoff point — a sub-agent produced output that the next agent couldn&#x27;t use well. That&#x27;s the hardest part of multi-agent orchestration to get right.</p></div>
+      </details>
+      </div>
     </div>
     <div class="your-turn">
       <h3>Your Turn</h3>
-      <div class="your-turn-goal">Get your AI agent to help you write a custom DeerFlow skill that adds a new capability to the framework</div>
-      <div class="your-turn-context">DeerFlow&#x27;s extensible skills system is one of its biggest selling points. Instead of modifying core code, you define a new skill — a package of tools and behavior — and plug it in. This is how you&#x27;d customize DeerFlow for your specific use case, like adding a skill for querying your company&#x27;s internal API or processing a specific file format.</div>
+      <div class="your-turn-goal">Design a custom skill concept for DeerFlow — describe what it does, what tools it needs, and how it would interact with existing sub-agents</div>
+      <div class="your-turn-context">DeerFlow&#x27;s skills system is extensible — you can add new capabilities without rewriting the core framework. A skill is a higher-level capability composed of one or more tools. Think about a capability that would make DeerFlow more useful for YOUR workflow.</div>
       
       <div class="agent-hints">
         <div class="agent-hints-label">Think about it</div>
-        <ul><li>What capability would actually be useful for YOUR workflow that DeerFlow doesn&#x27;t have built-in?</li><li>What does a skill need to define? Think about: what tools it uses, what inputs it expects, what outputs it produces.</li><li>How would you tell the orchestrator WHEN to use your new skill versus existing ones?</li><li>Where in the DeerFlow project structure would a custom skill live?</li></ul>
+        <ul><li>What repetitive multi-step task do you do regularly that involves both research and action?</li><li>What tools would your skill need access to? (APIs, file system, web, databases...)</li><li>How would your skill&#x27;s output be useful to OTHER sub-agents in the pipeline?</li><li>Think about the handoff — what does the orchestrator need to know to route tasks to your skill?</li></ul>
       </div>
       
       <details class="reveal">
@@ -1102,53 +1116,43 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
           <div class="code-block">
             <span class="code-caption">One way you could prompt it</span>
             <button class="copy-btn">COPY</button>
-            <pre><code>I want to create a custom DeerFlow skill that can query a PostgreSQL database. Help me understand the skill structure in DeerFlow 2.0 — what files do I need to create, what interface does a skill implement, and how do I register it so the orchestrator knows it exists? Don&#x27;t write the full implementation yet — just outline the skeleton and explain each piece. I want to understand the pattern before I build it.</code></pre>
+            <pre><code>I want to design a custom DeerFlow skill called &#x27;competitive-intel.&#x27; Here&#x27;s what it should do: Given a company name, it (1) searches the web for recent news, funding rounds, and product launches, (2) checks their GitHub for open-source activity, (3) summarizes findings into a structured report with sections for News, Tech Stack, and Threat Level. It would need web search tools, GitHub API access, and the ability to write structured markdown files to the sandbox filesystem. The orchestrator would route any task mentioning competitor analysis or market research to this skill. Its output — the structured markdown report — would be consumable by other sub-agents, like a presentation-builder that turns it into slides.</code></pre>
           </div>
         </div>
       </details>
     </div>
     <div class="decision-point">
       <h3>Quick Check</h3>
-      <div class="question">You&#x27;re deploying DeerFlow for a team of 10 people who will use it daily. What&#x27;s the most important configuration choice?</div>
+      <div class="question">A user gives DeerFlow the task: &#x27;Write a Python script that fetches Bitcoin prices for the last 30 days and creates a line chart.&#x27; Which is the most important reason this task needs sandbox execution?</div>
       
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt0">
-          <label for="decision_11_opt0">Enable long-term memory with per-user isolation</label>
-          <div class="decision-feedback correct">&#10003; Correct! Exactly right. With multiple users, you need memory isolation — otherwise one person&#x27;s preferences and history bleed into another&#x27;s experience. Long-term memory is DeerFlow&#x27;s superpower for repeated use, but it becomes a liability if User A&#x27;s context contaminates User B&#x27;s responses. Per-user memory stores mean each person gets a personalized, improving experience.</div>
+          <label for="decision_11_opt0">The script installs packages and runs arbitrary code — sandboxing prevents damage to the host</label>
+          <div class="decision-feedback correct">&#10003; Correct! Correct. The agent will likely need to `pip install` libraries like matplotlib and requests, then execute the script. Running arbitrary package installations and code on your host machine is risky. The sandbox gives the agent a disposable environment where it can install anything, run anything, and if something goes wrong, you just toss the container. This is the core safety guarantee.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt1">
-          <label for="decision_11_opt1">Use the fastest model available for all agents</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. Speed matters, but it&#x27;s not the most critical choice for a multi-user deployment. A better strategy is using a capable model for the orchestrator and faster models for routine sub-tasks. And model choice is easy to change later — memory architecture decisions are harder to retrofit.</div>
+          <label for="decision_11_opt1">Python scripts are too slow to run on the host machine</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Speed isn&#x27;t the concern — Docker containers actually add a tiny bit of overhead. The reason is safety. You&#x27;re letting an AI agent install packages and run code. Without a sandbox, a bug or hallucination could affect your real system.</div>
         </div>
         <div class="decision-option">
           <input type="radio" name="decision_11" id="decision_11_opt2">
-          <label for="decision_11_opt2">Run everything in local execution mode for speed</label>
-          <div class="decision-feedback incorrect">&#10007; Not quite. With 10 users running tasks that execute code, local execution mode becomes a security and stability risk. Multiple agents running arbitrary code on the same host without isolation? That&#x27;s asking for trouble. Docker sandboxing adds some latency but keeps the system stable and secure for multi-user deployments.</div>
+          <label for="decision_11_opt2">The chart image needs to be saved somewhere isolated</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. While the sandbox does provide a file system for saving artifacts, that&#x27;s a convenience feature, not the primary reason for sandboxing. The real concern is that the agent is executing arbitrary code and installing packages — you need isolation for safety.</div>
         </div>
     </div>
     <div class="recap-section">
       <h2>Recap</h2>
-      <div class="recap-body"><h2>What we built</h2>
+      <div class="recap-body"><p>We went from zero to running DeerFlow 2.0 — ByteDance&#x27;s trending super agent framework. But more importantly, we built a mental model for how modern multi-agent systems work.</p>
 
-<p>We went from zero to a running DeerFlow 2.0 instance — ByteDance&#x27;s open-source super agent harness that just hit #1 on GitHub Trending.</p>
+<p>The key insight isn&#x27;t the specific tool — it&#x27;s the <strong>pattern</strong>: instead of building one massive agent that tries to do everything, you build an orchestrator that routes tasks to specialized sub-agents, each with their own skills and sandboxed execution environment. Memory ties sessions together. Context engineering keeps each agent focused and efficient.</p>
 
-<p>More importantly, we understood <strong>why</strong> it&#x27;s architecturally interesting:</p>
-
-<p><strong>The orchestrator pattern</strong> — instead of one agent struggling with complex tasks, DeerFlow breaks work into sub-tasks and routes each one to a specialized sub-agent. It&#x27;s the difference between one overwhelmed generalist and a well-coordinated team of specialists.</p>
-
-<p><strong>Sandboxed execution</strong> — agents that can safely write AND run code, not just generate it. Docker containers give agents disposable workspaces where they can install packages, run scripts, and produce real output without touching your machine.</p>
-
-<p><strong>Long-term memory</strong> — agents that learn and remember across sessions. This is the feature that turns DeerFlow from a cool demo into something genuinely useful for daily work.</p>
-
-<p><strong>Extensible skills</strong> — add new capabilities without forking the project. DeerFlow&#x27;s plug-in architecture means it can grow with your needs.</p>
-
-<p>The real takeaway isn&#x27;t about DeerFlow specifically — it&#x27;s about a <strong>shift in how agent systems are being built</strong>. We&#x27;re moving from single-agent-does-everything to orchestrated teams of specialized agents. DeerFlow 2.0 is one of the best open-source implementations of this pattern available today.</p></div>
-      <ul class="takeaways-list"><li>Multi-agent orchestration beats single-agent complexity — break hard tasks into sub-tasks handled by specialized agents</li><li>Sandboxed code execution is essential for agent safety — always prefer Docker isolation when agents run code autonomously</li><li>Long-term memory transforms agents from stateless tools into persistent collaborators that improve over time</li><li>LangChain class paths make DeerFlow model-agnostic — you can mix and match providers and even use local models</li><li>Context engineering (curating what each agent sees) is as important as the model you choose</li></ul>
+<p>This is where agent development is heading. Not bigger models, but smarter orchestration.</p></div>
+      <ul class="takeaways-list"><li>DeerFlow 2.0 is a <em>super agent harness</em> — an orchestrator that coordinates specialized sub-agents, not a single monolithic agent</li><li>The five pillars are sub-agents, skills/tools, sandboxed execution, context engineering, and long-term memory — and they work together as a system</li><li>Sandbox execution isn&#x27;t optional for agents that write code — it&#x27;s a safety requirement. Docker containers give agents a disposable workspace</li><li>LangChain class paths in config.yaml mean you can swap LLM providers without touching agent code — configure, don&#x27;t hardcode</li><li>Context engineering (what each agent sees) is as important as the model choice — focused agents outperform overloaded ones</li></ul>
       
       <div class="next-steps">
         <h3>Where to go next</h3>
-        <ul><li>Write a custom skill for your specific use case and register it with the orchestrator</li><li>Experiment with different model configurations — try a heavy model for orchestration and lighter models for sub-agents to optimize cost vs. quality</li><li>Set up MCP servers to give DeerFlow access to your own tools and data sources</li><li>Explore the 1.x branch if you&#x27;re specifically interested in DeerFlow&#x27;s Deep Research roots</li><li>Join the DeerFlow community on GitHub — the project is actively developed and contributions are welcome</li></ul>
+        <ul><li>Try building a custom skill and registering it with DeerFlow&#x27;s skills system</li><li>Experiment with assigning different models to different sub-agents to optimize cost vs. quality</li><li>Explore DeerFlow&#x27;s MCP server support to connect your existing MCP tools</li><li>Check out the <code>1.x</code> branch if you&#x27;re specifically interested in the original Deep Research capabilities</li><li>Watch the GitHub repo — DeerFlow 2.0 is under active development and the community is growing fast</li></ul>
       </div>
     </div>
     <div class="sources-section">
@@ -1214,7 +1218,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         <div class="other-article-card">
           <div class="oa-info">
             <div class="oa-title">Comfy-Org/ComfyUI</div>
-            <div class="oa-summary">Modular node-based GUI for building and running image-generation pipelines with diffusion models.</div>
+            <div class="oa-summary">Modular node-based GUI for building and running diffusion model image generation workflows.</div>
             <div class="oa-meta">GitHub Trending Python</div>
           </div>
           <div class="oa-votes">
@@ -1252,9 +1256,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
-            <div class="oa-summary">Argues AI coding tools lower the barrier to writing code but raise the bar for real engineering judgment.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">If AI writes code, should the session be part of the commit?</div>
+            <div class="oa-summary">Tool and discussion exploring whether AI coding sessions should be preserved alongside git commits.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
@@ -1265,9 +1269,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">OpenFang</div>
-            <div class="oa-summary">Open-source operating system designed to orchestrate and manage autonomous AI agents.</div>
-            <div class="oa-meta">Product Hunt AI · Mar 1</div>
+            <div class="oa-title">AI Made Writing Code Easier. It Made Being an Engineer Harder</div>
+            <div class="oa-summary">Essay arguing AI coding tools lower the coding bar but raise the bar for engineering judgment.</div>
+            <div class="oa-meta">Hacker News AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
@@ -1278,9 +1282,9 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
         </div>
         <div class="other-article-card">
           <div class="oa-info">
-            <div class="oa-title">Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster</div>
-            <div class="oa-summary">AMD demonstrates running a trillion-parameter language model locally using a cluster of Ryzen AI Max+ laptops.</div>
-            <div class="oa-meta">Hacker News AI · Mar 1</div>
+            <div class="oa-title">OpenFang</div>
+            <div class="oa-summary">Open-source operating system designed for building and running AI agents.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 1</div>
           </div>
           <div class="oa-votes">
             <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
@@ -1296,7 +1300,7 @@ body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: r
     </div>
     <script>
     (function() {
-      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "OpenFang", "tags": "agents,open-source", "source": "Product Hunt AI"}, {"title": "Running a One Trillion-Parameter LLM Locally on AMD Ryzen AI Max+ Cluster", "tags": "coding", "source": "Hacker News AI"}];
+      var articles = [{"title": "666ghj/BettaFish", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "anthropics/skills", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "datawhalechina/hello-agents", "tags": "agents", "source": "GitHub Trending Python"}, {"title": "microsoft/markitdown", "tags": "tools", "source": "GitHub Trending Python"}, {"title": "Comfy-Org/ComfyUI", "tags": "tools,vision", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "I built a demo of what AI chat will look like when it's “free” and ad-supported", "tags": "tools", "source": "Hacker News AI"}, {"title": "If AI writes code, should the session be part of the commit?", "tags": "coding", "source": "Hacker News AI"}, {"title": "AI Made Writing Code Easier. It Made Being an Engineer Harder", "tags": "coding", "source": "Hacker News AI"}, {"title": "OpenFang", "tags": "agents,open-source", "source": "Product Hunt AI"}];
       var repo = "coldbrewnosugar/ai-course";
       var track = "general";
       var date = "2026-03-02";
