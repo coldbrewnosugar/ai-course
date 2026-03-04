@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turbocharge LLM Serving with LMCache KV Cache Layer — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Your LLM Is Doing the Same Math Over and Over Again</h1>
+      <div class="hero-subtitle">LMCache fixes that — caching KV states across requests so your GPU stops wasting cycles on repeated context</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">inference-optimization</span> <span class="tag">vLLM</span> <span class="tag">KV-cache</span> <span class="tag">open-source</span> <span class="tag">serving</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Here&#x27;s a pattern that&#x27;s quietly eating GPU budgets everywhere: you&#x27;ve got a RAG pipeline, or a chatbot with a big system prompt, or multi-turn conversations — and every single request makes your model re-process the same long context from scratch. That&#x27;s like re-reading the entire Harry Potter series every time someone asks you a question about Hogwarts.</p>
+
+<p><strong>LMCache</strong> just hit trending on GitHub, and for good reason. It&#x27;s an open-source extension that plugs into vLLM or SGLang and caches the internal KV states (the model&#x27;s &#x27;working memory&#x27; of text it&#x27;s already processed) across requests <em>and even across different serving instances</em>. The result? <strong>3-10x reduction in time-to-first-token</strong> for long-context workloads.</p>
+
+<p>It&#x27;s already been adopted by GMI Cloud, Google Cloud, CoreWeave, and integrated with Redis, NVIDIA Dynamo, and KServe. This isn&#x27;t a toy project — it&#x27;s production infrastructure that&#x27;s solving a real cost problem.</p>
+
+<p>Today we&#x27;re going to understand <em>why</em> this matters, set it up with vLLM, and benchmark the difference ourselves.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Understand the Problem: Why KV Cache Reuse Is a Big Deal</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we touch any tools, let&#x27;s build a mental model for what&#x27;s happening inside your LLM when it processes a request.</p>
+
+<p>When a transformer model reads your prompt, it builds up something called <strong>KV (Key-Value) cache</strong> — think of it as the model&#x27;s scratch notes. For each token in your input, the model computes attention keys and values that capture how that token relates to everything else. These scratch notes are <em>expensive</em> to create — they require full forward passes through the model.</p>
+
+<p>Here&#x27;s the kicker: <strong>if you send the same system prompt with every request</strong> (which almost everyone does), the model rebuilds those exact same scratch notes every single time. It&#x27;s like a student re-deriving calculus from first principles before answering each homework question.</p>
+
+<p>LMCache says: &quot;Hey, we already computed those notes. Let me just hand them back to you.&quot; It stores KV caches in a multi-tier system — GPU memory (fastest), CPU RAM, disk, or even S3 (cheapest) — and serves them back when matching text appears in a new request.</p>
+
+<p>The really clever part? It works for <strong>any reused text, not just prefixes</strong>. And it works <strong>across different serving instances</strong> in your cluster. That&#x27;s wild.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain the computational cost of KV cache generation with concrete numbers
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What does the model actually compute per token during the prefill phase?</li><li>How does context length affect the time-to-first-token?</li><li>What&#x27;s the memory footprint of KV cache for a 70B model with 8K context?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should walk you through the math: for a model like Llama 70B, each token in the prefill generates KV pairs across all layers and attention heads. With 80 layers and 8K context, you&#x27;re looking at gigabytes of KV cache per request. It should explain that prefill time scales roughly quadratically with context length due to attention, which is why a 4K system prompt can add 500ms+ to your TTFT. The key insight: if 80% of your context is the same across requests, you&#x27;re wasting 80% of that prefill compute.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        <strong>TTFT = Time To First Token</strong> — the delay before the model starts streaming its response. For interactive applications, this is the metric users <em>feel</em> most. Nobody minds a slow stream, but a 2-second blank stare kills the UX.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why not just use vLLM&#x27;s built-in prefix caching?</summary>
+        <div class="reveal-body"><p>vLLM does have automatic prefix caching (APC), and it works well — for a single instance. But APC only helps when the <em>same instance</em> sees repeated prefixes, and it doesn&#x27;t persist across restarts. LMCache extends this idea to work across multiple instances, survive restarts, and handle non-prefix reuse (like shared context that appears in the middle of a prompt). Think of APC as a single-machine L1 cache, and LMCache as the distributed L2/L3 hierarchy.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Set Up LMCache with vLLM</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, let&#x27;s get our hands dirty. We&#x27;re going to set up a vLLM server with LMCache enabled. The beautiful thing is that LMCache is designed to slot in with minimal config changes — you don&#x27;t rewrite your serving code, you just add a cache layer.</p>
+
+<p>The setup has two pieces:</p>
+<ol>
+<li><strong>Install LMCache</strong> (one pip install)</li>
+<li><strong>Configure vLLM to use it</strong> (a YAML config file)</li>
+</ol>
+
+<p>Let&#x27;s get our agent to walk us through a clean setup.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to produce a complete but minimal setup: install commands and a vLLM launch command with LMCache enabled for CPU-based KV cache offloading
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What are the dependencies — do we need a specific vLLM version?</li><li>LMCache uses a YAML config file — what are the essential fields?</li><li>We want CPU-based caching to start (simplest tier) — how do we specify that?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a two-step setup. First, <code>pip install lmcache</code> (it pulls compatible dependencies automatically). Second, a short YAML config file — maybe 6-8 lines — that specifies the storage backend as <code>cpu</code>, sets a max cache size, and configures the chunk size for KV cache segments. Then a vLLM launch command that points to this config. The key config snippet looks something like:</p>
+
+<p>```yaml</p>
+<p>local_cpu:</p>
+<p>enabled: true</p>
+<p>max_size: 30  # GB of CPU RAM for cache</p>
+<p>chunk_size: 256  # tokens per cache chunk</p>
+<p>```</p>
+
+<p>Then you launch vLLM with <code>--kv-cache-config lmcache_config.yaml</code> and you&#x27;re rolling.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        <strong>GPU requirement:</strong> You need an NVIDIA GPU with CUDA support. LMCache works on Linux only. If you&#x27;re on a Mac or don&#x27;t have a GPU, you can still follow along conceptually — the config and benchmarking patterns are what matter most here.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        <strong>Chunk size matters.</strong> LMCache breaks KV caches into chunks (default 256 tokens). Smaller chunks = more flexible reuse but more overhead. Bigger chunks = less overhead but you might miss partial matches. 256 is a solid default for most workloads.
+      </div>
+        
+      <details class="reveal">
+        <summary>What about multi-tier storage?</summary>
+        <div class="reveal-body"><p>LMCache supports a storage hierarchy: GPU → CPU → Disk → S3. In production, you&#x27;d typically use CPU as the hot tier and disk or S3 for persistence. The tiering is automatic — hot entries stay in CPU RAM, cold ones spill to disk. For our workshop we&#x27;ll stick with CPU to keep things simple, but adding disk storage is just a few more YAML lines. The real power move is using Redis or a shared storage backend so <em>all</em> your serving instances share the same cache pool.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point you should understand: (1) why repeated context wastes GPU compute, (2) how KV cache reuse solves this, and (3) how to install LMCache and wire it into a vLLM deployment. If any of that feels fuzzy, go back and re-read Step 1&#x27;s mental model — it&#x27;s the foundation for everything else.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re running a RAG application where every request includes a 3,000-token system prompt + a 2,000-token retrieved document + a short user question. The system prompt is always the same, but the retrieved document changes per request. Where does LMCache help most?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Caching the system prompt&#x27;s KV states — the 3,000 tokens that repeat every time</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly. The system prompt is identical across all requests, so its KV cache can be computed once and reused forever. That&#x27;s 3,000 tokens of prefill you never pay for again. The retrieved documents change per request, so they can&#x27;t be cached (though if users ask follow-up questions about the same doc, that context gets cached too).</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">Caching the retrieved document — it&#x27;s the biggest variable piece</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. The retrieved document changes per request, so there&#x27;s less reuse opportunity on the first query. However, LMCache *does* help here in multi-turn scenarios — if the user asks follow-up questions about the same retrieved doc, those KV states get cached. But the biggest immediate win is the system prompt that repeats every single time.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">Caching the user&#x27;s question — it&#x27;s the shortest part and fastest to cache</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. User questions are short (maybe 20-50 tokens) and almost always unique. Caching them wouldn&#x27;t save meaningful compute. The leverage is in the *long, repeated* content — that&#x27;s where prefill cost dominates.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Build a Benchmark: Measure the Actual TTFT Difference</h2>
+      </div>
+      <div class="step-body">
+        <p>Okay, this is the fun part — we&#x27;re going to <em>see</em> the speedup. The best way to appreciate LMCache is to benchmark it on exactly the kind of workload it&#x27;s designed for: repeated long context.</p>
+
+<p>Our benchmark scenario:</p>
+<ul>
+<li>A <strong>2,000-token system prompt</strong> (think: detailed instructions for a customer service bot)</li>
+<li>A <strong>short user question</strong> that changes each time</li>
+<li>Send 10 requests in sequence, measuring TTFT for each</li>
+</ul>
+
+<p>Without LMCache, every request pays the full prefill cost. With LMCache, the first request pays full price, but requests 2-10 get the system prompt&#x27;s KV cache for free. We should see TTFT drop dramatically after the first request.</p>
+
+<p>Let&#x27;s get our agent to build this benchmark script.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to create a simple benchmark script that sends requests to a vLLM server (with and without LMCache) and measures TTFT for each request
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How do you measure time-to-first-token when using the OpenAI-compatible API that vLLM exposes?</li><li>What should the shared system prompt look like — does it need to be realistic or can we just repeat tokens?</li><li>How do we isolate the LMCache effect — should we compare two separate server configs?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a Python script that uses the <code>openai</code> client library (since vLLM exposes an OpenAI-compatible endpoint). The script sends multiple requests with the same long system prompt but different user messages, records the timestamp when the first token arrives, and prints a table of TTFT values. The key insight in the output: request #1 has a high TTFT (cold cache), and requests #2-10 should show dramatically lower TTFT (warm cache). Expect something like 800ms → 100ms for a 2K-token system prompt on a mid-range GPU. The agent should also suggest running the same benchmark against a vanilla vLLM instance (no LMCache) for comparison.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        <strong>Use streaming mode</strong> for TTFT measurement. When you enable <code>stream=True</code> on the API call, you can timestamp when the first chunk arrives — that&#x27;s your TTFT. Without streaming, you only get total latency, which includes generation time too.
+      </div>
+        
+      <details class="reveal">
+        <summary>What kind of speedups should I actually expect?</summary>
+        <div class="reveal-body"><p>LMCache claims 3-10x TTFT reduction, and that tracks with the math. The speedup depends on:</p>
+
+<ul>
+<li><strong>What fraction of your prompt is reusable?</strong> If 80% is shared context, you skip 80% of prefill.</li>
+<li><strong>How long is the shared context?</strong> Longer shared prefixes = bigger absolute savings. A 500-token system prompt saves less than a 5,000-token one.</li>
+<li><strong>Your GPU speed.</strong> Slower GPUs show a bigger relative improvement because prefill takes longer in the first place.</li>
+<li><strong>Cache tier.</strong> GPU memory gives near-zero overhead. CPU adds some transfer time. Disk/S3 adds more, but it&#x27;s still way faster than recomputing.</li>
+</ul>
+
+<p>For a typical RAG workload with a 2-4K shared prefix, expect 3-5x TTFT reduction on the cached portion.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Scale It Up: Multi-Instance Cache Sharing</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where LMCache gets really interesting — and where it pulls ahead of simpler prefix caching solutions.</p>
+
+<p>In production, you don&#x27;t run one vLLM instance. You run a fleet behind a load balancer. Without shared caching, each instance maintains its own KV cache, and a request that hits Instance B gets zero benefit from the cache that Instance A already built. It&#x27;s like every cashier at a grocery store having to memorize the price list independently.</p>
+
+<p>LMCache solves this with a <strong>shared storage backend</strong>. All instances read and write to the same cache pool — typically backed by Redis or a shared filesystem. When Instance A processes a new system prompt, it writes the KV cache to the shared store. When Instance B gets a request with the same prompt, it pulls the cached KV states instead of recomputing them.</p>
+
+<p>This is <em>especially</em> powerful for:</p>
+<ul>
+<li><strong>Scaling events</strong> — new instances come up with a warm cache immediately</li>
+<li><strong>Multi-tenant platforms</strong> — popular system prompts get cached once, benefit everyone</li>
+<li><strong>Disaggregated prefill</strong> — you can have dedicated prefill workers that just generate KV caches for other instances to consume</li>
+</ul>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain how to configure LMCache for multi-instance cache sharing using a shared backend, and describe the architecture
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What shared storage backends does LMCache support?</li><li>How does cache invalidation work when models are updated?</li><li>What&#x27;s the network overhead of transferring KV caches between instances?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe the architecture: multiple vLLM instances, each running LMCache, all pointing to a shared Redis (or shared filesystem) backend. The config change is minimal — you swap the local CPU backend for a remote one. The agent should note that cache keys are based on the text content and model identity, so different models don&#x27;t collide. It should also flag that KV cache transfers over the network add some latency, but it&#x27;s still dramatically faster than recomputing prefill — transferring a few GB over a fast network takes milliseconds, while recomputing thousands of tokens takes hundreds of milliseconds to seconds. For cutting-edge setups, LMCache supports NIXL (NVIDIA&#x27;s inter-node transfer library) for near-zero-copy GPU-to-GPU transfers.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        <strong>Disaggregated prefill</strong> is the power-user pattern here. You dedicate some instances purely to computing KV caches (prefill workers) and others purely to generating tokens (decode workers). LMCache is the glue that transfers KV states between them. This lets you independently scale prefill and decode capacity.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does NIXL fit into this?</summary>
+        <div class="reveal-body"><p>NIXL (NVIDIA Inter-node eXchange Library) is NVIDIA&#x27;s low-level library for high-speed data transfer between GPUs across machines. LMCache integrates with NIXL to transfer KV caches directly from GPU memory on one machine to GPU memory on another — skipping the CPU entirely. This matters at scale because KV caches for large models are <em>huge</em> (tens of GB). Going GPU→network→GPU instead of GPU→CPU→network→CPU→GPU cuts transfer time significantly. It&#x27;s like having a dedicated express lane on the highway.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Tune for Production: Cache Eviction, Monitoring, and Gotchas</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, we&#x27;ve got LMCache running and benchmarked. Before you take this to production, let&#x27;s talk about the things that bite people.</p>
+
+<p><strong>Cache sizing:</strong> Your cache has finite space. LMCache uses LRU (Least Recently Used) eviction by default — old, unused entries get kicked out to make room. But if your cache is too small for your workload&#x27;s diversity, you&#x27;ll get poor hit rates and wasted memory. The rule of thumb: monitor your cache hit rate and size up until it stabilizes above 80%.</p>
+
+<p><strong>Model updates:</strong> When you update or fine-tune your model, the old KV caches are invalid — same text produces different internal states. LMCache handles this through cache keys that include model identity, so a model swap automatically invalidates the old cache. But be aware: your cache goes cold after every model update.</p>
+
+<p><strong>Token boundaries matter:</strong> LMCache works at the token level, and different tokenizers produce different tokens for the same text. If you&#x27;re sharing caches across model variants, make sure they use the same tokenizer.</p>
+
+<p><strong>Memory pressure:</strong> KV caches are big. A single 8K-context request on a 70B model can generate 5-10 GB of KV data. If you&#x27;re caching thousands of unique contexts on CPU, you&#x27;ll need serious RAM. Plan your hardware accordingly.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to produce a production-ready LMCache configuration with monitoring, appropriate cache sizing, and multi-tier storage
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What metrics should we monitor to know if LMCache is actually helping?</li><li>How do we calculate the right cache size for our workload?</li><li>What happens when the cache fills up — how do we handle eviction gracefully?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a more complete YAML config that includes: CPU tier with a calculated size based on your expected unique contexts, disk tier as overflow, eviction policy set to LRU, and logging/metrics enabled. It should also suggest monitoring cache hit rate, average TTFT, and cache memory usage. The agent should mention that LMCache exposes metrics you can scrape with Prometheus, and suggest a simple dashboard with three panels: hit rate over time, TTFT p50/p95, and cache size. The key advice: start with generous cache sizes and tune down, rather than starting small and missing cache hits.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        <strong>Don&#x27;t forget disk I/O.</strong> If you&#x27;re using disk-tier caching, make sure you&#x27;re on NVMe SSDs, not spinning disks. KV cache reads from a slow disk can actually be <em>slower</em> than just recomputing the prefill on a fast GPU. Profile your storage before committing to disk-tier caching.
+      </div>
+        
+      <details class="reveal">
+        <summary>What about cost savings in practice?</summary>
+        <div class="reveal-body"><p>The cost math is straightforward: if LMCache reduces your prefill compute by 70% (because 70% of your average prompt is cached), you need ~30% of the GPU capacity for prefill that you&#x27;d otherwise need. For a fleet running 100 A100s on a RAG workload, that could mean dropping to 50-60 GPUs for the same throughput. At $2-3/hour per A100, that&#x27;s $80-120/hour saved. The cache infrastructure (extra CPU RAM, maybe a Redis cluster) costs a fraction of that. The ROI is real, which is why cloud providers are adopting this.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>Nice work! You should now understand: the full LMCache architecture (multi-tier caching with shared backends), how to benchmark TTFT improvements, how multi-instance sharing works, and the production considerations around sizing, eviction, and monitoring. That&#x27;s a solid foundation for actually deploying this.</div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Design a caching strategy for a multi-tenant LLM platform where different customers have different system prompts, some customers share the same RAG documents, and you need to minimize cross-tenant cache pollution</div>
+      <div class="your-turn-context">Imagine you&#x27;re running a platform like an &#x27;LLM-as-a-service&#x27; where 50 customers each have unique system prompts (ranging from 500 to 5,000 tokens), but they often query against the same document corpus. Some documents are popular (queried by 30+ tenants), while most are long-tail. You need to configure LMCache to maximize hit rates without one tenant&#x27;s cache evicting another&#x27;s hot entries.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>How would you partition or prioritize cache space between system prompts vs. document contexts?</li><li>Should popular shared documents get higher cache priority than tenant-specific system prompts?</li><li>What eviction policy makes sense when you have both &#x27;always hot&#x27; entries (system prompts) and &#x27;sometimes hot&#x27; entries (documents)?</li><li>How would you handle a new tenant onboarding — should their system prompt be pre-warmed?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>I&#x27;m building a multi-tenant LLM serving platform with 50 customers. Each customer has a unique system prompt (500-5,000 tokens) that&#x27;s used on every request, plus RAG-retrieved documents from a shared corpus where some docs are accessed by 30+ tenants. I&#x27;m using vLLM with LMCache. Help me design a caching strategy that: (1) ensures each tenant&#x27;s system prompt stays warm in cache, (2) maximizes reuse of popular shared documents across tenants, (3) prevents one tenant&#x27;s burst of unique queries from evicting another tenant&#x27;s cached data. Suggest the LMCache config, cache sizing math, and any application-level routing I should add.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You notice your LMCache hit rate is only 40% despite most requests sharing the same 3,000-token system prompt. What&#x27;s the most likely cause?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">The cache chunk size is misaligned with the system prompt length</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Chunk size affects granularity but wouldn&#x27;t cause a 40% hit rate on identical text. LMCache handles arbitrary lengths by splitting into chunks — even imperfect alignment just means one partial chunk, not a total miss.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">The cache is too small and system prompt entries are being evicted by other traffic</label>
+          <div class="decision-feedback correct">&#10003; Correct! Bingo. If your cache can&#x27;t hold the KV states for your common system prompts alongside everything else, LRU eviction will kick out system prompt entries when other requests fill the cache. The fix: increase cache size or implement priority-based eviction so frequently-used entries stick around. This is the #1 gotcha in production LMCache deployments.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">LMCache doesn&#x27;t support non-prefix caching so the system prompt position varies</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Actually, one of LMCache&#x27;s key features is that it supports caching of any reused text, not just prefixes. If the system prompt appears at the beginning of every request (which it should), prefix matching will catch it reliably.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt3">
+          <label for="decision_11_opt3">The vLLM OpenAI-compatible API doesn&#x27;t pass system prompts to LMCache</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. LMCache operates at the token level inside the serving engine — it sees all tokens regardless of which API field they came from. The system prompt is just tokens like everything else.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>We just went from &quot;what even is a KV cache?&quot; to understanding a production-grade caching system that major cloud providers are deploying right now. Let&#x27;s step back and look at the big picture.</p>
+
+<p><strong>The core insight:</strong> LLM serving is full of redundant computation. Every time your model processes the same system prompt, the same RAG context, or the same conversation history, it&#x27;s burning GPU cycles to produce identical internal states. LMCache intercepts that waste by storing and reusing KV caches across requests and across your entire serving fleet.</p>
+
+<p><strong>What we built:</strong> A vLLM deployment with LMCache, a benchmark showing 3-10x TTFT improvement on cached content, and an understanding of multi-instance cache sharing and production tuning.</p>
+
+<p><strong>The bigger trend:</strong> This is part of a broader shift in LLM infrastructure from &quot;throw more GPUs at it&quot; to &quot;be smarter about what you compute.&quot; KV cache reuse, speculative decoding, prompt caching at the API level (like Anthropic&#x27;s and OpenAI&#x27;s built-in prompt caching) — they&#x27;re all attacks on the same problem. Understanding KV cache reuse gives you a mental model for all of them.</p></div>
+      <ul class="takeaways-list"><li>KV caches are the model&#x27;s expensive scratch notes — reusing them for repeated context skips the most expensive part of inference (prefill)</li><li>LMCache adds a multi-tier (GPU/CPU/Disk/S3) cache layer to vLLM or SGLang with minimal config — it&#x27;s not a fork, it&#x27;s a plugin</li><li>The real power is cross-instance sharing: all your serving instances can share a cache pool via Redis or shared storage, so one instance&#x27;s work benefits the whole fleet</li><li>Production tuning is about cache sizing and hit rate — monitor these metrics and you&#x27;ll know exactly when LMCache is earning its keep</li><li>This same KV-cache-reuse concept underlies prompt caching features in commercial APIs (Anthropic, OpenAI) — understanding the mechanism helps you use those features better too</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Try LMCache with SGLang if that&#x27;s your serving engine of choice — it supports KV cache offloading there too</li><li>Explore disaggregated prefill: separate your fleet into prefill workers and decode workers connected by LMCache</li><li>Read the LMCache technical report for the CacheGen compression algorithm — it compresses KV caches for cheaper storage and faster transfer</li><li>Benchmark on your actual workload — the speedup varies dramatically based on how much context you reuse, so real numbers from your traffic matter more than synthetic benchmarks</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/LMCache/LMCache" target="_blank" rel="noopener">LMCache/LMCache</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Marcus AI Claims Dataset</div>
+            <div class="oa-summary">Open dataset of factual claims made by AI systems, useful for benchmarking accuracy and hallucination detection.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Cancel ChatGPT AI boycott surges after OpenAI pentagon military deal</div>
+            <div class="oa-summary">Growing boycott movement against ChatGPT after OpenAI signs a contract with the U.S. military.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">GPT‑5.3 Instant</div>
+            <div class="oa-summary">OpenAI launches GPT-5.3 Instant, a faster and cheaper model optimized for everyday conversational tasks.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude is an Electron App because we&#x27;ve lost native</div>
+            <div class="oa-summary">Tonsky argues the software industry has abandoned native desktop apps in favor of inferior Electron wrappers.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">PRX Part 3 — Training a Text-to-Image Model in 24h!</div>
+            <div class="oa-summary">Guide to training a competitive text-to-image generation model from scratch in just 24 hours.</div>
+            <div class="oa-meta">Hugging Face · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">When AI writes the software, who verifies it?</div>
+            <div class="oa-summary">Leo de Moura argues formal verification and proof assistants are essential for trusting AI-generated code.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Why No AI Games?</div>
+            <div class="oa-summary">Frank Lantz asks why AI breakthroughs haven&#x27;t yet produced genuinely new and interesting game designs.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI-generated art can’t be copyrighted after Supreme Court declines review</div>
+            <div class="oa-summary">Article URL: https://www.theverge.com/policy/887678/supreme-court-ai-art-copyright Comments URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">India&#x27;s top court angry after junior judge cites fake AI-generated orders</div>
+            <div class="oa-summary">Indian judge cited fabricated court orders generated by AI, drawing sharp rebuke from the Supreme Court.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude&#x27;s Cycles [pdf]</div>
+            <div class="oa-summary">Donald Knuth analyzes Claude&#x27;s reasoning patterns and cyclic behaviors in a new Stanford paper.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "Marcus AI Claims Dataset", "tags": "", "source": "Hacker News AI"}, {"title": "Cancel ChatGPT AI boycott surges after OpenAI pentagon military deal", "tags": "", "source": "Hacker News AI"}, {"title": "GPT‑5.3 Instant", "tags": "", "source": "Hacker News AI"}, {"title": "Claude is an Electron App because we've lost native", "tags": "", "source": "Hacker News AI"}, {"title": "PRX Part 3 — Training a Text-to-Image Model in 24h!", "tags": "vision", "source": "Hugging Face"}, {"title": "When AI writes the software, who verifies it?", "tags": "", "source": "Hacker News AI"}, {"title": "Why No AI Games?", "tags": "", "source": "Hacker News AI"}, {"title": "AI-generated art can’t be copyrighted after Supreme Court declines review", "tags": "", "source": "Hacker News AI"}, {"title": "India's top court angry after junior judge cites fake AI-generated orders", "tags": "", "source": "Hacker News AI"}, {"title": "Claude's Cycles [pdf]", "tags": "", "source": "Hacker News AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-04";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

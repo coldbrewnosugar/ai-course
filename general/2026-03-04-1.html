@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build a RAG Pipeline with MCP Servers Using UltraRAG 3.0 — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>RAG Pipelines, But Make Them Lego Bricks</h1>
+      <div class="hero-subtitle">UltraRAG 3.0 turns every RAG component into an independent MCP server you wire together with YAML — no orchestration spaghetti required</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">RAG</span> <span class="tag">MCP</span> <span class="tag">low-code</span> <span class="tag">retrieval</span> <span class="tag">agents</span> <span class="tag">YAML</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Here&#x27;s what&#x27;s been happening: <strong>UltraRAG 3.0</strong> dropped in late January from a collaboration between Tsinghua (THUNLP), Northeastern University (NEUIR), OpenBMB, and AI9stars. The big idea? Instead of building RAG pipelines as monolithic chains where your retriever, reranker, and generator are all tangled together in one codebase, each component runs as its own <strong>MCP Server</strong> — a standalone service with a clean interface.</p>
+
+<p>Why should you care? Because the Model Context Protocol (MCP) is quickly becoming the USB-C of AI tooling. It&#x27;s a standard way for AI models to talk to external tools and data sources. UltraRAG takes that concept and applies it to RAG specifically: your retriever is one MCP server, your reranker is another, your generator is a third. You connect them with a YAML config file that supports loops, conditionals, and branches.</p>
+
+<p>Meanwhile, <strong>AgentScope</strong> has added native MCP support, and <strong>ReMe</strong> offers a memory layer with hybrid retrieval (vector + BM25) that pairs nicely with this whole ecosystem. The trend is clear: RAG is moving from &quot;write a big script&quot; to &quot;compose small services.&quot;</p>
+
+<p>Today we&#x27;ll build a document Q&amp;A pipeline using this architecture — and you&#x27;ll see why a few dozen lines of YAML can replace hundreds of lines of orchestration code.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Get the Mental Model: MCP as RAG Architecture</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we touch any tools, let&#x27;s make sure we&#x27;re on the same page about what&#x27;s actually happening here.</p>
+
+<p>Think of a traditional RAG pipeline like a restaurant where one person takes your order, cooks the food, and serves it. It works, but if you want to swap out the chef or add a dessert course, you&#x27;re rewriting the whole operation.</p>
+
+<p><strong>UltraRAG&#x27;s MCP approach</strong> is more like a food truck court. Each truck (MCP server) does one thing well — one retrieves documents, one reranks them, one generates answers. They don&#x27;t know about each other&#x27;s internals. A coordinator (the MCP client) takes your order and routes it to the right trucks in the right sequence.</p>
+
+<p>The magic ingredient is that this routing logic lives in a <strong>YAML file</strong>, not buried in Python code. Want to add a reranking step? Add three lines of YAML. Want to loop back and retrieve more documents if the first answer isn&#x27;t confident enough? That&#x27;s a loop construct in YAML.</p>
+
+<p>Here are the key pieces:</p>
+<ul>
+<li><strong>MCP Servers</strong>: Atomic services — each one registers &quot;tools&quot; (functions) that the orchestrator can call</li>
+<li><strong>MCP Client</strong>: The orchestrator that reads your YAML and calls the right tools in the right order</li>
+<li><strong>YAML Workflow</strong>: Your pipeline definition — sequential steps, conditional branches, loops</li>
+<li><strong>Pipeline Builder UI</strong>: A visual canvas that syncs bidirectionally with the YAML (edit either one, the other updates)</li>
+</ul>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain the MCP architecture in UltraRAG and help you set up the project locally
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What does your agent need to know about your system? (Python version, OS, GPU availability)</li><li>UltraRAG needs specific dependencies — how would you ask about prerequisites?</li><li>Think about what &#x27;MCP Server&#x27; means here versus MCP in other contexts like Claude Desktop</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should walk you through cloning the UltraRAG repo from GitHub (<code>github.com/OpenBMB/UltraRAG</code>), installing dependencies with pip, and explain that UltraRAG requires Python 3.10+. It&#x27;ll mention you need API keys for your LLM provider (or a local model) and an embedding model. The key insight it should surface: each RAG component (retriever, generator, reranker) runs as a separate process that communicates via the MCP protocol — they&#x27;re literally independent servers, not just classes in the same codebase.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        You&#x27;ll need an API key for an LLM (OpenAI, Anthropic, or a local model via Ollama) and an embedding model. UltraRAG supports multiple providers — ask your agent which ones and how to configure them.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        If you don&#x27;t have a GPU, no worries. UltraRAG works fine with API-based models. The local model path is optional for when you want full offline control.
+      </div>
+        
+      <details class="reveal">
+        <summary>What exactly is MCP and why does it matter for RAG?</summary>
+        <div class="reveal-body"><p>The <strong>Model Context Protocol</strong> is an open standard (originally from Anthropic) that defines how AI models interact with external tools and data sources. Think of it like HTTP for AI tools — a shared language so any model can talk to any tool.</p>
+
+<p>For RAG, this is a game-changer. Traditionally, if you built a retriever in LangChain and wanted to swap it into a LlamaIndex pipeline, you&#x27;d rewrite the integration. With MCP, your retriever just exposes a standard interface: &quot;give me a query, I&#x27;ll give you documents.&quot; Any MCP-compatible orchestrator can use it.</p>
+
+<p>UltraRAG is the first framework to go all-in on this: every component IS an MCP server. The framework itself is basically a smart MCP client that knows how to read YAML and call these servers in the right order.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Define Your First Pipeline in YAML</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, this is where it gets fun. In UltraRAG, a pipeline is just a YAML file that says: &quot;First do this, then do that, and if this condition is true, do this other thing.&quot;</p>
+
+<p>The simplest RAG pipeline has three steps:</p>
+<ol>
+<li><strong>Retrieve</strong> — find relevant documents for the user&#x27;s query</li>
+<li><strong>Rerank</strong> — rescore and filter those documents for relevance</li>
+<li><strong>Generate</strong> — feed the top documents + query to an LLM for an answer</li>
+</ol>
+
+<p>In traditional code, this is 100+ lines of Python with error handling, prompt templates, and glue code. In UltraRAG, it&#x27;s a YAML workflow where each step calls a tool on an MCP server.</p>
+
+<p>The YAML supports three control structures you&#x27;ll use constantly:</p>
+<ul>
+<li><strong>Sequential</strong>: Steps run one after another (the default)</li>
+<li><strong>Conditional branches</strong>: &quot;If the confidence score is below 0.7, retrieve more documents&quot;</li>
+<li><strong>Loops</strong>: &quot;Keep refining the answer until quality checks pass&quot;</li>
+</ul>
+
+<p>Honestly, when I first saw this I thought &quot;there&#x27;s no way YAML is expressive enough for real pipelines.&quot; But the trick is that the <em>complex logic</em> lives inside the MCP servers — the YAML just wires them together. It&#x27;s like how a circuit board doesn&#x27;t need to understand transistor physics; it just needs to connect the right components.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to create a basic three-step RAG pipeline YAML config for UltraRAG
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What three components does every basic RAG pipeline need?</li><li>How should you describe the flow — what goes in, what comes out at each step?</li><li>What parameters might each step need? Think about things like &#x27;top_k&#x27; for retrieval or &#x27;model_name&#x27; for generation</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a YAML workflow file with three sequential steps. The retriever step takes a query and returns candidate documents (with a <code>top_k</code> parameter, maybe 20). The reranker step takes those documents and rescores them (narrowing to top 5). The generator step takes the reranked documents plus the original query and produces an answer. Each step references an MCP server by name and specifies which tool to call on that server. The whole thing should be about 20-30 lines of YAML — that&#x27;s the point. Ask the agent to annotate each section so you understand what every line does.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        When prompting your agent, be specific about what you want annotated. Say something like &#x27;Add a comment above each step explaining what it does and why&#x27; — this turns the output into a learning tool, not just a config file.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does YAML handle loops and branches?</summary>
+        <div class="reveal-body"><p>UltraRAG extends standard YAML with control flow keywords. A <strong>conditional branch</strong> looks something like a step with a <code>condition</code> field — if the condition evaluates to true, execute one set of steps; otherwise, execute another. A <strong>loop</strong> wraps a set of steps with a <code>loop</code> construct that includes a termination condition.</p>
+
+<p>For example, an iterative retrieval strategy might say: &quot;Retrieve documents → Generate answer → Check confidence → If confidence &lt; threshold, reformulate query and loop back to retrieval.&quot; In traditional code, this is a messy while loop with state management. In UltraRAG YAML, it&#x27;s a <code>loop</code> block with a <code>break_condition</code>.</p>
+
+<p>The visual Pipeline Builder makes this even clearer — you literally drag and drop nodes and draw connections, and the YAML updates in real time (and vice versa).</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point you should have UltraRAG cloned and installed, understand the MCP server architecture (retriever, reranker, generator as independent services), and have a basic three-step YAML pipeline config. If any of that feels shaky, go back and ask your agent to explain the part that&#x27;s unclear — that&#x27;s literally what it&#x27;s there for.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Build a Knowledge Base and Wire Up Hybrid Retrieval</h2>
+      </div>
+      <div class="step-body">
+        <p>A RAG pipeline without documents is like a library with no books. Let&#x27;s fix that.</p>
+
+<p>UltraRAG includes <strong>Knowledge Base Management</strong> built right into the UI — you upload documents (PDFs, markdown, text files), and it handles chunking, embedding, and indexing. But what&#x27;s interesting is <em>how</em> it retrieves.</p>
+
+<p>Most tutorials show you pure vector search: embed the query, find the nearest document embeddings, done. That works okay, but it has a blind spot. Vector search is great at <em>semantic</em> similarity (&quot;car&quot; matches &quot;automobile&quot;) but terrible at <em>lexical</em> matching (if someone asks for &quot;error code E-4012&quot; and that exact string is in your docs, vector search might miss it).</p>
+
+<p><strong>Hybrid retrieval</strong> combines two approaches:</p>
+<ul>
+<li><strong>Vector search</strong> (dense retrieval): Good at meaning, bad at exact matches</li>
+<li><strong>BM25</strong> (sparse retrieval): Good at exact keyword matching, bad at synonyms</li>
+</ul>
+
+<p>Think of it like having two friends help you search — one who understands what you <em>mean</em> and one who&#x27;s great at finding the exact words you said. Together, they cover each other&#x27;s weaknesses.</p>
+
+<p>ReMe&#x27;s memory system uses this same hybrid pattern, which is why the tools pair well together. The retriever MCP server in UltraRAG can be configured to use either or both strategies.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to help you set up a knowledge base with hybrid retrieval in UltraRAG
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What kind of documents will you use? (Start simple — a few markdown files or PDFs you have lying around)</li><li>How should chunks be sized? Think about what makes a &#x27;useful&#x27; unit of information for answering questions</li><li>How would you ask about combining vector and BM25 search? What trade-offs should you understand?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain how to ingest documents through UltraRAG&#x27;s knowledge base manager — either via the UI or programmatically. It&#x27;ll walk you through configuring chunking (typical defaults: 512 tokens with 50-token overlap), choosing an embedding model, and setting up hybrid retrieval. The key configuration piece is telling the retriever MCP server to use both vector and BM25 scoring, with a fusion strategy (usually Reciprocal Rank Fusion) to combine the two result lists. The agent should explain why overlap in chunks matters (so you don&#x27;t cut a sentence in half at a chunk boundary) and recommend starting with equal weighting before tuning.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Chunk size matters more than you&#x27;d think. Too small and you lose context. Too large and you dilute the relevant signal with noise. 512 tokens with some overlap is a solid starting point, but ask your agent about how to tune this for your specific documents.
+      </div>
+        
+      <details class="reveal">
+        <summary>Deep dive: How Reciprocal Rank Fusion works</summary>
+        <div class="reveal-body"><p>When you have two ranked lists of documents (one from vector search, one from BM25), you need a strategy to combine them. <strong>Reciprocal Rank Fusion (RRF)</strong> is elegant in its simplicity:</p>
+
+<p>For each document, its RRF score = sum of <code>1 / (k + rank)</code> across all lists where it appears. The constant <code>k</code> (usually 60) prevents top-ranked documents from having disproportionate scores.</p>
+
+<p>So if a document is ranked #1 in vector search and #5 in BM25, its score is <code>1/61 + 1/65 = 0.0318</code>. A document ranked #2 in both gets <code>1/62 + 1/62 = 0.0323</code> — slightly higher because consistent ranking is rewarded.</p>
+
+<p>The beauty is that RRF doesn&#x27;t care about the actual scores from each system (which might be on totally different scales). It only cares about rank positions. This makes it robust and easy to implement.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does ReMe&#x27;s hybrid retrieval compare?</summary>
+        <div class="reveal-body"><p>ReMe (from the AgentScope ecosystem) uses a similar hybrid approach for its vector-based memory system. It supports three memory types — personal memory, task/procedural memory, and tool memory — all searchable via a <code>memory_search</code> method that combines vector and BM25.</p>
+
+<p>The interesting connection: you could use ReMe as the <em>memory layer</em> alongside UltraRAG&#x27;s <em>document retrieval layer</em>. ReMe handles what the agent has learned from past conversations; UltraRAG handles querying your knowledge base. Together, they give an agent both long-term memory and access to your documents — which is honestly where this whole space is heading.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">Your RAG pipeline retrieves 20 documents but the generated answers are mediocre. You suspect too many irrelevant documents are getting through. What&#x27;s the best next step?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">Add a reranker step between retrieval and generation</label>
+          <div class="decision-feedback correct">&#10003; Correct! A reranker (like a cross-encoder model) scores each document against the query with much higher accuracy than initial retrieval. It&#x27;s computationally heavier — which is why you retrieve broadly first, then rerank the smaller set. In UltraRAG, this is literally adding one more step to your YAML and pointing it at a reranker MCP server.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Reduce top_k from 20 to 5</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This might accidentally throw away relevant documents. The better approach is to retrieve broadly (cast a wide net) and then use a reranker to filter precisely. Reducing top_k is a blunt instrument — a reranker is a scalpel.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Increase chunk size so each document has more context</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Bigger chunks mean more context per result, but they also mean more noise per result. If irrelevant documents are the problem, bigger chunks makes it worse — you&#x27;d be feeding the generator even more irrelevant text. The issue is selection quality, not chunk size.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt3">
+          <label for="decision_6_opt3">Switch from hybrid to pure vector search</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Removing BM25 would actually reduce retrieval quality for keyword-heavy queries. The issue isn&#x27;t the retrieval method — it&#x27;s the lack of a quality filter between retrieval and generation. That&#x27;s what rerankers are for.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Add Iterative Retrieval with YAML Loops</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where UltraRAG&#x27;s YAML orchestration really flexes. In a basic pipeline, you retrieve once and generate once. But what if the first retrieval doesn&#x27;t find great documents? Or the generated answer contradicts itself?</p>
+
+<p><strong>Iterative retrieval</strong> is the strategy where your pipeline can loop back: generate an answer, evaluate it, and if it&#x27;s not good enough, reformulate the query and try again. It&#x27;s like when you Google something, don&#x27;t find what you need, rephrase your search, and try again — except automated.</p>
+
+<p>Traditionally, implementing this requires writing a state machine in Python: track attempt counts, manage query reformulation, handle termination conditions, store intermediate results. It&#x27;s easily 200+ lines of orchestration code.</p>
+
+<p>In UltraRAG, it&#x27;s a <code>loop</code> construct in your YAML. You define:</p>
+<ul>
+<li>The steps that repeat (retrieve → evaluate)</li>
+<li>A break condition (confidence &gt; 0.8 OR attempts &gt; 3)</li>
+<li>How the query gets reformulated between iterations</li>
+</ul>
+
+<p>This is the kind of pattern that separates &quot;I built a RAG demo&quot; from &quot;I built a RAG system that actually works.&quot; And it&#x27;s also where the MCP architecture pays dividends — because each iteration calls the same MCP servers with different inputs, and those servers don&#x27;t need to know they&#x27;re being called in a loop.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to extend your basic pipeline YAML with an iterative retrieval loop
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What condition should trigger a retry? Think about how you&#x27;d measure &#x27;answer quality&#x27;</li><li>How should the query change between iterations? What could you ask the LLM to do with the original query + failed attempt?</li><li>What&#x27;s a sensible maximum number of retries to prevent infinite loops?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should modify your YAML to wrap the retrieve-rerank-generate steps in a loop construct. After generation, a new &#x27;evaluate&#x27; step checks the answer quality (using the LLM itself as a judge — asking &#x27;does this answer address the query using the provided documents?&#x27;). If the score is below a threshold, a &#x27;reformulate&#x27; step asks the LLM to rephrase the query based on what was missing. The loop breaks when quality is sufficient or after 3 iterations. The agent should explain each new section and warn you about the cost implications — each loop iteration means more LLM calls.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        LLM-as-judge (using the model to evaluate its own outputs) is a pragmatic pattern, not a perfect one. It&#x27;s good enough for most cases but can be blind to its own mistakes. For production, consider adding rule-based checks alongside LLM evaluation.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Each loop iteration costs money (LLM API calls). Set a max iteration limit and consider adding a cost tracking step. Ask your agent about adding logging to track how many iterations each query actually needs — you&#x27;ll be surprised how often one pass is enough.
+      </div>
+        
+      <details class="reveal">
+        <summary>When is iterative retrieval actually worth it?</summary>
+        <div class="reveal-body"><p>Iterative retrieval shines for <strong>complex, multi-faceted questions</strong> where a single query can&#x27;t capture everything. For example: &quot;Compare the pricing models of AWS Lambda and Google Cloud Functions for a workload that processes 10,000 images per day.&quot;</p>
+
+<p>A single retrieval might find documents about Lambda pricing OR Cloud Functions pricing, but rarely both in the right context. An iterative approach can:</p>
+<ol>
+<li>First pass: Retrieve Lambda pricing docs</li>
+<li>Reformulate: &quot;Now find Google Cloud Functions pricing for image processing&quot;</li>
+<li>Second pass: Retrieve Cloud Functions docs</li>
+<li>Generate: Compare using both sets of documents</li>
+</ol>
+
+<p>For simple factual questions (&quot;What&#x27;s the default timeout for Lambda?&quot;), iteration is wasteful. The art is knowing when to enable it — and that&#x27;s often a conditional branch in your YAML: if the query looks complex (multi-entity, comparative), use the iterative path; otherwise, use the simple one.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You now have a complete iterative RAG pipeline defined in YAML — retriever, reranker, generator, evaluator, and query reformulator, all wired together with loop logic. This is a production-grade retrieval pattern described in a config file. Take a moment to appreciate that this would have been 300+ lines of Python orchestration code without the MCP/YAML approach.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Use the Pipeline Builder UI and Test Your Pipeline</h2>
+      </div>
+      <div class="step-body">
+        <p>UltraRAG&#x27;s <strong>Pipeline Builder</strong> is where the visual and code worlds merge. It&#x27;s a canvas-based editor — think flowchart tool — where you can:</p>
+
+<ul>
+<li><strong>Drag and drop</strong> MCP server nodes onto a canvas</li>
+<li><strong>Draw connections</strong> between them to define data flow</li>
+<li><strong>Edit parameters</strong> inline (click a node, change <code>top_k</code>, swap the model)</li>
+<li><strong>See the YAML update in real time</strong> as you rearrange the visual layout</li>
+<li><strong>Edit the YAML directly</strong> and watch the visual canvas rearrange itself</li>
+</ul>
+
+<p>This bidirectional sync is honestly the killer feature for learning. You can build visually to understand the flow, then switch to YAML to understand the config syntax, and they always stay in sync.</p>
+
+<p>The UI also has a built-in <strong>AI Assistant</strong> that can help you design pipelines, tune parameters, and even generate prompts. Once your pipeline is ready, you can convert it into an interactive chat interface with one click — meaning you can go from YAML config to &quot;chat with your documents&quot; demo in minutes.</p>
+
+<p>Let&#x27;s use it to test our pipeline and debug any issues.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to help you launch the UltraRAG UI, load your pipeline, and test it with sample queries
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What command starts the UltraRAG UI server? What port does it run on?</li><li>What kind of test queries would stress-test both the vector and BM25 retrieval paths?</li><li>How would you ask your agent to help you debug if the pipeline returns poor answers?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you the command to launch UltraRAG&#x27;s web UI (typically a Python command that starts a local web server). It&#x27;ll suggest test queries that exercise different retrieval patterns: a semantic query (&#x27;explain the main concept&#x27;), a keyword-heavy query (&#x27;what does error E-4012 mean&#x27;), and a complex comparative query (to test the iterative loop). For debugging, the agent should explain how to use the UI&#x27;s step-by-step execution mode to see what each MCP server returns at each stage — this is like adding breakpoints to your YAML pipeline.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The Pipeline Builder&#x27;s bidirectional sync means you can experiment visually and then copy the resulting YAML for version control. Best of both worlds: visual for exploration, YAML for reproducibility.
+      </div>
+        
+      <details class="reveal">
+        <summary>Connecting UltraRAG to AgentScope and ReMe</summary>
+        <div class="reveal-body"><p>Since AgentScope has native MCP support, you can use UltraRAG&#x27;s MCP servers as tools within an AgentScope agent. The agent gets ReAct-style reasoning (from AgentScope), document retrieval (from UltraRAG), and persistent memory (from ReMe).</p>
+
+<p>The setup: point AgentScope&#x27;s MCP client at UltraRAG&#x27;s server addresses. Now your AgentScope agent can call <code>retrieve</code>, <code>rerank</code>, and <code>generate</code> as tools, and AgentScope&#x27;s built-in planning decides when to use them. Add ReMe for memory, and your agent remembers past conversations while also querying your document knowledge base.</p>
+
+<p>This composability is the whole point of MCP-based architecture. Each piece is independent, reusable, and swappable.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Add a conditional branch to your pipeline: if the user&#x27;s query is a simple factual question, skip the reranker and iterative loop (just retrieve and generate). If it&#x27;s a complex or comparative question, use the full iterative pipeline.</div>
+      <div class="your-turn-context">Not every query needs the full pipeline treatment. Simple questions like &#x27;What is the default port?&#x27; can be answered in one retrieval pass, while complex questions like &#x27;Compare X and Y across these three dimensions&#x27; benefit from iterative retrieval. A conditional branch saves API costs and reduces latency for simple queries while keeping the power of iteration for hard ones.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>How would you classify a query as &#x27;simple&#x27; vs &#x27;complex&#x27;? Could the LLM itself make that judgment?</li><li>What does a conditional branch look like in YAML? Think about an &#x27;if/else&#x27; structure with a condition step</li><li>What information does the routing step need to output so the YAML knows which path to take?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>I need to add a conditional routing step to my UltraRAG pipeline YAML. Here&#x27;s what I want: Before retrieval, add a &#x27;classify_query&#x27; step that uses the LLM to classify the user&#x27;s query as either &#x27;simple&#x27; (factual, single-entity) or &#x27;complex&#x27; (comparative, multi-faceted, requires synthesis). If simple, use a fast path: retrieve top 5 documents and generate directly. If complex, use the full path: retrieve top 20, rerank to top 5, generate, evaluate, and loop if needed (max 3 iterations). Show me the YAML with comments explaining each section, and tell me how to configure the classification prompt for the routing step.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to add a new capability to your pipeline — summarizing retrieved documents before passing them to the generator. In the MCP architecture, what&#x27;s the right way to do this?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Create a new MCP server with a &#x27;summarize&#x27; tool and add a step in the YAML</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the MCP way. Each capability is an atomic server with its own tools. You register a new &#x27;summarize&#x27; tool, deploy it as an MCP server, and add one step in your YAML between reranking and generation. Other pipelines can reuse this summarizer without any changes.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Add summarization logic inside the generator MCP server</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This violates the single-responsibility principle of the MCP architecture. The generator server should only generate answers. Bundling summarization in there makes it harder to reuse, test, or swap independently. Keep your servers atomic.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Write a Python wrapper that summarizes documents before calling the pipeline</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This bypasses the MCP architecture entirely. Now you have orchestration logic outside the YAML, which defeats the purpose of having a declarative pipeline. If the logic is part of the RAG flow, it should be in the pipeline.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>Let&#x27;s step back and look at what we actually built today.</p>
+
+<p>We started with a mental model: RAG components as independent MCP servers, wired together with YAML instead of Python glue code. We built a pipeline that retrieves documents using hybrid search (vector + BM25), reranks them for precision, generates answers, and — the cool part — loops back to try again if the answer isn&#x27;t good enough.</p>
+
+<p>The bigger insight isn&#x27;t about UltraRAG specifically. It&#x27;s about <strong>composable AI architectures</strong>. The MCP protocol means your retriever doesn&#x27;t care if it&#x27;s being called by UltraRAG, AgentScope, or something you build yourself. Your reranker doesn&#x27;t know if it&#x27;s part of a three-step pipeline or a ten-step one. Everything is a service with a standard interface.</p>
+
+<p>This is how the best software gets built — small, focused pieces that compose cleanly. And now it&#x27;s how RAG pipelines get built too.</p></div>
+      <ul class="takeaways-list"><li>MCP servers turn RAG components into reusable, swappable building blocks — the retriever, reranker, and generator don&#x27;t know about each other and don&#x27;t need to</li><li>YAML orchestration with loops and conditional branches replaces hundreds of lines of state management code, and the visual Pipeline Builder makes it explorable</li><li>Hybrid retrieval (vector + BM25 with Reciprocal Rank Fusion) covers both semantic and keyword matching — always use both unless you have a specific reason not to</li><li>Iterative retrieval with LLM-as-judge evaluation is the pattern that separates demo-quality RAG from production-quality RAG</li><li>Composability across tools (UltraRAG for retrieval, AgentScope for agent reasoning, ReMe for memory) is the real payoff of the MCP architecture</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Try connecting your UltraRAG pipeline to AgentScope&#x27;s ReAct agent — let the agent decide when to retrieve vs. answer from its own knowledge</li><li>Add ReMe&#x27;s memory layer so your pipeline remembers past conversations and can reference previous Q&amp;A sessions</li><li>Experiment with UltraRAG&#x27;s evaluation framework to benchmark your pipeline against standard RAG datasets</li><li>Build a custom MCP server for a domain-specific tool (e.g., a SQL query server or an API caller) and add it as a step in your pipeline</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/OpenBMB/UltraRAG" target="_blank" rel="noopener">OpenBMB/UltraRAG</a> <span class="source-name">(GitHub Trending Python)</span></li><li><a href="https://github.com/agentscope-ai/agentscope" target="_blank" rel="noopener">agentscope-ai/agentscope</a> <span class="source-name">(GitHub Trending Python)</span></li><li><a href="https://github.com/agentscope-ai/ReMe" target="_blank" rel="noopener">agentscope-ai/ReMe</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Marcus AI Claims Dataset</div>
+            <div class="oa-summary">Open dataset of factual claims made by AI systems, useful for benchmarking accuracy and hallucination detection.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Cancel ChatGPT AI boycott surges after OpenAI pentagon military deal</div>
+            <div class="oa-summary">Growing boycott movement against ChatGPT after OpenAI signs a deal with the Pentagon for military applications.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">GPT‑5.3 Instant</div>
+            <div class="oa-summary">OpenAI launches GPT-5.3 Instant, a faster and cheaper model optimized for everyday conversational tasks.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude is an Electron App because we&#x27;ve lost native</div>
+            <div class="oa-summary">Tonsky argues desktop apps have abandoned native UI toolkits for Electron, using Claude&#x27;s app as a case study.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">PRX Part 3 — Training a Text-to-Image Model in 24h!</div>
+            <div class="oa-summary">Guide to training a text-to-image generation model from scratch in just 24 hours on limited compute.</div>
+            <div class="oa-meta">Hugging Face · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">When AI writes the software, who verifies it?</div>
+            <div class="oa-summary">Leo de Moura argues formal verification and proof assistants are essential for validating AI-generated code correctness.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Why No AI Games?</div>
+            <div class="oa-summary">Game designer Frank Lantz asks why AI hasn&#x27;t yet produced genuinely new and compelling game experiences.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI-generated art can’t be copyrighted after Supreme Court declines review</div>
+            <div class="oa-summary">Article URL: https://www.theverge.com/policy/887678/supreme-court-ai-art-copyright Comments URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">India&#x27;s top court angry after junior judge cites fake AI-generated orders</div>
+            <div class="oa-summary">Indian judge cited fabricated court orders generated by AI, drawing sharp rebuke from the supreme court.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude&#x27;s Cycles [pdf]</div>
+            <div class="oa-summary">Donald Knuth analyzes Claude&#x27;s reasoning patterns and failure modes in a Stanford research paper.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "Marcus AI Claims Dataset", "tags": "", "source": "Hacker News AI"}, {"title": "Cancel ChatGPT AI boycott surges after OpenAI pentagon military deal", "tags": "", "source": "Hacker News AI"}, {"title": "GPT‑5.3 Instant", "tags": "", "source": "Hacker News AI"}, {"title": "Claude is an Electron App because we've lost native", "tags": "", "source": "Hacker News AI"}, {"title": "PRX Part 3 — Training a Text-to-Image Model in 24h!", "tags": "vision", "source": "Hugging Face"}, {"title": "When AI writes the software, who verifies it?", "tags": "", "source": "Hacker News AI"}, {"title": "Why No AI Games?", "tags": "", "source": "Hacker News AI"}, {"title": "AI-generated art can’t be copyrighted after Supreme Court declines review", "tags": "", "source": "Hacker News AI"}, {"title": "India's top court angry after junior judge cites fake AI-generated orders", "tags": "", "source": "Hacker News AI"}, {"title": "Claude's Cycles [pdf]", "tags": "", "source": "Hacker News AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-04";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

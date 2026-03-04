@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Train a Text-to-Image Diffusion Model in 24 Hours — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-image-gen">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>A $1,500 Text-to-Image Model — Trained in a Single Day</h1>
+      <div class="hero-subtitle">Photoroom just open-sourced the full recipe. Let&#x27;s break it apart, understand every trick, and learn how to reproduce it with an AI agent at your side.</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">diffusion-models</span> <span class="tag">text-to-image</span> <span class="tag">pixel-space-training</span> <span class="tag">perceptual-loss</span> <span class="tag">open-source</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Here&#x27;s something that would&#x27;ve been unthinkable two years ago: Photoroom&#x27;s PRX team just trained a <strong>text-to-image diffusion model from scratch in 24 hours</strong> on 32 H200 GPUs, for roughly <strong>$1,500</strong> in total compute.</p>
+
+<p>To put that in perspective — early Stable Diffusion training runs cost hundreds of thousands of dollars. DALL·E 2&#x27;s training was estimated in the millions. We&#x27;ve gone from &quot;only Big Tech can do this&quot; to &quot;a determined team with a credit card can do this over a weekend.&quot;</p>
+
+<p>The secret isn&#x27;t a single breakthrough. It&#x27;s <strong>stacking a dozen clever tricks</strong> that each shave off time, improve convergence, or both. The biggest conceptual shift? <strong>Ditching the VAE entirely</strong> and training directly on pixels. That one decision unlocks a cascade of simplifications.</p>
+
+<p>Photoroom open-sourced everything — the training code, the experimental framework, the full recipe. Today we&#x27;re going to understand <em>why</em> each piece matters, and use an AI agent to help us explore, reproduce, and extend their work.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>The Big Idea: Predict Pixels, Not Noise</h2>
+      </div>
+      <div class="step-body">
+        <p>Okay, let&#x27;s start with the conceptual foundation — because honestly, this is the most interesting part.</p>
+
+<p>Traditional diffusion models work in <strong>latent space</strong>. You take an image, compress it through a VAE (variational autoencoder) into a smaller representation, add noise to that, and train a model to remove the noise. Then at inference time, you denoise and decode back to pixels.</p>
+
+<p>Think of it like trying to learn cooking by only ever tasting food through a straw. The VAE is the straw — it gives you <em>some</em> information, but you&#x27;re always working through an intermediary.</p>
+
+<p><strong>X-prediction flips this.</strong> Instead of predicting the noise that was added, the model directly predicts what the clean image looks like. And because you&#x27;re predicting actual pixels, you can skip the VAE entirely.</p>
+
+<p>Why does this matter?</p>
+<ul>
+<li><strong>Simpler pipeline</strong> — no VAE to train, license, or debug</li>
+<li><strong>Clean images live on the data manifold</strong> — predicting something that &quot;looks like a real image&quot; is fundamentally easier than predicting random noise</li>
+<li><strong>You unlock classical CV tricks</strong> — perceptual losses, LPIPS, DINO features — all designed for pixel space</li>
+</ul>
+
+<p>The key math is surprisingly clean: instead of predicting velocity <code>v = x - ε</code>, you predict <code>x₀</code> directly and derive velocity from that. Let&#x27;s get your agent to help you build intuition here.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain the difference between noise prediction, velocity prediction, and x-prediction in diffusion models — with a concrete analogy, not equations.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What everyday analogy could explain &#x27;predicting the destination vs. predicting the direction of travel&#x27;?</li><li>Why might it be easier to predict what something should look like than to predict the noise that corrupted it?</li><li>Ask your agent to compare what happens at high noise levels vs. low noise levels for each approach.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a clear analogy — something like: noise prediction is like trying to figure out what someone erased from a whiteboard by predicting the eraser strokes. X-prediction is like just predicting what the whiteboard <em>should</em> look like. At high noise levels (image is mostly static), predicting noise is nearly impossible — but predicting &#x27;this should probably be a dog on grass&#x27; is still reasonable because you&#x27;re guessing at plausible images. The agent should explain that x-prediction targets lie on the natural image manifold, which constrains the problem in a helpful way.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The paper behind this is &quot;Back to Basics&quot; by Li and He (2025). If your agent references it, that&#x27;s a good sign it&#x27;s grounded in the right source.
+      </div>
+        
+      <details class="reveal">
+        <summary>But wait — doesn&#x27;t predicting x₀ at high noise give you blurry images?</summary>
+        <div class="reveal-body"><p>Great instinct! Yes — early in training and at high noise levels, the model&#x27;s x₀ predictions will be blurry averages. But that&#x27;s actually fine for two reasons:</p>
+
+<ol>
+<li><strong>During training</strong>, the loss still provides useful gradients because perceptual losses care about structure, not pixel-perfect sharpness</li>
+<li><strong>During inference</strong>, the iterative denoising process means early steps just need a rough direction — the model refines details in later steps when noise is low</li>
+</ol>
+
+<p>This is one of those cases where what seems like a bug is actually a feature. The &quot;blurry prediction&quot; at high noise is the model correctly expressing uncertainty about details while nailing the global structure.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Patching: How to Feed a 1024px Image to a Transformer</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s a practical problem: a 1024×1024 image has over a million pixels. Transformers run on tokens, and attention is quadratic in sequence length. You can&#x27;t just feed a million tokens into a transformer — your GPU would catch fire.</p>
+
+<p>The solution is <strong>patching</strong> — chop the image into square patches and treat each patch as a single token. It&#x27;s the same idea as Vision Transformers (ViT), just applied to diffusion.</p>
+
+<p>Photoroom uses <strong>32×32 pixel patches</strong>, which is much larger than the typical 16×16 or even 8×8 you see in classification models. Here&#x27;s the napkin math:</p>
+
+<ul>
+<li>At 512px: <code>(512 / 32)² = 256 tokens</code> — very manageable!</li>
+<li>At 1024px: <code>(1024 / 32)² = 1024 tokens</code> — still totally fine</li>
+</ul>
+
+<p>Compare that to 8×8 patches at 1024px: <code>(1024 / 8)² = 16,384 tokens</code>. That&#x27;s the difference between a 2-minute training step and a 2-hour one.</p>
+
+<p>The tradeoff? Larger patches mean less spatial detail per token. To compensate, they use a <strong>256-dimensional bottleneck</strong> in the projection layer — the patch gets compressed to 256 dims before entering the transformer, keeping the model size reasonable while the transformer learns global relationships.</p>
+
+<p>Think of it like Google Maps zoom levels. You don&#x27;t need street-level detail to plan a cross-country road trip. The 32px patches give you the &quot;highway view&quot; — the transformer figures out the big picture, and the details emerge during iterative denoising.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to calculate the memory and compute tradeoffs for different patch sizes (8, 16, 32) at both 512px and 1024px resolution.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What&#x27;s the relationship between patch size, sequence length, and attention cost?</li><li>How does quadratic attention scaling affect training time at each configuration?</li><li>What about the information loss — how much detail can a 32px patch actually capture?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a clean comparison table — something like: 8px patches at 1024px = 16,384 tokens (attention cost ~268M), 16px = 4,096 tokens (~16.7M), 32px = 1,024 tokens (~1M). That&#x27;s a <strong>268× reduction</strong> in attention cost from 8px to 32px patches. The agent should note that this makes 1024px pixel-space training only about 3× slower than 256px latent-space training — which is the whole reason this speedrun is possible.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The 256-dim bottleneck is doing important work here. Without it, projecting a 32×32×3 = 3,072-dimensional patch directly into the transformer&#x27;s hidden dimension would waste capacity on raw pixel values. The bottleneck forces the model to learn a compact representation right at the input layer.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why not use even larger patches like 64×64?</summary>
+        <div class="reveal-body"><p>At 64×64 patches on a 512px image, you&#x27;d get <code>(512/64)² = 64 tokens</code>. That&#x27;s barely any spatial information — the transformer would essentially see an 8×8 grid of super-blurry tiles. There&#x27;s a sweet spot where you have enough tokens for the transformer to reason about spatial relationships but few enough to keep training fast. For this architecture and resolution range, 32px hits that sweet spot.</p>
+
+<p>Also worth noting: the patch size interacts with the multi-resolution training schedule. At 512px with 32px patches, 256 tokens is comfortable. When they jump to 1024px, the 1024 tokens is still within what modern transformers handle well. If they&#x27;d used 16px patches, the 1024px stage would need 4,096 tokens — still doable but significantly more expensive.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point you should understand two core ideas: (1) x-prediction lets you train directly on pixels by predicting the clean image instead of noise, and (2) large 32px patches keep the token count manageable — 256 tokens at 512px, 1024 at 1024px. These two decisions together are what make a 24-hour speedrun even thinkable.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Perceptual Losses: Borrowing Eyes from Classical CV</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where pixel-space training really pays off. When your model predicts actual pixels, you can use <strong>perceptual losses</strong> — and these have been refined over a decade of computer vision research.</p>
+
+<p>A quick refresher: the standard diffusion loss (MSE between predicted and target) treats every pixel equally. A one-pixel shift of an entire image would score terribly, even though the image looks identical to humans. Perceptual losses fix this by comparing images through the &quot;eyes&quot; of a pretrained neural network.</p>
+
+<p>Photoroom uses <strong>two</strong> perceptual losses stacked on top of the diffusion objective:</p>
+
+<ol>
+<li><strong>LPIPS</strong> (weight: 0.1) — This uses a pretrained VGG network to compare low-level features: edges, textures, local patterns. Think of it as checking &quot;does the surface look right?&quot;</li>
+</ol>
+
+<ol>
+<li><strong>DINO perceptual loss</strong> (weight: 0.01) — This uses DINOv2, a self-supervised vision model, to compare high-level semantic features. Think of it as checking &quot;is this the right <em>thing</em>?&quot;</li>
+</ol>
+
+<p>Notice the weight difference — LPIPS gets 10× more weight than DINO. That&#x27;s intentional. You want the model to primarily learn the diffusion objective, with perceptual losses as gentle nudges. Too much perceptual weight and the model starts hallucinating features the perceptual networks are biased toward.</p>
+
+<p>The beautiful part: <strong>these losses add almost no compute overhead</strong>. The VGG and DINO forward passes are tiny compared to the main transformer forward pass. Free lunch, basically.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to explain why perceptual losses are awkward in latent-space diffusion but natural in pixel-space, using a concrete example.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What does the model output look like in latent space vs. pixel space?</li><li>If your model outputs a latent vector, what extra step would you need before computing LPIPS?</li><li>Why might that extra step cause problems during training?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain that in latent-space models, the output is an abstract vector — to compute perceptual loss, you&#x27;d have to decode it back to pixels through the VAE first. That means backpropagating through the VAE decoder, which is expensive and can cause gradient issues (the VAE wasn&#x27;t trained for this). In pixel space, the model&#x27;s output IS an image — you just feed it directly into VGG or DINO. No adapter, no extra decode step, no gradient hacks. The agent might use an analogy like: &#x27;It&#x27;s the difference between judging a painting directly vs. judging a description of a painting that someone else has to interpret first.&#x27;</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The DINO loss is applied on <strong>pooled full images</strong>, not patch-wise. This is important — patch-wise DINO features might push the model to optimize local patches independently, breaking global coherence. Pooling ensures the semantic loss captures the whole-image meaning.
+      </div>
+        
+      <details class="reveal">
+        <summary>How do these losses interact with different noise levels?</summary>
+        <div class="reveal-body"><p>This is a subtle but important detail. Both perceptual losses are applied <strong>at all noise levels</strong> — even when the image is mostly noise and the model&#x27;s x₀ prediction is a blurry mess.</p>
+
+<p>At high noise, the LPIPS loss can&#x27;t really help (the prediction is too blurry for texture comparison to be meaningful). But the DINO loss still provides a useful signal — even a blurry blob can have the right semantic content (&#x27;this is roughly a dog shape&#x27;).</p>
+
+<p>At low noise, both losses shine. LPIPS ensures textures and edges are sharp and realistic, while DINO ensures the semantic content hasn&#x27;t drifted.</p>
+
+<p>The authors of PixelGen (which inspired this approach) showed that this combination noticeably improves both convergence speed and final visual quality. More signal at every training step = faster learning.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re designing a pixel-space diffusion model and need to choose your perceptual loss strategy. Which approach makes the most sense?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">LPIPS only (weight 0.1) — captures texture and edge quality</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. LPIPS alone handles low-level features well, but misses the semantic signal. Your model might produce images with great textures that don&#x27;t actually match the prompt&#x27;s meaning. You need both levels of the perceptual hierarchy.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">DINO only (weight 0.5) — captures semantic meaning</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. DINO alone provides semantic guidance but doesn&#x27;t help with visual quality at the texture level. Also, a weight of 0.5 is way too high for a perceptual loss — it would dominate the diffusion objective and cause the model to hallucinate features the DINO network prefers.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">LPIPS (0.1) + DINO (0.01) — low-level texture + high-level semantics with gentle weights</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly what Photoroom does. LPIPS handles texture/edge quality, DINO handles semantic correctness, and both are weighted gently so they nudge the diffusion objective without overwhelming it. The 10× weight difference between them also reflects that low-level quality matters more for image generation than abstract semantic alignment.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt3">
+          <label for="decision_6_opt3">MSE on raw pixels with a high weight — keep it simple</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. MSE on raw pixels is already part of the diffusion objective. Adding more pixel-level MSE doesn&#x27;t give you anything new — it&#x27;s still blind to perceptual quality. A one-pixel shift would look identical to humans but score terribly. The whole point of perceptual losses is to go beyond pixel-level comparison.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>The Speed Stack: Token Routing, REPA, and Muon</h2>
+      </div>
+      <div class="step-body">
+        <p>Alright, so we&#x27;ve got the conceptual foundation: predict pixels, use big patches, add perceptual losses. But we need to go faster. The 24-hour budget is tight. This is where the engineering gets fun.</p>
+
+<p>Photoroom stacks three more acceleration tricks:</p>
+
+<p><strong>TREAD (Token Routing)</strong> — Not every token needs to go through every transformer block. TREAD routes 50% of tokens from the 2nd block directly to the penultimate block, skipping all the middle layers. Think of it like an express lane on a highway — some cars (tokens) take the scenic route through every block, others take the express bypass. This cuts compute roughly in half for those tokens while barely affecting quality.</p>
+
+<p><strong>REPA (Representation Alignment)</strong> — At the 8th transformer block, they align the model&#x27;s internal representations with a pretrained DINOv3 teacher. It&#x27;s like having a tutor who whispers &quot;you&#x27;re on the right track&quot; at a specific checkpoint during the forward pass. This helps the model learn good internal features faster. Weight: 0.5, which is actually quite high — they&#x27;re taking this signal seriously.</p>
+
+<p><strong>Muon Optimizer</strong> — Instead of plain AdamW, they use Muon for all 2D parameters (weight matrices) and Adam only for 1D parameters (biases, norms). Muon uses Nesterov momentum with a special Newton-Schulz orthogonalization step. The practical upshot: better conditioning of the optimization landscape, which means faster convergence.</p>
+
+<p>The training schedule is two stages:</p>
+<ul>
+<li><strong>Stage 1</strong>: 100k steps at 512px, batch size 1024</li>
+<li><strong>Stage 2</strong>: 20k steps at 1024px, batch size 512</li>
+</ul>
+
+<p>Start at lower resolution where training is cheap, lock in the core capabilities, then fine-tune at high resolution.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to summarize the complete training recipe as a checklist you could use to reproduce the run, including all hyperparameters and the training schedule.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What are all the components someone would need to set up before launching the run?</li><li>What are the two training stages and their configurations?</li><li>Don&#x27;t forget the dataset — what did they train on?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a structured checklist covering: (1) Model: PRX-1.2B transformer, 32px patches, 256-dim bottleneck; (2) Prediction: x-prediction in pixel space; (3) Losses: diffusion MSE + LPIPS(0.1) + DINO(0.01) + REPA(0.5); (4) Efficiency: TREAD token routing at 50%, self-guidance instead of CFG; (5) Optimizer: Muon(lr=1e-4, momentum=0.95, nesterov) for 2D params, Adam(lr=1e-4) for 1D; (6) Stage 1: 100k steps, 512px, batch 1024; Stage 2: 20k steps, 1024px, batch 512, REPA disabled; (7) Data: ~8.7M synthetic images from Flux + FLUX-Reason + Midjourney-v6; (8) Hardware: 32 H200s, ~24h. The agent might format this as a nice markdown table or YAML-style config.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Notice that REPA is <strong>disabled</strong> during the 1024px fine-tuning stage. The DINOv3 teacher was trained on lower resolutions, so its representations might not transfer cleanly to 1024px. Knowing when to turn tricks OFF is just as important as knowing when to turn them on.
+      </div>
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        If you want to actually run this training, you&#x27;ll need access to 32 H200 GPUs. Most cloud providers offer these — Lambda Labs, RunPod, and CoreWeave are popular options. At ~$2/GPU/hour, budget around $1,500 for the full 24-hour run.
+      </div>
+        
+      <details class="reveal">
+        <summary>What&#x27;s self-guidance and why does it replace CFG?</summary>
+        <div class="reveal-body"><p>Classifier-Free Guidance (CFG) is the standard trick for improving prompt adherence in diffusion models. It works by running the model twice — once with the text condition, once without — and amplifying the difference. The problem: it literally doubles your inference compute.</p>
+
+<p>With TREAD&#x27;s token routing, they get a natural alternative called <strong>self-guidance</strong>. The &quot;dense&quot; forward pass (all tokens through all blocks) gives the conditional prediction. The &quot;routed&quot; forward pass (50% of tokens taking the express lane) gives a weaker, partially-unconditional prediction. The difference between these two serves the same role as CFG — but you only need to run the model once, using the routing mechanism you already have.</p>
+
+<p>It&#x27;s not quite as powerful as full CFG, but it&#x27;s <em>free</em> — no extra forward pass required. When you&#x27;re counting every GPU-hour, that matters a lot.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Why synthetic training data?</summary>
+        <div class="reveal-body"><p>The ~8.7M training images come from three synthetic datasets generated by Flux and Midjourney. This is increasingly common in 2025-2026 — synthetic data offers:</p>
+
+<ol>
+<li><strong>Clean licensing</strong> — no copyright concerns from scraping the internet</li>
+<li><strong>High quality captions</strong> — generated images come with their prompts, and can be re-captioned with models like Gemini 2.5 Flash</li>
+<li><strong>Consistent quality</strong> — no blurry phone photos or watermarked stock images</li>
+<li><strong>Diversity control</strong> — you can generate exactly the distribution you want</li>
+</ol>
+
+<p>The flip side: your model can only be as diverse as the models that generated the training data. Photoroom acknowledges this — some limitations in their outputs (especially unusual subjects or compositions) come from data diversity rather than architectural issues.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You now understand the full stack: x-prediction eliminates the VAE, 32px patches keep sequence length manageable, perceptual losses (LPIPS + DINO) provide multi-level supervision, TREAD routes 50% of tokens for speed, REPA aligns representations with a teacher model, and Muon optimizer improves convergence. These all combine to make a 24-hour training run produce usable text-to-image generation.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Reproduce It: Setting Up the PRX Training Framework</h2>
+      </div>
+      <div class="step-body">
+        <p>Let&#x27;s get practical. Photoroom open-sourced everything on GitHub, so we can actually set this up and run it. Even if you don&#x27;t have 32 H200s lying around, understanding the codebase structure teaches you a lot about how modern diffusion training pipelines work.</p>
+
+<p>The repo contains two main things:</p>
+<ol>
+<li><strong>The speedrun training code</strong> — the exact config that produced their 24-hour model</li>
+<li><strong>The experimental framework</strong> from Parts 1 and 2 — so you can test individual tricks in isolation</li>
+</ol>
+
+<p>Let&#x27;s use our agent to explore the repo and understand how to get started, what to modify for your own experiments, and how to scale up or down based on your available compute.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to help you plan a scaled-down version of the PRX training run that you could do on a single 8×H100 node in under 6 hours.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What would you need to change about the batch size and step count?</li><li>Should you keep all the tricks or drop some for simplicity on the first run?</li><li>What resolution schedule would make sense with less compute?</li><li>How small a dataset subset could you use while still getting meaningful results?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a practical scaling plan: reduce to 512px only (skip the 1024px stage), cut steps to ~25k, use batch size 256 (scaling with GPU count), use a 1-2M image subset, keep x-prediction and perceptual losses (they&#x27;re free), keep TREAD (also basically free), maybe drop REPA to simplify the first run. The agent should estimate this would take 4-6 hours on 8×H100 and produce lower-quality but still coherent outputs — enough to validate the pipeline works before committing to a full run.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        A great first experiment: train at 256px only with 16px patches (still 256 tokens). This lets you iterate fast on the loss functions and optimizer settings. Once those look right, scale up resolution and patch size together.
+      </div>
+        
+      <details class="reveal">
+        <summary>How do I evaluate whether my run is working?</summary>
+        <div class="reveal-body"><p>During training, watch for these signals:</p>
+
+<ol>
+<li><strong>Loss curves</strong> — The diffusion MSE should drop steadily. LPIPS and DINO losses should decrease but may be noisy.</li>
+<li><strong>Sample quality</strong> — Generate samples every few thousand steps with fixed prompts. You should see: (a) random noise → blurry blobs by 5k steps, (b) recognizable objects by 20k steps, (c) coherent scenes by 50k steps.</li>
+<li><strong>FID/CMMD scores</strong> — If you have a reference dataset, compute these periodically. Photoroom&#x27;s 1024px pixel-space model hit FID 14.1, which is very competitive.</li>
+<li><strong>Prompt adherence</strong> — Try progressively harder prompts. Simple ones (&#x27;a red car&#x27;) should work early, complex ones (&#x27;a cat wearing a top hat riding a bicycle through Paris at sunset&#x27;) take longer.</li>
+</ol>
+
+<p>Known issues even in their full run: texture glitches, occasional anatomy problems, and struggles with very compositionally complex prompts. These are undertraining artifacts, not architectural problems — they&#x27;d likely improve with more compute and data.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Design a prompt that gets your agent to create a comparison analysis of VAE-based (latent diffusion) vs. VAE-free (pixel-space x-prediction) training pipelines, covering complexity, speed, quality, and flexibility tradeoffs.</div>
+      <div class="your-turn-context">One of the most important decisions in building a diffusion model is whether to use a VAE or train directly in pixel space. This is no longer a clear-cut decision — pixel-space training has become viable, but latent diffusion still has advantages in some scenarios. Being able to articulate these tradeoffs is crucial for anyone working in generative AI.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What dimensions should the comparison cover? Think beyond just &#x27;quality&#x27; — what about pipeline complexity, dependency management, and flexibility for different tasks.</li><li>How should you ask the agent to structure its output so it&#x27;s actually useful as a decision framework?</li><li>What specific numbers from the PRX experiments could you reference to ground the comparison in data rather than vibes?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Create a comparison framework for deciding between latent diffusion (VAE-based) and pixel-space diffusion (x-prediction) for a new text-to-image project. Cover these dimensions: (1) pipeline complexity and dependencies, (2) training speed at different resolutions, (3) image quality metrics, (4) flexibility for adding auxiliary losses, (5) inference cost, and (6) practical considerations like licensing. Reference the PRX results where pixel-space 1024px training achieved FID 14.1 vs latent baseline of 17.4, and was only ~3× slower than 256px latent training. Format as a decision matrix with clear recommendations for different scenarios (research lab, startup, hobbyist).</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re about to start a training run and need to choose your resolution schedule. Your compute budget allows about 120k total training steps on 32 GPUs. Which schedule gives you the best final model?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">256px → 512px → 1024px (40k / 40k / 40k steps each)</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Spreading steps evenly across three resolutions wastes the cheapest compute. The 256px stage is fast but the model learns limited detail at that resolution. Photoroom found you can skip 256px entirely without loss — jumping straight to 512px and spending most steps there is more efficient.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">512px for 100k steps → 1024px for 20k steps</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is exactly what Photoroom uses. The bulk of learning happens at 512px where each step is cheap (256 tokens). Then a short 1024px fine-tuning stage (1024 tokens, more expensive per step) teaches the model to generate high-resolution detail. The 5:1 ratio of low-res to high-res steps reflects the diminishing returns of high-res training.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">1024px only for all 120k steps</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Training only at 1024px means 1024 tokens per image for every single step — about 4× the cost per step compared to 512px. You&#x27;d process far fewer total images in your budget. Starting at 512px lets the model learn composition, color, and basic structure cheaply, then the 1024px stage adds the fine details. Progressive resolution is a strict win here.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt3">
+          <label for="decision_11_opt3">512px only for all 120k steps — skip high-res entirely</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This is actually not terrible — you&#x27;d get a solid 512px model. But you&#x27;d miss out on the quality jump that comes from 1024px fine-tuning. The PRX results show that even 20k steps at 1024px makes a noticeable difference in detail and sharpness. Given that you have the budget, skipping it leaves quality on the table.</div>
+        </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Get your agent to design a minimal experiment that tests whether x-prediction actually converges faster than noise prediction, using the simplest possible setup.</div>
+      <div class="your-turn-context">The PRX team claims x-prediction is key to making pixel-space training work. But claims are cheap — experiments are what matter. Can you design a controlled experiment that isolates this one variable? Think small: we&#x27;re not training a full model, we&#x27;re just testing a hypothesis.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What&#x27;s the minimum model size, dataset size, and resolution where you could see a meaningful difference?</li><li>What exactly should you hold constant between the two runs?</li><li>What metrics would tell you whether x-prediction is actually better, not just different?</li><li>How would you ask your agent to generate the training script for both variants?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Help me design a minimal A/B experiment to test x-prediction vs. noise prediction for image diffusion. I want to train two identical small models (maybe ~100M params) on a 50k-image subset at 256px resolution for 10k steps each. Everything should be identical except the prediction target. For each model, I need to track: training loss curves, FID score at 5k and 10k steps, and visual quality of 8 fixed-prompt samples. Give me: (1) the experimental design with all variables controlled, (2) what to look for in the results that would confirm or deny the hypothesis, and (3) a rough estimate of how long this would take on a single A100. Don&#x27;t write the full training code — just outline the key configuration differences between the two runs.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>Let&#x27;s zoom out. We just walked through how a small team trained a text-to-image diffusion model <strong>from scratch in 24 hours for $1,500</strong>. Not by finding one magic trick, but by <strong>carefully stacking a dozen optimizations</strong> that each contribute a piece:</p>
+
+<p>🧠 <strong>X-prediction</strong> — predict the clean image, not the noise. This puts predictions on the natural image manifold, making the learning problem fundamentally easier.</p>
+
+<p>🖼️ <strong>Pixel-space training</strong> — ditch the VAE entirely. Simpler pipeline, no external dependencies, and it unlocks classical CV tools.</p>
+
+<p>🧩 <strong>32px patches</strong> — keep the token sequence short (256 at 512px, 1024 at 1024px) so transformers stay fast.</p>
+
+<p>👁️ <strong>Perceptual losses</strong> — LPIPS for texture quality, DINO for semantic correctness. Gentle weights so they guide without dominating.</p>
+
+<p>🚀 <strong>TREAD routing</strong> — skip 50% of tokens through half the transformer blocks. Nearly 2× speedup with minimal quality loss.</p>
+
+<p>📚 <strong>REPA alignment</strong> — use a DINOv3 teacher to accelerate feature learning at intermediate layers.</p>
+
+<p>⚡ <strong>Muon optimizer</strong> — better optimization geometry for weight matrices means faster convergence.</p>
+
+<p>📈 <strong>Resolution scheduling</strong> — 100k steps cheap at 512px, then 20k steps at 1024px to add detail.</p>
+
+<p>The most important lesson isn&#x27;t any single trick — it&#x27;s the <strong>methodology</strong>. Each of these was tested in isolation (Parts 1 and 2 of the blog series), measured carefully, and only the winners made it into the final recipe. That&#x27;s how you do applied ML research.</p></div>
+      <ul class="takeaways-list"><li>Predicting clean images (x-prediction) instead of noise makes pixel-space training viable, eliminating the VAE and simplifying the entire pipeline</li><li>Patch size is a critical hyperparameter — 32px patches at 1024px resolution give 1024 tokens, which is the sweet spot between detail and computational cost</li><li>Perceptual losses (LPIPS + DINO) are free in pixel space and dramatically improve convergence speed — they were awkward-to-impossible in latent space</li><li>Token routing (TREAD) can skip 50% of tokens through most transformer blocks with minimal quality loss — a near-2× speedup</li><li>Multi-resolution training (512px → 1024px) lets you get 80% of the learning done cheaply, then refine at high resolution</li><li>Modern optimizers like Muon, representation alignment, and self-guidance each contribute incremental gains that compound into dramatic speedups when stacked</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Clone the PRX GitHub repo and explore the training configs — the experimental framework lets you test individual tricks in isolation</li><li>Try a scaled-down run at 256px or 512px on a single GPU to validate the pipeline before committing to a full run</li><li>Read Parts 1 and 2 of the PRX blog series to understand how each trick was evaluated independently before being combined</li><li>Experiment with different perceptual loss weights — the LPIPS(0.1) + DINO(0.01) ratio is a starting point, not gospel</li><li>Explore whether this recipe transfers to other domains (video, 3D, audio) where VAE-free training could simplify pipelines</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://huggingface.co/blog/Photoroom/prx-part3" target="_blank" rel="noopener">PRX Part 3 — Training a Text-to-Image Model in 24h!</a> <span class="source-name">(Hugging Face)</span></li><li><a href="https://arxiv.org/abs/2502.03049" target="_blank" rel="noopener">Back to Basics: Let Denoising Generative Models Denoise (Li and He, 2025)</a> <span class="source-name">(arXiv)</span></li><li><a href="https://arxiv.org/abs/2503.01710" target="_blank" rel="noopener">PixelGen: Pixel Diffusion Beats Latent Diffusion with Perceptual Loss</a> <span class="source-name">(arXiv)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI-generated art can’t be copyrighted after Supreme Court declines review</div>
+            <div class="oa-summary">Article URL: https://www.theverge.com/policy/887678/supreme-court-ai-art-copyright Comments URL:...</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">India&#x27;s top court angry after junior judge cites fake AI-generated orders</div>
+            <div class="oa-summary">Indian judge cited fabricated court orders generated by AI, prompting anger from the country&#x27;s top court.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Claude&#x27;s Cycles [pdf]</div>
+            <div class="oa-summary">Donald Knuth analyzes Claude&#x27;s reasoning patterns and cyclic behaviors in a Stanford research paper.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Elevated Errors in Claude.ai</div>
+            <div class="oa-summary">Anthropic status page reporting a service incident with increased error rates on Claude.ai.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Excommunicated devs making games with AI</div>
+            <div class="oa-summary">Game developers shunned by the industry are using AI tools to build games independently.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Ars Technica fires reporter after AI controversy involving fabricated quotes</div>
+            <div class="oa-summary">Ars Technica terminated a reporter caught using AI to fabricate quotes attributed to real sources.</div>
+            <div class="oa-meta">Hacker News AI · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">This startup claims it can stop lightning and prevent catastrophic wildfires</div>
+            <div class="oa-summary">A startup says its technology can suppress lightning strikes to prevent wildfire ignitions like Quebec&#x27;s 2023 disaster.</div>
+            <div class="oa-meta">MIT Tech Review · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">MIT Technology Review Insiders Panel</div>
+            <div class="oa-summary">MIT Technology Review&#x27;s subscriber panel offering exclusive access to editors and expert discussions.</div>
+            <div class="oa-meta">MIT Tech Review · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">The Download: The startup that says it can stop lightning, and inside OpenAI’s Pentagon deal</div>
+            <div class="oa-summary">This is today’s edition of The Download, our weekday newsletter that provides a daily dose of what’s going on in the...</div>
+            <div class="oa-meta">MIT Tech Review · Mar 3</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "AI-generated art can’t be copyrighted after Supreme Court declines review", "tags": "", "source": "Hacker News AI"}, {"title": "India's top court angry after junior judge cites fake AI-generated orders", "tags": "", "source": "Hacker News AI"}, {"title": "Claude's Cycles [pdf]", "tags": "", "source": "Hacker News AI"}, {"title": "Elevated Errors in Claude.ai", "tags": "", "source": "Hacker News AI"}, {"title": "Excommunicated devs making games with AI", "tags": "", "source": "Hacker News AI"}, {"title": "Ars Technica fires reporter after AI controversy involving fabricated quotes", "tags": "", "source": "Hacker News AI"}, {"title": "This startup claims it can stop lightning and prevent catastrophic wildfires", "tags": "tools", "source": "MIT Tech Review"}, {"title": "MIT Technology Review Insiders Panel", "tags": "", "source": "MIT Tech Review"}, {"title": "The Download: The startup that says it can stop lightning, and inside OpenAI’s Pentagon deal", "tags": "", "source": "MIT Tech Review"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "image-gen";
+      var date = "2026-03-04";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
