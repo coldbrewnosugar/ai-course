@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Custom Agent Skills for Claude Code — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-audio">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Teaching Your AI Agent New Tricks</h1>
+      <div class="hero-subtitle">Skills are like apps for your AI — modular expertise packages that turn a generalist agent into a domain specialist. Today we&#x27;ll install some, understand how they work, and build one from scratch.</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">agent-skills</span> <span class="tag">claude-code</span> <span class="tag">plugins</span> <span class="tag">modular-ai</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Two things just landed that are worth paying attention to. First, Anthropic open-sourced their official <a href="https://github.com/anthropics/skills">Agent Skills repo</a> — the same skill system that powers Claude&#x27;s built-in document capabilities (PDF, DOCX, PPTX, XLSX). You can now see exactly how those production skills are structured and build your own.</p>
+
+<p>Second, the community responded <em>fast</em>. A developer named Alireza Rezvani published a <a href="https://github.com/alirezarezvani/claude-skills">library of 86 production-ready skill packages</a> covering everything from security auditing to RAG architecture to financial modeling. It&#x27;s already at 2,300+ stars.</p>
+
+<p>The big idea here is <strong>modular AI expertise</strong>. Instead of writing one massive system prompt that tries to cover everything, you install purpose-built skill packages that the agent loads on demand. Think of it like the difference between a Swiss Army knife and a full workshop — sometimes you need the right specialized tool.</p>
+
+<p>This matters because it changes the economics of AI agent work. Instead of spending 30 minutes crafting the perfect prompt every time you need your agent to do something specialized, you install a skill once and it just <em>knows</em> that domain. And because the format is standardized (a folder with a <code>SKILL.md</code> file), skills are portable across Claude Code, Claude.ai, and the Claude API.</p>
+
+<p>Today we&#x27;ll go from zero to having a custom audio-workflow skill that we built ourselves — and along the way, we&#x27;ll understand the architecture well enough to turn <em>any</em> domain expertise into a reusable skill package.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Understand the Skill Architecture</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we build anything, let&#x27;s grok what a skill actually <em>is</em>. Honestly, when I first heard &quot;agent skills&quot; I expected something complicated — SDKs, APIs, registration flows. Nope.</p>
+
+<p>A skill is just a <strong>folder with a markdown file</strong> called <code>SKILL.md</code>. That&#x27;s it. That&#x27;s the whole thing.</p>
+
+<p>Think of it like a recipe card. The front of the card has the name and a description (&quot;when should the chef use this recipe?&quot;). The back has the actual instructions — step-by-step guidance the agent follows when it activates that skill.</p>
+
+<p>The <code>SKILL.md</code> file has two parts:</p>
+
+<ol>
+<li><strong>YAML frontmatter</strong> — metadata at the top between <code>---</code> markers. Just two required fields: <code>name</code> and <code>description</code>.</li>
+<li><strong>Markdown body</strong> — the actual instructions, examples, and guidelines Claude follows.</li>
+</ol>
+
+<p>The description field is secretly the most important part. It&#x27;s how Claude decides <em>when</em> to activate the skill. It&#x27;s like the label on a toolbox — if you label it poorly, you&#x27;ll never grab the right tool.</p>
+
+<p>More complex skills can also include:</p>
+<ul>
+<li><strong>Python CLI tools</strong> alongside the SKILL.md (scripts the agent can invoke)</li>
+<li><strong>Reference documentation</strong> (specs, style guides, API docs)</li>
+<li><strong>Example files</strong> the agent can reference</li>
+</ul>
+
+<p>But the core is always that one markdown file. Let&#x27;s have our agent show us what one looks like.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to explain the SKILL.md structure by generating a simple example skill
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What kind of simple, everyday task would make a good example skill? Think of something your agent does repeatedly.</li><li>What two pieces of metadata does the frontmatter need?</li><li>What should go in the description to help the agent know WHEN to activate this skill?</li><li>What kind of instructions, examples, and guardrails would make the skill reliable?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a simple SKILL.md file — maybe a code-review skill or a git-commit-message skill. The key thing to notice is the structure:</p>
+
+<p>```yaml</p>
+<p>---</p>
+<p>name: my-skill-name</p>
+<p>description: When to use this skill</p>
+<p>---</p>
+<p>```</p>
+
+<p>Followed by markdown with sections like <code>## Instructions</code>, <code>## Examples</code>, and <code>## Guidelines</code>. The description field should read almost like a trigger condition — &quot;Use this when the user asks for X or when Y happens.&quot; The instructions section is where the real expertise lives — the specific steps and rules the agent follows.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>description</code> field isn&#x27;t just documentation — it&#x27;s the activation trigger. Claude reads it to decide whether this skill is relevant to the current task. Write it like you&#x27;re telling a coworker: &quot;Hey, use this when someone asks you to...&quot;
+      </div>
+        
+      <details class="reveal">
+        <summary>How does Claude actually load skills?</summary>
+        <div class="reveal-body"><p>When you install a skill, it goes into <code>~/.claude/skills/</code> (for Claude Code). When you start a conversation, Claude scans available skills and reads their descriptions. If your request matches a skill&#x27;s description, Claude loads that skill&#x27;s full instructions into its context window — like pulling a reference manual off the shelf mid-conversation.</p>
+
+<p>This is why the description matters so much. A vague description means the skill might get loaded when it shouldn&#x27;t (wasting context) or <em>not</em> loaded when it should (missing the opportunity).</p>
+
+<p>It&#x27;s also why skills should be focused rather than broad. Each skill you load takes up context window space, so a focused skill that does one thing well beats a bloated skill that tries to cover everything.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>What about those document skills Anthropic uses in production?</summary>
+        <div class="reveal-body"><p>The open-sourced repo includes the actual skills that power Claude&#x27;s PDF, DOCX, PPTX, and XLSX handling. These are source-available (not Apache 2.0 like the examples), but studying them is incredibly useful. They show how a production skill handles edge cases, error recovery, and complex multi-step workflows. They&#x27;re the &quot;reference implementation&quot; of what a serious skill looks like. Check <code>skills/pdf</code> and <code>skills/docx</code> in the anthropics/skills repo.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Install Skills from the Plugin Marketplace</h2>
+      </div>
+      <div class="step-body">
+        <p>Now that we know what skills <em>are</em>, let&#x27;s install some. Anthropic built a plugin marketplace right into Claude Code — it&#x27;s like an app store for agent capabilities.</p>
+
+<p>The flow is dead simple. You register a GitHub repo as a &quot;marketplace&quot; (basically telling Claude Code where to find skills), then browse and install whatever you need. The two big marketplaces right now are:</p>
+
+<ul>
+<li><strong>anthropics/skills</strong> — Anthropic&#x27;s official skills, including the document skills that power Claude.ai</li>
+<li><strong>alirezarezvani/claude-skills</strong> — 86 community skills across 9 domains (engineering, product, marketing, compliance, finance, and more)</li>
+</ul>
+
+<p>The community library is particularly wild. There are skills for things like:</p>
+<ul>
+<li><strong>agent-designer</strong> — helps Claude design multi-agent orchestration systems</li>
+<li><strong>rag-architect</strong> — builds RAG pipelines with chunking optimization</li>
+<li><strong>security-auditor</strong> — scans code for vulnerabilities</li>
+<li><strong>iso-13485</strong> — knows medical device quality management standards (!)</li>
+</ul>
+
+<p>Let&#x27;s install some skills and see how the marketplace works. You don&#x27;t need to write any code here — just Claude Code commands.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Walk through installing skills from both the official and community marketplaces in Claude Code
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What&#x27;s the command to register a new marketplace? (Hint: it involves `/plugin`)</li><li>Once registered, how do you browse what&#x27;s available?</li><li>What&#x27;s the difference between installing a whole skill *set* versus a single skill?</li><li>After installation, how do you actually USE an installed skill?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should walk you through the two-step process:</p>
+
+<p><strong>Step 1 — Register the marketplace:</strong></p>
+<p>```</p>
+<p>/plugin marketplace add anthropics/skills</p>
+<p>```</p>
+
+<p><strong>Step 2 — Install skills:</strong></p>
+<p>```</p>
+<p>/plugin install document-skills@anthropic-agent-skills</p>
+<p>```</p>
+
+<p>Or for the community library:</p>
+<p>```</p>
+<p>/plugin marketplace add alirezarezvani/claude-skills</p>
+<p>/plugin install engineering-skills@claude-code-skills</p>
+<p>```</p>
+
+<p>The key insight: after installation, you don&#x27;t need special commands to activate skills. Just mention what you need — &quot;Use the PDF skill to extract form fields from invoice.pdf&quot; — and Claude recognizes the skill should be loaded. It&#x27;s intent-based, not command-based.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        You can install individual skills too, not just whole sets. Use <code>/plugin install skill-security-auditor@claude-code-skills</code> to grab just one. Useful when you don&#x27;t want 21 engineering skills taking up space.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Skills take up context window space when activated. Installing 86 skills doesn&#x27;t mean Claude loads all 86 at once — it reads descriptions and loads what&#x27;s relevant. But if descriptions are too broad, you might get unexpected skill activations. Start with a focused set.
+      </div>
+        
+      <details class="reveal">
+        <summary>What&#x27;s the POWERFUL tier in the community library?</summary>
+        <div class="reveal-body"><p>The community library has a &quot;POWERFUL&quot; tier of 25 advanced skills that go beyond simple task instructions. These include skills like <code>agent-workflow-designer</code> (which knows patterns for sequential, parallel, router, orchestrator, and evaluator agent workflows) and <code>rag-architect</code> (which can design chunking strategies and retrieval evaluation). These skills essentially encode deep architectural knowledge — the kind of thing a senior engineer might spend days researching — into a reusable package. Think of them as &quot;senior consultant in a box.&quot;</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point you should understand: (1) Skills are folders with SKILL.md files — YAML frontmatter + markdown instructions. (2) You can install them from marketplaces using `/plugin` commands. (3) They activate automatically based on intent matching against the description field. Now let&#x27;s build one ourselves.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Design Our Custom Audio Workflow Skill</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where it gets fun. We&#x27;re going to build a custom skill for audio workflows — think transcription, speaker diarization, audio summarization, podcast processing, that kind of thing.</p>
+
+<p>Why audio? Because it&#x27;s a domain where Claude is generally helpful but not <em>specialized</em>. Without a skill, if you ask Claude to help process a podcast episode, it&#x27;ll give you reasonable but generic advice. With a well-crafted skill, it&#x27;ll know the specific tools (Whisper, pyannote, ffmpeg), the optimal workflow order, common pitfalls, and output formats.</p>
+
+<p>Before we write anything, let&#x27;s think about what makes a great skill. This is the most important step — the <em>design</em> — and it&#x27;s where your agent can really help.</p>
+
+<p>A good skill has three layers:</p>
+<ol>
+<li><strong>When</strong> — a precise description of when this skill should activate</li>
+<li><strong>What</strong> — the specific expertise and workflow steps</li>
+<li><strong>How</strong> — examples, guardrails, and edge case handling</li>
+</ol>
+
+<p>Think of it like training a new team member. You wouldn&#x27;t just say &quot;handle audio stuff.&quot; You&#x27;d explain the specific scenarios they&#x27;ll encounter, the tools they should reach for, and the mistakes to avoid.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to help you design the SKILL.md for an audio-workflow skill — focus on the description field and the main instruction sections
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What specific audio tasks should this skill cover? Transcription? Diarization? Noise reduction? Summarization?</li><li>What tools and libraries should the skill know about? (Think ffmpeg, Whisper, pyannote...)</li><li>What&#x27;s the typical workflow ORDER for processing audio? Does it matter?</li><li>What are common mistakes people make with audio processing that the skill should warn about?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a well-structured SKILL.md with a description like: &quot;Activate when the user needs to transcribe, process, analyze, or summarize audio files. Covers speech-to-text, speaker diarization, audio cleaning, and content extraction workflows.&quot;</p>
+
+<p>The instructions section should cover a logical workflow: (1) Audio preparation (format conversion, noise reduction with ffmpeg), (2) Transcription (Whisper model selection based on quality/speed needs), (3) Post-processing (speaker diarization, timestamp alignment), (4) Content extraction (summarization, key moments, action items).</p>
+
+<p>It should include guidelines like: &quot;Always check audio format before processing — convert to WAV 16kHz mono for best transcription results&quot; and &quot;For files over 25MB, chunk the audio rather than processing all at once.&quot;</p>
+
+<p>The whole thing should be one markdown file — no code to write, just domain expertise encoded as instructions.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The best skills encode <em>workflow knowledge</em>, not just tool knowledge. Anyone can Google &quot;how to use Whisper.&quot; The value of a skill is knowing the ORDER of operations, the decision points (&quot;use the large model for this, the tiny model for that&quot;), and the gotchas (&quot;always convert to mono 16kHz first&quot;).
+      </div>
+        
+      <details class="reveal">
+        <summary>What makes a skill description great vs. mediocre?</summary>
+        <div class="reveal-body"><p><strong>Mediocre:</strong> &quot;A skill for audio processing.&quot;</p>
+
+<p><strong>Good:</strong> &quot;Activate when the user needs to transcribe, process, analyze, or summarize audio files including podcasts, interviews, meetings, and voice memos. Covers speech-to-text with Whisper, speaker diarization with pyannote, audio format conversion with ffmpeg, and content extraction workflows.&quot;</p>
+
+<p>The good version lists specific <strong>trigger scenarios</strong> (podcasts, interviews, meetings) and <strong>specific capabilities</strong> (Whisper, pyannote, ffmpeg). This helps Claude match the skill to the right requests. The mediocre version would match too broadly (any mention of audio) or miss specific use cases (&quot;summarize this meeting recording&quot; might not trigger &quot;audio processing&quot;).</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Can skills include CLI tools?</summary>
+        <div class="reveal-body"><p>Yes! More advanced skills can include Python scripts alongside the SKILL.md. For our audio skill, you could add a <code>tools/</code> directory with scripts for common operations — like a <code>chunk_audio.py</code> that splits large files, or a <code>format_transcript.py</code> that converts raw Whisper output into a clean document. The SKILL.md would reference these tools in its instructions: &quot;For files over 25MB, use the chunk_audio tool to split into segments.&quot; Claude Code can then execute these tools as part of the workflow. This is how the production document skills work — they have significant Python tooling alongside their SKILL.md.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;re writing the description field for your audio skill. A user might say &#x27;clean up this podcast audio&#x27; or &#x27;transcribe my meeting recording&#x27; or &#x27;summarize what was said in this voice memo.&#x27; Which description approach is best?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">List specific trigger scenarios and name the tools/capabilities the skill covers</label>
+          <div class="decision-feedback correct">&#10003; Correct! Exactly right. A good description includes specific scenarios (&#x27;podcasts, meetings, interviews, voice memos&#x27;) and specific capabilities (&#x27;transcription with Whisper, diarization, format conversion with ffmpeg&#x27;). This gives Claude enough signal to match diverse user requests to this skill without false positives.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Keep it short and generic — &#x27;Handles all audio-related tasks&#x27;</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Too broad. This would activate for requests like &#x27;help me pick a podcast mic&#x27; or &#x27;what&#x27;s the best audio format for streaming?&#x27; — tasks this skill isn&#x27;t designed for. Vague descriptions lead to incorrect activations and wasted context window.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Write a very technical description focused on file formats and codecs</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Too narrow and too technical. Users rarely describe their needs in terms of codecs — they say &#x27;transcribe this&#x27; or &#x27;clean up the audio.&#x27; Your description should match how people actually talk about their needs, not how an audio engineer would describe the technical implementation.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Build and Install the Skill Locally</h2>
+      </div>
+      <div class="step-body">
+        <p>Now let&#x27;s take our design and make it real. The beauty of the skill system is that &quot;installing&quot; a custom skill is just putting a folder in the right place. No build step, no compilation, no registration API.</p>
+
+<p>For Claude Code, custom skills go in <code>~/.claude/skills/</code>. For Claude.ai, you upload them through the UI. For the API, you pass them in the request.</p>
+
+<p>We&#x27;re going to have our agent create the final polished SKILL.md and put it in the right location. But here&#x27;s the thing — this is also where we add the <em>good stuff</em>: specific examples that show Claude exactly what good output looks like, edge case handling, and maybe even a helper script or two.</p>
+
+<p>Think of examples in a skill like unit tests for behavior. They don&#x27;t just document what to do — they anchor the agent&#x27;s understanding of what &quot;good&quot; looks like for this domain.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to create the final audio-workflow skill folder with a polished SKILL.md and install it locally
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>Where exactly should the skill folder go on your filesystem?</li><li>What examples would help Claude understand what good audio workflow output looks like?</li><li>Should you include a helper script for any common operations like audio chunking?</li><li>How will you test that the skill activates correctly — what test prompt would you try?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should create a folder at <code>~/.claude/skills/audio-workflow/</code> containing a polished <code>SKILL.md</code>. The file should have:</p>
+
+<ul>
+<li>Frontmatter with <code>name: audio-workflow</code> and a detailed description</li>
+<li>A <code>## Workflow</code> section with the step-by-step processing order</li>
+<li>A <code>## Tool Reference</code> section listing ffmpeg, Whisper, and pyannote with when to use each</li>
+<li>A <code>## Examples</code> section with 2-3 scenarios (&quot;User has a 2-hour podcast episode&quot; → here&#x27;s the workflow)</li>
+<li>A <code>## Common Pitfalls</code> section with things like sample rate mismatches and memory limits</li>
+</ul>
+
+<p>The agent might also create a simple <code>tools/chunk_audio.py</code> helper script. After creation, test it by asking: &quot;I have a 90-minute meeting recording in MP3 format. Help me transcribe it and identify who said what.&quot;</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Test your skill with prompts that DON&#x27;T mention audio processing directly. Try &#x27;I recorded a client call and need to pull out the action items.&#x27; A well-described skill should still activate because the description covers meeting recordings and content extraction.
+      </div>
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        If your skill references tools like Whisper&#x27;s API, the user will need their own OpenAI API key for the transcription step. Make sure your skill instructions mention this requirement clearly — &quot;Requires: OpenAI API key for Whisper, or local Whisper installation.&quot;
+      </div>
+        
+      <details class="reveal">
+        <summary>How to distribute your skill to others</summary>
+        <div class="reveal-body"><p>Once your skill works locally, sharing it is straightforward. Push the skill folder to a GitHub repo (can be part of a larger skills collection). Others can either:</p>
+
+<ol>
+<li><strong>Clone and copy</strong> — just drop the folder into their <code>~/.claude/skills/</code></li>
+<li><strong>Use the marketplace</strong> — if you structure your repo correctly with a plugin manifest, others can install via <code>/plugin marketplace add your-username/your-repo</code> and then <code>/plugin install your-skill@your-marketplace</code></li>
+<li><strong>Upload to Claude.ai</strong> — the skill folder works directly with Claude.ai&#x27;s skill upload feature</li>
+<li><strong>Use via API</strong> — pass the SKILL.md contents in API requests</li>
+</ol>
+
+<p>The format is intentionally simple so that skills are maximally portable. One SKILL.md works everywhere.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a working custom audio-workflow skill installed at `~/.claude/skills/audio-workflow/`. Test it by asking Claude a question about processing audio — it should respond with noticeably more specific, structured guidance than before. If the responses feel generic, your description might need to be more precise about when to activate.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Skill Chaining — Making Skills Work Together</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where skills go from &quot;neat trick&quot; to &quot;actually powerful.&quot; Skills can reference other skills. Your audio-workflow skill can say, in its instructions, &quot;After transcription is complete, use the content-summarization skill to generate a brief.&quot;</p>
+
+<p>This is skill chaining, and it&#x27;s the pattern that makes the whole system scale. Instead of one monolithic mega-skill that tries to handle everything, you build focused skills that hand off to each other — like a relay team.</p>
+
+<p>The community library&#x27;s <code>agent-workflow-designer</code> skill actually knows five different chaining patterns:</p>
+<ul>
+<li><strong>Sequential</strong> — A → B → C (our audio pipeline)</li>
+<li><strong>Parallel</strong> — A and B run simultaneously, C combines results</li>
+<li><strong>Router</strong> — a decision skill picks which specialist skill to invoke</li>
+<li><strong>Orchestrator</strong> — a coordinator skill manages multiple workers</li>
+<li><strong>Evaluator</strong> — a quality-check skill that reviews another skill&#x27;s output</li>
+</ul>
+
+<p>For our audio skill, the natural chain is sequential: audio-preparation → transcription → diarization → summarization. But you could also imagine a parallel pattern where transcription and noise analysis happen simultaneously.</p>
+
+<p>Let&#x27;s design a chain that connects our audio skill to a summarization or action-item extraction step.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to add skill chaining instructions to your audio-workflow skill — specifically, connecting it to a downstream summarization or action-item extraction step
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What should the handoff look like? What data passes from one skill to the next?</li><li>Should the chain be hardcoded, or should the skill suggest the next step and let the user decide?</li><li>What if someone wants just transcription without summarization — how do you keep the chain flexible?</li><li>Could you use a router pattern where the skill decides between &#x27;meeting notes,&#x27; &#x27;podcast show notes,&#x27; and &#x27;interview highlights&#x27; based on the content?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should update your SKILL.md with a <code>## Workflow Chaining</code> section that describes how this skill connects to others. The approach should be flexible — not hardcoded chains, but suggested next steps.</p>
+
+<p>Something like: &quot;After transcription, suggest the appropriate follow-up based on content type: for meetings → action-item extraction, for podcasts → show notes generation, for interviews → highlight compilation.&quot;</p>
+
+<p>The key design insight is that the skill should <strong>suggest</strong> the chain, not enforce it. The instructions might say: &quot;Once transcription is complete, ask the user if they&#x27;d like to proceed with content analysis. If the transcript appears to be a meeting, recommend action-item extraction. If it&#x27;s a podcast or interview, recommend highlights and summary.&quot;</p>
+
+<p>This is the router pattern in action — the audio skill acts as both a processor and a smart dispatcher.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The best skill chains feel invisible. The user says &#x27;process this meeting recording and give me the action items,&#x27; and the agent seamlessly flows through audio prep → transcription → diarization → action-item extraction — each step using the right specialized knowledge.
+      </div>
+        
+      <details class="reveal">
+        <summary>Subagents — the next level of skill architecture</summary>
+        <div class="reveal-body"><p>The community library includes an <code>agent-designer</code> skill that knows how to build multi-agent systems. In Claude Code, skills can spawn subagents — separate Claude instances with their own skill loadouts, working on subtasks. Imagine your audio skill spawning a transcription subagent (optimized for Whisper workflows) and a summarization subagent (optimized for content analysis) running in parallel.</p>
+
+<p>This is still emerging, but the pattern is powerful: instead of one agent switching between skills sequentially, you have specialized agents working simultaneously. The <code>agent-workflow-designer</code> skill in the community library encodes the patterns for designing these multi-agent systems — sequential, parallel, router, orchestrator, and evaluator topologies.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Cross-platform portability — one skill, three platforms</summary>
+        <div class="reveal-body"><p>Here&#x27;s something genuinely cool: the SKILL.md format works identically across Claude Code, Claude.ai, and the Claude API. Your audio-workflow skill folder works in all three without modification. In Claude Code, it&#x27;s a local folder. In Claude.ai, you upload it. In the API, you pass the content in your request. The community library even includes install scripts for OpenAI Codex and OpenClaw — the format is deliberately simple enough that <em>any</em> AI agent platform can parse it. It&#x27;s essentially an emerging standard for packaging agent expertise.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You&#x27;ve built your audio skill and want to add chaining to a summarization step. What&#x27;s the best approach?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt0">
+          <label for="decision_10_opt0">Have the skill suggest the next step based on content type, letting the user decide</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the router pattern done right. The skill uses its domain knowledge to recommend the best follow-up (meeting notes vs. podcast show notes vs. interview highlights), but the user stays in control. This makes the chain flexible without sacrificing the specialized knowledge that makes each recommendation smart.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt1">
+          <label for="decision_10_opt1">Hardcode a fixed chain that always runs: transcribe → diarize → summarize</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Too rigid. Sometimes you just want a transcript. Sometimes you need speaker labels but not a summary. A hardcoded chain forces unnecessary processing and frustrates users who only need part of the workflow. Good skills are modular — each step should be useful on its own.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_10" id="decision_10_opt2">
+          <label for="decision_10_opt2">Don&#x27;t chain at all — keep skills completely independent</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This misses the biggest benefit of the skill system. Independent skills can&#x27;t leverage each other&#x27;s context. If your audio skill finishes transcription but doesn&#x27;t know that a summarization skill exists, the user has to manually bridge the gap. Skills should be independent but *aware* of complementary skills.</div>
+        </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build a second skill that pairs with the audio workflow — a &#x27;meeting-intelligence&#x27; skill that takes transcripts and extracts structured meeting notes with action items, decisions made, and follow-up questions</div>
+      <div class="your-turn-context">This is the natural companion to our audio skill. Once you have a transcript, the most common request is &#x27;what happened in this meeting and what do I need to do?&#x27; This skill should encode the expertise of someone who&#x27;s really good at taking meeting notes — they know what matters, what&#x27;s noise, and how to structure output so it&#x27;s actually useful.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What sections should structured meeting notes have? Think about what you&#x27;d actually want to read after missing a meeting.</li><li>How should the skill handle different meeting types — standup vs. brainstorm vs. client call?</li><li>What&#x27;s the difference between an &#x27;action item&#x27; and a &#x27;decision&#x27;? How should the skill distinguish them?</li><li>How should this skill reference the audio-workflow skill in its description — to enable chaining?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Create a SKILL.md for a meeting-intelligence skill that extracts structured notes from meeting transcripts. It should output: (1) a 3-sentence executive summary, (2) key decisions made with who made them, (3) action items with owners and deadlines mentioned, (4) open questions that weren&#x27;t resolved, and (5) follow-up topics for the next meeting. It should handle different meeting types — standups should be brief, brainstorms should capture all ideas even rough ones, and client calls should flag any commitments made. The description should mention that it pairs with audio-workflow for full audio-to-insights pipelines. Include examples of good vs. bad meeting note output.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>We just went from &quot;what even is an agent skill?&quot; to building and installing a custom audio-workflow skill with chaining. Let&#x27;s take stock of what we actually learned.</p>
+
+<p>The skill system is deceptively simple in architecture — a folder with a markdown file — but surprisingly powerful in practice. The key insight is that <strong>skills encode domain expertise as structured instructions</strong>, not code. You&#x27;re not writing a plugin or an API integration. You&#x27;re writing a really good briefing document that turns a generalist AI into a specialist.</p>
+
+<p>We installed skills from both Anthropic&#x27;s official marketplace and the 86-skill community library. We designed and built a custom audio-workflow skill from scratch, focusing on the three layers that matter: <em>when</em> it should activate (the description), <em>what</em> it knows (workflow steps and tool knowledge), and <em>how</em> it handles edge cases (examples and guardrails).</p>
+
+<p>Then we leveled up by adding skill chaining — making our audio skill smart enough to suggest the right follow-up step based on what it just processed. This router pattern is the key to building AI workflows that feel seamless rather than stitched together.</p>
+
+<p>The meta-lesson here is about <strong>how to think about AI agent architecture</strong>. Skills are the building block. Chains are the wiring. And the marketplace is where expertise compounds across the community. Your audio skill could help the next person who needs it, just like the 86 community skills are already helping you.</p></div>
+      <ul class="takeaways-list"><li>Skills are just folders with SKILL.md files — YAML frontmatter (name + description) plus markdown instructions. No code required, though you can include CLI tools for complex skills.</li><li>The description field is the activation trigger — write it like you&#x27;re telling a coworker when to reach for this particular playbook. Specific scenarios and capabilities beat vague labels.</li><li>Skill chaining turns individual skills into intelligent workflows — use the router pattern (suggest next steps based on content) rather than hardcoded pipelines.</li><li>Skills are portable across Claude Code, Claude.ai, and the Claude API — one SKILL.md works everywhere, making your expertise investment highly reusable.</li><li>The community library (86+ skills) proves this architecture scales — from security auditing to financial modeling to medical device compliance, domain expertise is becoming modular and shareable.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Browse the community library at github.com/alirezarezvani/claude-skills — find a domain you know well and study how they structured the SKILL.md</li><li>Build a skill for your own repeated workflow — whatever you find yourself explaining to Claude over and over is a skill waiting to be extracted</li><li>Explore the POWERFUL tier skills like agent-workflow-designer and rag-architect — they encode advanced architectural patterns you can learn from</li><li>Publish your skills to a GitHub repo and register it as a marketplace so your team (or the community) can install them with one command</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/anthropics/skills" target="_blank" rel="noopener">anthropics/skills</a> <span class="source-name">(GitHub Trending Python)</span></li><li><a href="https://github.com/alirezarezvani/claude-skills" target="_blank" rel="noopener">alirezarezvani/claude-skills</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Father claims Google&#x27;s AI product fuelled son&#x27;s delusional spiral</div>
+            <div class="oa-summary">A father alleges Google&#x27;s AI chatbot worsened his son&#x27;s mental health and delusional thinking.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Did Alibaba just kneecap its powerful Qwen AI team?</div>
+            <div class="oa-summary">Key researchers are leaving Alibaba&#x27;s Qwen AI lab, raising questions about the team&#x27;s future direction.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Extending single-minus amplitudes to gravitons</div>
+            <div class="oa-summary">Researchers used GPT-5.2 Pro to help derive and verify new graviton amplitude results in quantum gravity.</div>
+            <div class="oa-meta">OpenAI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Marcus AI Claims Dataset</div>
+            <div class="oa-summary">A dataset cataloging specific claims made by AI skeptic Gary Marcus for systematic fact-checking and evaluation.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">The Download: Earth’s rumblings, and AI for strikes on Iran</div>
+            <div class="oa-summary">This is today’s edition of The Download, our weekday newsletter that provides a daily dose of what’s going on in the...</div>
+            <div class="oa-meta">MIT Tech Review · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "Father claims Google's AI product fuelled son's delusional spiral", "tags": "", "source": "Hacker News AI"}, {"title": "Did Alibaba just kneecap its powerful Qwen AI team?", "tags": "", "source": "Hacker News AI"}, {"title": "Extending single-minus amplitudes to gravitons", "tags": "", "source": "OpenAI"}, {"title": "Marcus AI Claims Dataset", "tags": "", "source": "Hacker News AI"}, {"title": "The Download: Earth’s rumblings, and AI for strikes on Iran", "tags": "", "source": "MIT Tech Review"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "audio";
+      var date = "2026-03-05";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

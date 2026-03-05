@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Run OpenAI&#x27;s gpt-oss Open-Weight Models Locally — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>OpenAI Goes Open — And It&#x27;s Actually Good</h1>
+      <div class="hero-subtitle">gpt-oss gives you full chain-of-thought reasoning, native tool use, and it runs on hardware you can actually afford. Let&#x27;s set it up.</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">model-release</span> <span class="tag">open-weights</span> <span class="tag">local-inference</span> <span class="tag">reasoning</span> <span class="tag">fine-tuning</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Okay, so here&#x27;s the headline: <strong>OpenAI just released two open-weight models under Apache 2.0</strong>. Yes, that OpenAI. The one that&#x27;s been synonymous with &quot;closed-source&quot; for the past three years.</p>
+
+<p>The models are called <strong>gpt-oss-120b</strong> and <strong>gpt-oss-20b</strong>, and they&#x27;re genuinely impressive:</p>
+
+<ul>
+<li><strong>gpt-oss-120b</strong> has 117B total parameters but only <strong>5.1B active</strong> at any time (thanks to Mixture-of-Experts architecture). It fits on a single H100.</li>
+<li><strong>gpt-oss-20b</strong> has 21B parameters with 3.6B active — and runs in <strong>16GB of VRAM</strong>. That&#x27;s a consumer GPU.</li>
+<li>Both come with full chain-of-thought reasoning, configurable reasoning effort (low/medium/high), and native function calling.</li>
+<li>They use a new thing called the <strong>Harmony response format</strong>, which is essential — the models literally won&#x27;t work right without it.</li>
+</ul>
+
+<p>The real kicker? They were post-trained with <strong>MXFP4 quantization</strong> baked in, meaning the quantization isn&#x27;t an afterthought — all the benchmarks were run with it. You&#x27;re getting the real deal, not a degraded version.</p>
+
+<p>Today we&#x27;re going to spin up gpt-oss-20b locally, understand what makes it tick, test its agentic capabilities, and peek at fine-tuning. Let&#x27;s go.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Understand the Architecture Before You Install Anything</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we touch any code, let&#x27;s build a mental model of what gpt-oss actually <em>is</em>. This matters because it affects every decision you&#x27;ll make — from which GPU you need to how you format your prompts.</p>
+
+<p><strong>Mixture-of-Experts (MoE) — the restaurant analogy:</strong></p>
+<p>Imagine a restaurant with 20 specialized chefs (math chef, writing chef, coding chef, etc.), but for any given dish, only 2-3 chefs actually work on it. That&#x27;s MoE. gpt-oss-120b has 117 billion parameters total, but only routes through ~5 billion for each token. You get big-model intelligence at small-model speed.</p>
+
+<p><strong>MXFP4 quantization — built in, not bolted on:</strong></p>
+<p>Most quantized models feel like photocopies of photocopies. gpt-oss was <em>post-trained</em> with MXFP4 quantization, meaning the model learned to work well at lower precision. Think of it like a musician who practiced on a slightly out-of-tune piano — they&#x27;ve adapted to it, so the performance still sounds great.</p>
+
+<p><strong>The Harmony response format — this is the big one:</strong></p>
+<p>Harmony is a structured output format that gpt-oss was trained on exclusively. It handles things like separating the model&#x27;s internal reasoning (chain-of-thought) from its final answer, and it structures tool calls in a specific way. If you don&#x27;t use Harmony, the model will produce garbage. It&#x27;s not optional — it&#x27;s like trying to speak French to someone who only understands Mandarin.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain the hardware requirements for both gpt-oss models so you can decide which one to run
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What GPU do you actually have? What&#x27;s its VRAM?</li><li>What&#x27;s the difference between total parameters and active parameters — and why does it matter for memory?</li><li>Should you ask about CPU-only inference as a fallback?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you a clear comparison table: gpt-oss-120b needs ~80GB VRAM (one H100 or MI300X), while gpt-oss-20b fits in ~16GB (RTX 4090, 5090, or even an RTX 4060 Ti 16GB). It should explain that MoE means you need enough memory for ALL parameters even though only some are active per token — the routing happens at inference time. For CPU-only, it&#x27;ll likely warn you it&#x27;s technically possible but painfully slow.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        For this workshop, we&#x27;re focusing on <strong>gpt-oss-20b</strong> since it&#x27;s the one most people can actually run. If you have an H100 lying around, everything applies to the 120b too — just swap the model name.
+      </div>
+        
+      <details class="reveal">
+        <summary>What exactly is MXFP4 and why should I care?</summary>
+        <div class="reveal-body"><p>MXFP4 stands for Microscaling Floating Point 4-bit. Normal FP16 uses 16 bits per parameter. MXFP4 uses just 4 bits but with a clever twist: groups of values share a scaling factor, which preserves more information than naive 4-bit quantization. The &#x27;microscaling&#x27; part means each small block of weights gets its own scale, reducing the error that accumulates with cruder approaches. The practical result: gpt-oss-120b uses about 60GB of memory instead of 230GB+. That&#x27;s the difference between &#x27;you need a cluster&#x27; and &#x27;you need one GPU.&#x27;</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Spin Up gpt-oss-20b with vLLM</h2>
+      </div>
+      <div class="step-body">
+        <p>vLLM is the recommended way to serve gpt-oss. It gives you an OpenAI-compatible API server, which means any code or tool that talks to the OpenAI API can talk to your local model with zero changes. You just point it at <code>localhost</code> instead of <code>api.openai.com</code>.</p>
+
+<p>The gpt-oss team released a special build of vLLM (<code>0.10.1+gptoss</code>) that has all the necessary kernels for MXFP4 and the Harmony format baked in. This isn&#x27;t the standard vLLM pip package — you need to install from their custom index.</p>
+
+<p>Honestly, this part confused me at first too — there are three different pip index URLs involved. But it&#x27;s just one install command, and then one serve command. Let&#x27;s get our agent to walk us through it.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to give you the exact setup commands to install vLLM with gpt-oss support and start serving the 20b model
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What package manager does vLLM recommend? (Hint: it&#x27;s not plain pip)</li><li>Why might you need a special version of vLLM instead of the standard one?</li><li>What happens when you run the serve command — does it download the model automatically?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should give you two commands. First, a <code>uv pip install</code> command that pulls vLLM 0.10.1+gptoss from a special index URL (plus PyTorch nightly for CUDA 12.8). Second, <code>vllm serve openai/gpt-oss-20b</code> which auto-downloads the model from Hugging Face and starts an OpenAI-compatible server on port 8000. It should mention the <code>--index-strategy unsafe-best-match</code> flag and explain it&#x27;s needed because you&#x27;re mixing multiple package indexes.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The initial model download is <strong>large</strong> — expect 10-15GB for the 20b model. Make sure you have enough disk space and a decent internet connection. The model gets cached by Hugging Face, so subsequent starts are fast.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Once the server is running, you can test it with a simple <code>curl</code> to <code>http://localhost:8000/v1/chat/completions</code>. It speaks the exact same protocol as OpenAI&#x27;s API.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why vLLM instead of just using Transformers directly?</summary>
+        <div class="reveal-body"><p>You <em>can</em> use HuggingFace Transformers directly — the repo has examples for that. But vLLM gives you three big advantages: (1) <strong>PagedAttention</strong> manages GPU memory like virtual memory manages RAM, so you can serve more concurrent requests, (2) <strong>continuous batching</strong> means new requests don&#x27;t have to wait for the current batch to finish, and (3) the <strong>OpenAI-compatible API</strong> means you can swap between your local model and OpenAI&#x27;s hosted version with one line change. For a workshop, Transformers is fine. For anything production-adjacent, vLLM is the move.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have vLLM running with gpt-oss-20b, serving on localhost:8000. You can verify it&#x27;s working by hitting the `/v1/models` endpoint — you should see `openai/gpt-oss-20b` listed. If you&#x27;re getting CUDA errors, double-check your GPU has at least 16GB of VRAM and that you installed the right PyTorch nightly.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Talk to Your Local Model — With Harmony and Reasoning Effort</h2>
+      </div>
+      <div class="step-body">
+        <p>Now for the fun part — actually talking to the model. But there are two things that make gpt-oss different from just chatting with Llama or Mistral:</p>
+
+<p><strong>1. The Harmony format is mandatory.</strong></p>
+<p>When you use the vLLM OpenAI-compatible server, Harmony is handled for you automatically. But if you ever use the model directly (through Transformers, for example), you need the <code>openai-harmony</code> package to format your messages correctly. Think of Harmony as the envelope your letter has to go in — the model was trained to read messages in this specific packaging.</p>
+
+<p><strong>2. Reasoning effort is configurable.</strong></p>
+<p>You can set reasoning to <code>low</code>, <code>medium</code>, or <code>high</code>. Low is fast but shallow — good for simple lookups or classification. High gives you deep chain-of-thought but takes longer. It&#x27;s like asking someone &#x27;quick, what&#x27;s 2+2?&#x27; versus &#x27;walk me through this proof step by step.&#x27;</p>
+
+<p>The coolest part? You get the <strong>full chain-of-thought</strong> in the response. Unlike OpenAI&#x27;s hosted models where reasoning is hidden, here you can see exactly how the model thought through a problem. This is gold for debugging and understanding model behavior.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to show you how to send a request to your local vLLM server with configurable reasoning effort, using the OpenAI Python client
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>Since vLLM speaks the OpenAI protocol, what client library can you reuse?</li><li>How would you point the OpenAI client at localhost instead of OpenAI&#x27;s servers?</li><li>Where does reasoning effort get specified — in the messages, headers, or somewhere else?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should show you that you use the standard <code>openai</code> Python client, but set <code>base_url</code> to <code>http://localhost:8000/v1</code> and <code>api_key</code> to any dummy string (it&#x27;s local, no auth needed). Reasoning effort goes in the request as a parameter. The key insight: the response includes a <code>reasoning</code> field with the full chain-of-thought, separate from the final <code>content</code>. You can inspect the model&#x27;s thinking process directly.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Try the same question at <code>low</code> and <code>high</code> reasoning effort and compare the responses. For a math problem, <code>low</code> might give you a quick answer while <code>high</code> shows you every step of the derivation. The latency difference is real — plan accordingly for your use case.
+      </div>
+        
+      <details class="reveal">
+        <summary>What&#x27;s actually in the Harmony format?</summary>
+        <div class="reveal-body"><p>Harmony structures the conversation into distinct sections: system instructions, user messages, assistant reasoning (the chain-of-thought), and assistant responses. It also has specific formatting for tool calls and tool results. The key innovation is that it cleanly separates &#x27;thinking&#x27; from &#x27;answering&#x27; — the model generates its reasoning in a dedicated block, then produces the user-facing response in another. This is why you get full chain-of-thought access. Without Harmony, the model tries to generate everything in one stream and gets confused about what&#x27;s internal reasoning versus what to show the user.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to build a coding assistant that answers questions quickly. Which reasoning effort should you default to?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">Medium — balanced speed and depth for most coding questions</label>
+          <div class="decision-feedback correct">&#10003; Correct! Medium gives you solid reasoning without the latency hit of high. For most coding questions — explaining code, suggesting fixes, writing functions — medium provides enough depth. You can always bump specific queries to high when you need deep analysis (like debugging a complex race condition).</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">High — always maximize reasoning for the best answers</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. High reasoning is great for genuinely hard problems, but it significantly increases latency and compute. For a coding assistant where users expect quick responses, high would make the experience feel sluggish. Most coding questions don&#x27;t need deep multi-step reasoning — save high for the hard stuff.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Low — speed is king for developer tools</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Low is too shallow for a coding assistant. It might work for autocomplete or simple lookups, but coding questions often require understanding context, tracing logic, and considering edge cases. Low reasoning would give you superficial answers that miss important nuances. You&#x27;d end up frustrating your users.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Test Agentic Capabilities — Function Calling That Actually Works</h2>
+      </div>
+      <div class="step-body">
+        <p>Here&#x27;s where gpt-oss gets really interesting. These models have <strong>native function calling</strong> — they were trained to understand tool definitions, decide when to call tools, and format the calls correctly. This isn&#x27;t a hack or a prompt engineering trick; it&#x27;s baked into the model&#x27;s training.</p>
+
+<p>What does &#x27;native&#x27; mean in practice? You define your tools (functions with names, descriptions, and parameter schemas), include them in the request, and the model will:</p>
+<ol>
+<li>Decide if any tool is relevant to the user&#x27;s question</li>
+<li>Generate a properly formatted tool call with the right arguments</li>
+<li>Wait for the result, then incorporate it into its reasoning</li>
+</ol>
+
+<p>This is the foundation of agentic AI — a model that can take actions, not just generate text. And now you can run it entirely on your own hardware, with no API calls leaving your network.</p>
+
+<p>The vLLM server handles the tool calling protocol just like OpenAI&#x27;s API does, so if you&#x27;ve ever used function calling with GPT-4, the interface is identical.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to set up a function calling example where the local model can check the weather and do unit conversions
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How do you describe a tool to the model — what info does it need?</li><li>What happens after the model generates a tool call? Who actually runs the function?</li><li>How does the conversation flow work — model calls tool, you return result, model responds to user?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain the three-step dance: (1) you send the user message plus tool definitions (each tool has a name, description, and JSON schema for parameters), (2) the model responds with a tool_call instead of text content, (3) you execute the function yourself, send the result back as a &#x27;tool&#x27; role message, and the model generates its final response. The agent should give you a small example with a weather tool definition and show the back-and-forth flow. The key insight: the model never actually runs the tools — it just decides what to call and with what arguments. You&#x27;re the one executing the functions.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The model can call <strong>multiple tools</strong> in a single response and handle <strong>parallel function calls</strong>. Try giving it a question that requires two lookups — like &#x27;What&#x27;s the weather in Tokyo and convert it to Fahrenheit?&#x27; — and watch it generate both calls at once.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does function calling actually work under the hood?</summary>
+        <div class="reveal-body"><p>When you include tool definitions in your request, the Harmony format injects them into the system prompt in a structured way the model was trained to recognize. The model then generates special tokens that signal &#x27;I want to call a tool&#x27; instead of producing regular text. The vLLM server intercepts these tokens and packages them as a <code>tool_calls</code> object in the API response. It&#x27;s essentially the model having a vocabulary that includes &#x27;call this function with these args&#x27; alongside regular words. The training process taught it when to use this vocabulary versus just answering directly.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Fine-Tune gpt-oss with Unsloth — The 70% Less VRAM Trick</h2>
+      </div>
+      <div class="step-body">
+        <p>So you&#x27;ve got gpt-oss running locally and it&#x27;s pretty good out of the box. But what if you want to make it <em>yours</em> — trained on your data, optimized for your specific use case?</p>
+
+<p>Unsloth already supports gpt-oss fine-tuning, and the numbers are wild: <strong>2x faster training with 70% less VRAM</strong> compared to standard approaches. They even have GRPO (Group Relative Policy Optimization) support for reinforcement learning, which is how you&#x27;d train your own reasoning behaviors.</p>
+
+<p>The secret sauce is LoRA (Low-Rank Adaptation). Instead of updating all 21 billion parameters, LoRA freezes the base model and trains small adapter matrices — typically adding less than 1% new parameters. Unsloth then optimizes the heck out of this process with custom Triton kernels.</p>
+
+<p>Think of it like this: the base model is a skilled chef who knows how to cook everything. Fine-tuning with LoRA is like giving them a small recipe card for your specific dish — they still use all their general cooking knowledge, but now they have your precise instructions on top.</p>
+
+<p>The practical impact? You can fine-tune gpt-oss-20b on a single consumer GPU with ~6GB of VRAM. That&#x27;s a $200 graphics card territory.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to explain how you&#x27;d set up an Unsloth fine-tuning run for gpt-oss-20b with LoRA, and what decisions you need to make
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What format does your training data need to be in?</li><li>What&#x27;s the difference between regular fine-tuning (SFT) and GRPO — when would you use each?</li><li>What are the key LoRA hyperparameters you&#x27;d want to understand before starting?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should walk you through the key decisions: (1) SFT for teaching the model new knowledge or style, GRPO for teaching it to reason better on specific tasks, (2) your data needs to be in conversation format matching the Harmony template, (3) key LoRA parameters are rank (higher = more capacity but more VRAM, typically 16-64), target modules (which layers to adapt), and learning rate. It should mention that Unsloth has free Colab notebooks that do everything for you — you literally just swap in your dataset and click run. The agent should emphasize that you need the <code>openai-harmony</code> package to format training data correctly.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Always format your fine-tuning data using the <strong>Harmony format</strong>. If you train on plain text or standard ChatML, you&#x27;ll break the model&#x27;s reasoning and tool-calling abilities. The <code>openai-harmony</code> package has utilities for this.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Unsloth provides free Colab notebooks specifically for gpt-oss. If you don&#x27;t have a local GPU, start there — you can fine-tune the 20b model on Colab&#x27;s free T4 GPU.
+      </div>
+        
+      <details class="reveal">
+        <summary>SFT vs GRPO — a quick comparison</summary>
+        <div class="reveal-body"><p><strong>SFT (Supervised Fine-Tuning)</strong> is like teaching by example: you show the model input-output pairs and it learns to mimic them. Great for style adaptation, domain knowledge, and specific formatting. <strong>GRPO (Group Relative Policy Optimization)</strong> is like teaching through feedback: the model generates multiple responses, you score them, and it learns to produce higher-scored outputs. GRPO is how you&#x27;d train better reasoning — you can reward the model for getting math problems right, writing better code, or following complex instructions more carefully. Unsloth&#x27;s GRPO support for gpt-oss uses 80% less VRAM than standard implementations, making it feasible on consumer hardware.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>Nice work. You should now understand the full gpt-oss stack: the MoE architecture and why it&#x27;s efficient, how to serve it locally with vLLM, how to use reasoning effort and function calling through the OpenAI-compatible API, and what your fine-tuning options look like with Unsloth. If any of those feel fuzzy, scroll back — each piece builds on the last.</div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build a local AI assistant that can search your filesystem and summarize documents — entirely on your own hardware with gpt-oss</div>
+      <div class="your-turn-context">One of the killer use cases for local models is working with private data that you&#x27;d never want to send to a cloud API. Imagine a personal assistant that can search your local files, read documents, and answer questions about them — all running on your machine with zero data leaving your network.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What tools would the model need? Think about what &#x27;actions&#x27; a file assistant performs.</li><li>How would you describe a &#x27;search files&#x27; tool versus a &#x27;read file&#x27; tool — what parameters does each need?</li><li>What about safety? Should the model be able to write or delete files, or just read?</li><li>How would you handle files that are too long to fit in the model&#x27;s context window?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>I want to build a local file assistant using gpt-oss-20b served through vLLM. The assistant should have two tools: (1) search_files — takes a directory path and a search query, returns a list of matching filenames, and (2) read_file — takes a file path and returns its contents. The assistant should be read-only for safety. When the user asks a question, the model should first search for relevant files, then read the most promising ones, then answer the question using their contents. Use the OpenAI Python client pointed at localhost:8000. Handle the multi-turn tool calling loop — the model might need to call search, then read, then answer. For files over 4000 tokens, truncate and tell the user you&#x27;re showing a summary. Keep it simple — a command-line interface is fine.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>Let&#x27;s step back and appreciate what just happened. OpenAI — the company that literally started the &#x27;closed-source AI&#x27; era — dropped two genuinely competitive open-weight models with Apache 2.0 licensing. And they&#x27;re not toy models. They have configurable reasoning, full chain-of-thought, native tool use, and they&#x27;re small enough to run on hardware real people actually own.</p>
+
+<p>We went from understanding the architecture (MoE + MXFP4 = big brain, small footprint) to serving it locally with vLLM, to making actual API calls with reasoning effort control, to testing agentic function calling, to understanding how to fine-tune it on our own data with Unsloth.</p>
+
+<p>The bigger picture here: <strong>the gap between cloud AI and local AI just got significantly smaller</strong>. You can now run a reasoning model with tool use on a single consumer GPU, fine-tune it for your domain, and keep all your data on your machine. That&#x27;s a fundamentally different proposition than what we had six months ago.</p></div>
+      <ul class="takeaways-list"><li>gpt-oss uses MoE + MXFP4 to deliver big-model reasoning at small-model cost — the 20b runs in 16GB VRAM with only 3.6B parameters active per token</li><li>The Harmony response format is NON-NEGOTIABLE — always use it, whether through vLLM&#x27;s automatic handling or the openai-harmony package. Without it, the model produces garbage.</li><li>Configurable reasoning effort (low/medium/high) lets you trade latency for depth — match the effort to your task complexity</li><li>Native function calling means you can build real agentic applications that run entirely on your own hardware — no API keys, no data leaving your network</li><li>Unsloth makes fine-tuning accessible on consumer GPUs with LoRA — use SFT for knowledge and style, GRPO for teaching better reasoning</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Try the Unsloth Colab notebook for gpt-oss-20b GRPO — train your own reasoning model for free</li><li>Experiment with the 120b model if you have access to an H100 — the jump in capability is significant</li><li>Build a multi-tool agent that chains function calls together (search → retrieve → analyze → respond)</li><li>Compare gpt-oss-20b against Qwen, Llama, and DeepSeek on your specific use case — the benchmarks tell one story, your data tells another</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/openai/gpt-oss" target="_blank" rel="noopener">openai/gpt-oss</a> <span class="source-name">(GitHub Trending Python)</span></li><li><a href="https://github.com/vllm-project/vllm" target="_blank" rel="noopener">vllm-project/vllm</a> <span class="source-name">(GitHub Trending Python)</span></li><li><a href="https://github.com/unslothai/unsloth" target="_blank" rel="noopener">unslothai/unsloth</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Azure/Azure-Sentinel</div>
+            <div class="oa-summary">Microsoft&#x27;s open-source repository of security detection rules and analytics for its cloud SIEM platform.</div>
+            <div class="oa-meta">GitHub Trending Python</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Show HN: P0 – Yes, AI can ship complex features into real codebases</div>
+            <div class="oa-summary">AI coding agent that implements multi-file features directly in production codebases, not just demos.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Bridging the operational AI gap</div>
+            <div class="oa-summary">Explores challenges companies face moving AI from pilot projects into reliable production deployments.</div>
+            <div class="oa-meta">MIT Tech Review · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">moltdj</div>
+            <div class="oa-summary">Platform where AI music agents create and stream tracks, with creators earning revenue like SoundCloud.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Relicensing with AI-Assisted Rewrite</div>
+            <div class="oa-summary">Using AI to rewrite a codebase from scratch to legally switch to a different open-source license.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Father claims Google&#x27;s AI product fuelled son&#x27;s delusional spiral</div>
+            <div class="oa-summary">A parent alleges Google&#x27;s AI chatbot worsened his son&#x27;s mental health and delusional thinking.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Did Alibaba just kneecap its powerful Qwen AI team?</div>
+            <div class="oa-summary">Key researchers are leaving Alibaba&#x27;s Qwen large language model team, raising questions about its future.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Extending single-minus amplitudes to gravitons</div>
+            <div class="oa-summary">Physics paper uses GPT-5.2 Pro to help derive new graviton scattering amplitudes in quantum gravity.</div>
+            <div class="oa-meta">OpenAI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Marcus AI Claims Dataset</div>
+            <div class="oa-summary">Open dataset of factual claims made by Marcus AI, useful for benchmarking AI accuracy and hallucination.</div>
+            <div class="oa-meta">Hacker News AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Vocova</div>
+            <div class="oa-summary">Transcription tool that converts audio and video into text from over 1,000 supported platforms.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 4</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "Azure/Azure-Sentinel", "tags": "fine-tuning", "source": "GitHub Trending Python"}, {"title": "Show HN: P0 – Yes, AI can ship complex features into real codebases", "tags": "coding", "source": "Hacker News AI"}, {"title": "Bridging the operational AI gap", "tags": "agents", "source": "MIT Tech Review"}, {"title": "moltdj", "tags": "agents", "source": "Product Hunt AI"}, {"title": "Relicensing with AI-Assisted Rewrite", "tags": "", "source": "Hacker News AI"}, {"title": "Father claims Google's AI product fuelled son's delusional spiral", "tags": "", "source": "Hacker News AI"}, {"title": "Did Alibaba just kneecap its powerful Qwen AI team?", "tags": "", "source": "Hacker News AI"}, {"title": "Extending single-minus amplitudes to gravitons", "tags": "", "source": "OpenAI"}, {"title": "Marcus AI Claims Dataset", "tags": "", "source": "Hacker News AI"}, {"title": "Vocova", "tags": "tools,vision,audio", "source": "Product Hunt AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-05";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
