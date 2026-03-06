@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hands-On with GPT-5.4: Exploring 1M-Token Context, Tool Search, and Computer Use via the API — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Hands-On with GPT-5.4: Exploring 1M-Token Context, Tool Search, and Computer Use via the API</h1>
+      <div class="hero-subtitle">Build an agent that leverages GPT-5.4&#x27;s new computer-use and million-token context capabilities end-to-end</div>
+      <div class="hero-meta">
+        <span>35 min</span>
+        <span> <span class="tag">model-release</span> <span class="tag">gpt-5.4</span> <span class="tag">openai</span> <span class="tag">computer-use</span> <span class="tag">long-context</span> <span class="tag">tool-use</span> <span class="tag">api</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>On March 5, 2026, OpenAI released <strong>GPT-5.4</strong> — their latest frontier model and a substantial architectural upgrade over the GPT-5 series. Three capabilities distinguish this release from its predecessors and from competing models:</p>
+
+<ol>
+<li><strong>A 1-million-token context window.</strong> Previous GPT models topped out at 128K tokens. GPT-5.4 extends this by roughly an order of magnitude, enabling ingestion of entire codebases, lengthy legal corpora, or multi-document research collections in a single prompt.</li>
+</ol>
+
+<ol>
+<li><strong>Native computer-use capability.</strong> The model can observe screenshots, reason about graphical interfaces, and emit structured actions (click, type, scroll) to operate desktop and web applications autonomously — without external orchestration frameworks.</li>
+</ol>
+
+<ol>
+<li><strong>Built-in tool search.</strong> Rather than requiring developers to pre-register every tool in the system prompt, GPT-5.4 can dynamically discover and invoke tools from a searchable registry, reducing prompt overhead and enabling more flexible agentic architectures.</li>
+</ol>
+
+<p>Taken together, these features represent a meaningful shift in what a single API call can accomplish. This session examines each capability through structured experimentation, with the objective of building a lightweight autonomous agent that combines all three.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Establishing API Access and Verifying Model Availability</h2>
+      </div>
+      <div class="step-body">
+        <p>Before exercising any of GPT-5.4&#x27;s new capabilities, we must establish a working connection to the OpenAI API and confirm that the model identifier resolves correctly. This step is deliberately simple — its purpose is to eliminate environmental issues before they compound with more complex tasks.</p>
+
+<p>The model identifier for GPT-5.4 follows OpenAI&#x27;s standard naming convention: <code>gpt-5.4</code>. It is accessible through the Chat Completions endpoint, which remains the primary interface for conversational and agentic workloads. The Responses API also supports the model, and we will use it in later steps when exercising tool-use features.</p>
+
+<p>A key architectural detail: GPT-5.4 supports the same message format as its predecessors (<code>system</code>, <code>user</code>, <code>assistant</code> roles), but the <code>max_tokens</code> parameter now accepts values up to 1,000,000. The default remains conservative — typically 4,096 — so explicit configuration is required when working with extended context.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to produce a minimal Python script that connects to the OpenAI API using GPT-5.4 and confirms the model is responding.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What library does the OpenAI Python SDK provide, and how is the client instantiated?</li><li>How should the API key be supplied — hardcoded, or through an environment variable? What are the security implications?</li><li>What is the simplest possible prompt you could send to verify the model is operational?</li><li>How will you confirm from the response object that `gpt-5.4` specifically handled the request?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a short Python script — no more than ten lines — that instantiates the OpenAI client, sends a trivial chat completion request specifying <code>model=&quot;gpt-5.4&quot;</code>, and prints both the response text and the model field from the response object. The key verification is that <code>response.model</code> returns a string containing <code>gpt-5.4</code>, confirming the correct model served the request.</p>
+
+<p>```python</p>
+<p>from openai import OpenAI</p>
+<p>client = OpenAI()  # reads OPENAI_API_KEY from environment</p>
+<p>response = client.chat.completions.create(</p>
+<p>model=&quot;gpt-5.4&quot;,</p>
+<p>messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Say hello.&quot;}]</p>
+<p>)</p>
+<p>print(response.choices[0].message.content)</p>
+<p>print(f&quot;Served by: {response.model}&quot;)</p>
+<p>```</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        GPT-5.4 requires an active OpenAI API key with access to the model. As of launch, it is available on all paid API tiers. Set your key via <code>export OPENAI_API_KEY=sk-...</code> before running any scripts.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>response.model</code> field may return a versioned identifier such as <code>gpt-5.4-2026-03-05</code> rather than the bare string <code>gpt-5.4</code>. This is expected behavior — OpenAI appends snapshot dates to model identifiers.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why verify the model identifier explicitly?</summary>
+        <div class="reveal-body"><p>OpenAI&#x27;s API silently falls back to available models if a requested identifier is invalid or the account lacks access. Without checking <code>response.model</code>, you could unknowingly run an entire session against GPT-4o or another fallback. This is a common source of confusing benchmark results and unexpected behavior differences. Always verify.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Exercising Computer Use: Screen Observation and Action Emission</h2>
+      </div>
+      <div class="step-body">
+        <p>GPT-5.4&#x27;s computer-use capability allows the model to observe the state of a graphical interface — via screenshots — and respond with structured actions that an execution environment can carry out. The model does not control the computer directly; rather, it participates in an <strong>observe-reason-act loop</strong> where a host process captures screenshots, sends them to the model, receives action instructions, executes those actions, and captures the next screenshot.</p>
+
+<p>This architecture separates perception and reasoning (the model&#x27;s responsibility) from execution (the host&#x27;s responsibility). The distinction matters: the model never has raw access to the operating system. It sees pixels and emits JSON-structured actions such as <code>click(x, y)</code>, <code>type(text)</code>, <code>scroll(direction)</code>, and <code>key(combination)</code>. The host process interprets and executes these.</p>
+
+<p>OpenAI exposes computer use through the <strong>Responses API</strong> rather than the Chat Completions endpoint. The request includes a <code>computer_use</code> tool definition specifying the screen dimensions, and the model returns <code>computer_call</code> output items containing the actions to perform.</p>
+
+<p>Conceptually, this is analogous to pair programming with a colleague who can see your screen but cannot touch your keyboard — they describe exactly what to click and type, and you carry out the instructions.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to build a simple computer-use loop that sends a screenshot to GPT-5.4 and receives structured action instructions.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The Responses API uses a different interface than Chat Completions. What method on the OpenAI client initiates a Responses API call?</li><li>How should the screenshot be encoded for transmission — what image format and encoding does the API expect?</li><li>What parameters does the `computer_use` tool definition require? Think about what the model needs to know about the screen geometry.</li><li>How would you structure the loop: capture → send → parse action → execute → repeat? What terminates the loop?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe a Python script that implements a single iteration of the computer-use loop. The script captures a screenshot (or loads one from file for testing), base64-encodes it, sends it to the Responses API with a <code>computer_use_preview</code> tool definition specifying screen width and height, and parses the returned <code>computer_call</code> action. The key structural elements are: (1) the tool definition with <code>type: &quot;computer_use_preview&quot;</code>, <code>display_width</code>, and <code>display_height</code> fields; (2) the image sent as a base64-encoded content block; and (3) parsing the response for <code>type: &quot;computer_call&quot;</code> items that contain an <code>action</code> object with fields like <code>type: &quot;click&quot;</code>, <code>x</code>, <code>y</code> or <code>type: &quot;type&quot;</code>, <code>text</code>. The agent should note that actually executing the actions requires a system-level automation library such as <code>pyautogui</code>.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Computer use is a powerful capability that executes actions on real systems. When experimenting, use a sandboxed environment — a virtual machine or Docker container with a virtual display — to prevent unintended modifications to your primary system.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        For testing without a live desktop, capture a static screenshot of any application and use it as input. The model will still produce valid actions relative to the UI elements it observes in the image.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does computer use differ from function calling?</summary>
+        <div class="reveal-body"><p>Function calling provides the model with a structured interface: defined parameters, typed inputs, and predictable outputs. Computer use is fundamentally different — the model operates on <strong>unstructured visual input</strong> (pixels) and must infer the state of the interface, identify interactive elements, and reason about spatial coordinates. This makes it more flexible (it can operate any GUI application without a pre-built API) but also less reliable (pixel-level reasoning introduces ambiguity). In practice, function calling is preferable when a structured interface exists; computer use fills the gap for applications that expose only a graphical interface.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have a working API connection to GPT-5.4 and a conceptual understanding of the computer-use observe-reason-act loop. You should be able to send a screenshot to the model and receive structured action instructions in response.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You need your agent to fill out a web form with data from a spreadsheet. Which approach is more appropriate?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Use computer use to visually navigate the browser, locate form fields, and type values from the spreadsheet</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. While computer use could accomplish this, it introduces unnecessary fragility. Pixel-level coordinate targeting is sensitive to screen resolution, browser zoom, and layout changes. A structured approach is more reliable when one is available.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">Use function calling with a browser automation tool (e.g., Playwright) that exposes form interactions as structured API calls</label>
+          <div class="decision-feedback correct">&#10003; Correct! When a structured interface exists — as it does for browser automation via Playwright or Selenium — function calling provides deterministic, resolution-independent interactions. Computer use should be reserved for situations where no structured API is available.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Built-in Tool Search: Dynamic Tool Discovery at Runtime</h2>
+      </div>
+      <div class="step-body">
+        <p>Traditional tool-use architectures require all available tools to be declared in the system prompt or tool registry before the conversation begins. This creates a tension: registering many tools inflates prompt size and can degrade model performance, but registering too few limits the agent&#x27;s capability.</p>
+
+<p>GPT-5.4 introduces <strong>built-in tool search</strong> as a resolution to this tension. Instead of enumerating every tool upfront, developers register tools in a searchable catalog. The model, when it determines that a task requires a tool it does not currently have access to, can query this catalog and retrieve relevant tool definitions on demand.</p>
+
+<p>The mechanism operates as follows: the developer includes a <code>tool_search</code> tool in the request&#x27;s tool list. When the model invokes <code>tool_search</code>, it provides a natural-language query describing the capability it needs. The host application searches the catalog, returns matching tool definitions, and the model can then invoke those tools in subsequent turns. This is analogous to a craftsperson who, rather than carrying every tool at all times, knows how to locate the right tool from a well-organized workshop when the task demands it.</p>
+
+<p>This pattern is particularly valuable for agents that operate across diverse domains — a single agent might need file-system tools, database connectors, web scrapers, and communication APIs, but rarely all at once.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to design a tool registry and search mechanism that integrates with GPT-5.4&#x27;s tool search capability.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What metadata should each tool in the registry contain to enable effective search? Think beyond just the name.</li><li>How should the search function rank results — exact match, semantic similarity, or keyword overlap?</li><li>What happens when tool search returns multiple candidates? How does the model select the right one?</li><li>How do you prevent the model from searching for tools endlessly instead of completing the task?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe a tool registry architecture with three components: (1) a catalog — a list of tool definitions, each containing a name, description, parameter schema, and tags for searchability; (2) a search function that accepts a natural-language query and returns the top-N matching tools, using either keyword matching or embedding-based semantic search; and (3) integration with the Responses API where <code>tool_search</code> is defined as an available tool, and when invoked, the host intercepts the call, runs the search, and injects the matched tool definitions into the conversation. The agent should emphasize that matched tools are added to the available tools for subsequent turns, not executed immediately.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Start with a simple keyword-based search over tool names and descriptions. Semantic search using embeddings is more powerful but adds latency and complexity. Optimize only when the simpler approach proves insufficient.
+      </div>
+        
+      <details class="reveal">
+        <summary>How large can a tool catalog be before search becomes necessary?</summary>
+        <div class="reveal-body"><p>Empirical testing across the GPT-4 and GPT-5 series suggests that model performance with tool use begins to degrade noticeably beyond 15-20 simultaneously available tools. The model struggles to consistently select the correct tool when presented with many similar options, and the token cost of including all definitions grows linearly. Tool search becomes valuable when the total catalog exceeds this threshold, even if only a handful of tools are needed for any given task. It is a form of <strong>retrieval-augmented tool use</strong> — the same principle as RAG, applied to capabilities rather than knowledge.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Stress-Testing the Million-Token Context Window</h2>
+      </div>
+      <div class="step-body">
+        <p>A 1-million-token context window fundamentally changes what can be accomplished in a single API call. To provide a sense of scale: one million tokens corresponds to approximately 750,000 words, or roughly 10-15 full-length novels, or the entire codebase of a medium-sized software project.</p>
+
+<p>However, context window size and context window <em>utilization</em> are distinct concerns. Three practical considerations govern effective use of extended context:</p>
+
+<p><strong>1. Attention distribution.</strong> Research on long-context models consistently demonstrates a &quot;lost in the middle&quot; phenomenon — models attend most strongly to information near the beginning and end of the context, with reduced recall for material in the middle. GPT-5.4 improves on this, but the pattern has not been entirely eliminated.</p>
+
+<p><strong>2. Cost and latency.</strong> Token pricing applies to the entire context, including input. A 1M-token prompt at GPT-5.4&#x27;s input pricing represents a non-trivial cost per request. Latency also scales with context length — time-to-first-token increases as the model processes more input.</p>
+
+<p><strong>3. Retrieval vs. ingestion.</strong> For many use cases, the question is not &quot;can the model hold all this context?&quot; but &quot;should it?&quot; Retrieval-augmented generation (RAG) — where relevant passages are extracted and injected into a shorter prompt — often yields comparable accuracy at lower cost. The million-token window is most valuable when the task genuinely requires holistic understanding of the entire corpus: cross-document reasoning, comprehensive summarization, or global pattern detection.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to build a document ingestion and analysis pipeline that loads a large corpus into GPT-5.4&#x27;s context and performs cross-document reasoning.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What document format should the corpus be converted to before injection? How do you preserve document boundaries within a single prompt?</li><li>How would you structure the system prompt to guide the model&#x27;s attention across a very long context? Consider explicit instructions about where to look.</li><li>What kind of question would genuinely require the full context — something that cannot be answered by examining a single document in isolation?</li><li>How would you measure whether the model is actually using the full context, versus relying on information near the prompt boundaries?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe a pipeline that: (1) reads multiple documents from a directory, (2) concatenates them with clear delimiters (e.g., XML-style tags like <code>&lt;document id=&quot;1&quot; title=&quot;...&quot;&gt;</code>) to preserve boundaries, (3) prepends a system prompt instructing the model to treat the collection as a unified corpus and reference documents by their identifiers, and (4) poses an analytical question that requires synthesizing information from multiple documents. The agent should also suggest a verification strategy: embed a unique &quot;needle&quot; phrase in a document in the middle of the context and ask the model to locate it, confirming that the full context is being processed. The key API parameter is <code>max_tokens</code> set high enough for a substantive response, and the agent should note that the total input token count can be checked via <code>response.usage.prompt_tokens</code>.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        A 1M-token input at GPT-5.4&#x27;s pricing represents significant cost per request. During development, test with a subset of your corpus (50K-100K tokens) and only scale to full context when the pipeline is validated.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Use <code>tiktoken</code> with the encoding for GPT-5.4 to count tokens before sending a request. This prevents unexpected truncation or API errors from exceeding the context limit.
+      </div>
+        
+      <details class="reveal">
+        <summary>When should you use RAG instead of the full context window?</summary>
+        <div class="reveal-body"><p>The million-token context window does not obsolete retrieval-augmented generation. RAG remains preferable when: (1) the total corpus exceeds 1M tokens, (2) the query targets specific factual information rather than requiring global synthesis, (3) cost sensitivity is high and the task can be served with a smaller context, or (4) low latency is critical and the overhead of processing a large context is unacceptable. The full context window excels at tasks requiring <strong>holistic reasoning</strong> — comparing themes across an entire book, identifying contradictions across a legal filing, or understanding the full dependency graph of a codebase. Think of RAG as a targeted search and the full context as reading the entire document shelf.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a working understanding of all three core GPT-5.4 capabilities: computer use for GUI interaction, tool search for dynamic capability discovery, and the 1M-token context window for large-scale document analysis. The final step combines them into a cohesive agent.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Assembling the Agent: Combining Computer Use, Tool Search, and Extended Context</h2>
+      </div>
+      <div class="step-body">
+        <p>The individual capabilities we have examined — computer use, tool search, and extended context — are each useful in isolation. Their real power emerges when combined in a single agentic workflow.</p>
+
+<p>Consider a realistic scenario: an analyst needs to review a large collection of research papers, extract key findings, and enter a summary into a web-based project management tool that has no API. This task requires: (1) ingesting the papers into the context window for cross-document analysis, (2) dynamically discovering the right summarization and formatting tools via tool search, and (3) using computer use to navigate the web application and enter the results.</p>
+
+<p>The architectural pattern for this combined agent is an <strong>orchestration loop</strong> with three phases per iteration:</p>
+
+<ul>
+<li><strong>Perceive</strong>: Gather input — load documents, capture screenshots, receive user instructions.</li>
+<li><strong>Reason</strong>: Send all available context to GPT-5.4, including tool definitions and any computer-use observations. The model decides what to do next.</li>
+<li><strong>Act</strong>: Execute the model&#x27;s instructions — run a tool, perform a computer action, or return a result to the user.</li>
+</ul>
+
+<p>The loop continues until the model signals completion or a maximum iteration count is reached. The critical design decision is the <strong>state management</strong> between iterations: what context carries forward, what gets summarized, and what gets discarded.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to design the orchestration loop for a combined agent that uses all three GPT-5.4 capabilities in a single workflow.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How should the agent&#x27;s state be represented between loop iterations? What information must persist, and what can be discarded?</li><li>When the model returns both a tool call and a computer action in the same response, what is the correct execution order?</li><li>How do you prevent the context from growing unboundedly across iterations, even with a 1M-token window?</li><li>What termination conditions should the loop enforce — both success conditions and safety limits?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe a main loop function that maintains a conversation history and iterates through perceive-reason-act cycles. Key design elements include: (1) a message history that carries forward across iterations, with a summarization strategy to compress older messages when the context approaches capacity; (2) a response parser that handles three output types — text responses, tool calls (including tool search), and computer-use actions — and dispatches each to the appropriate handler; (3) a tool executor that intercepts tool search calls to augment the available tools dynamically; (4) a computer-use executor that captures screenshots after each action for the next observation cycle; and (5) termination conditions including a maximum iteration count, explicit completion signals from the model, and an error threshold. The agent should emphasize that the loop is model-driven — GPT-5.4 decides what to do at each step, and the orchestrator simply executes.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Implement a sliding-window summarization strategy for the conversation history: after every N iterations, ask the model to summarize the oldest messages into a concise state description, then replace those messages with the summary. This prevents context exhaustion in long-running tasks.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        An agent with computer use and tool access can take consequential actions — modifying files, submitting forms, sending messages. Always implement a human-in-the-loop confirmation step for irreversible actions during development.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does this architecture compare to existing agent frameworks?</summary>
+        <div class="reveal-body"><p>The perceive-reason-act loop is a well-established pattern in agent design, shared by frameworks such as LangChain&#x27;s AgentExecutor, AutoGPT, and Anthropic&#x27;s computer-use reference implementation. The distinguishing factor with GPT-5.4 is that all three capability types — tool use, computer use, and extended context — are handled natively within a single model call, rather than requiring separate model invocations or specialized sub-agents. This reduces architectural complexity and latency, though it concentrates more responsibility (and potential failure modes) in a single component. The tradeoff is simplicity versus resilience: a multi-model architecture can route different capabilities to specialized models, while a single-model approach is easier to build and debug but has a single point of failure.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build a &#x27;codebase auditor&#x27; agent that ingests an entire repository into GPT-5.4&#x27;s context window, uses tool search to discover linting and analysis tools, and produces a structured audit report.</div>
+      <div class="your-turn-context">This task exercises all three GPT-5.4 capabilities in a practical software engineering scenario. The agent must handle large-scale code ingestion, dynamic tool discovery, and structured output generation. It does not require computer use, but you could extend it to file issues in a web-based tracker using that capability.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>How should the agent traverse and concatenate repository files? What files should be excluded (binary files, node_modules, etc.)?</li><li>What instructions should the system prompt contain to ensure the model treats the code as an interconnected system rather than isolated files?</li><li>How would you describe the tool registry to the agent — what kinds of analysis tools should be discoverable?</li><li>What structure should the audit report follow? Consider sections for security issues, code quality, architecture concerns, and dependency risks.</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>I need you to build a codebase auditor agent using the OpenAI Responses API with GPT-5.4. The agent should: (1) Recursively read all source files from a given repository path, excluding binary files, lock files, and dependency directories. Concatenate them with XML-style delimiters preserving file paths. (2) Define a tool registry containing tools for: static analysis (linting), dependency vulnerability checking, complexity analysis, and dead code detection. Implement tool_search as an available tool so GPT-5.4 can discover these dynamically. (3) Send the full codebase to GPT-5.4 with a system prompt instructing it to perform a comprehensive audit — analyzing security patterns, code quality, architectural coherence, and dependency health. The model should use tool_search to find and invoke relevant analysis tools as needed. (4) Collect the model&#x27;s findings into a structured JSON report with sections for critical issues, warnings, and recommendations, each referencing specific files and line ranges. Use a maximum of 10 loop iterations and implement context summarization if the conversation history grows beyond 800K tokens.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">Your agent needs to process a 2-million-token document collection. GPT-5.4&#x27;s context window is 1 million tokens. What is the most effective strategy?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Split the collection into two 1M-token batches, process each independently, then combine the results</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. While this handles the size constraint, independent processing loses cross-document relationships between the batches. The model cannot reason about connections between documents in separate calls.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Use RAG to retrieve the most relevant passages based on the query, staying within the context limit</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. RAG works well for targeted factual queries, but if the task requires holistic cross-document reasoning, selective retrieval may miss critical connections between seemingly unrelated passages.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Use a hierarchical approach: summarize each document individually, then load all summaries plus the most relevant full documents into the context</label>
+          <div class="decision-feedback correct">&#10003; Correct! This strategy preserves global awareness through summaries while retaining full detail where it matters most. It is a form of map-reduce reasoning: first extract key information from each document (map), then synthesize across all summaries with targeted deep-dives (reduce). This balances comprehensiveness with context constraints.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>In this session, we examined three capabilities that define GPT-5.4 as a meaningful advancement for agentic applications.</p>
+
+<p>We began by establishing API access and verifying model availability — a simple but essential foundation. We then explored <strong>computer use</strong>, understanding the observe-reason-act loop that allows GPT-5.4 to interact with graphical interfaces through structured action emission. We examined <strong>tool search</strong> as a solution to the tool registration scalability problem, enabling dynamic capability discovery at runtime. We stress-tested the <strong>1-million-token context window</strong>, analyzing its practical limits and the strategies required to use it effectively — including attention distribution patterns, cost considerations, and the continued relevance of RAG. Finally, we assembled these capabilities into a cohesive <strong>orchestration loop</strong> that represents the core architectural pattern for GPT-5.4-powered agents.</p>
+
+<p>The central insight is that these capabilities are individually useful but combinatorially powerful. An agent that can see a screen, discover tools on demand, and reason over vast context simultaneously occupies a qualitatively different capability tier than one limited to text-in, text-out interactions.</p></div>
+      <ul class="takeaways-list"><li>GPT-5.4&#x27;s computer use operates through an observe-reason-act loop where the model sees screenshots and emits structured actions — it never directly controls the system. Use it only when no structured API alternative exists.</li><li>Tool search is retrieval-augmented generation applied to capabilities rather than knowledge. It resolves the tension between tool availability and prompt efficiency by enabling dynamic discovery from a searchable catalog.</li><li>A million-token context window enables holistic cross-document reasoning, but it does not replace retrieval-augmented generation. Cost, latency, and attention distribution patterns mean that RAG remains optimal for targeted queries over very large corpora.</li><li>The perceive-reason-act orchestration loop is the fundamental architectural pattern for combining these capabilities. State management — particularly context summarization across iterations — is the key design challenge.</li><li>Always implement safety boundaries for autonomous agents: sandboxed execution environments for computer use, maximum iteration limits for loops, and human-in-the-loop confirmation for irreversible actions.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Experiment with the &#x27;needle in a haystack&#x27; test at various context lengths to empirically measure GPT-5.4&#x27;s recall accuracy across the full million-token window.</li><li>Build a tool catalog with 50+ tools spanning multiple domains and benchmark tool search accuracy against static tool registration for diverse task types.</li><li>Compare GPT-5.4&#x27;s computer-use performance against Anthropic&#x27;s Claude computer-use implementation on standardized GUI interaction benchmarks such as OSWorld or WebArena.</li><li>Implement the codebase auditor agent from the independent exercise and evaluate its findings against established static analysis tools like SonarQube or Semgrep.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://openai.com/index/introducing-gpt-5-4" target="_blank" rel="noopener">Introducing GPT-5.4</a> <span class="source-name">(OpenAI)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">GPT-5.4</div>
+            <div class="oa-summary">OpenAI launches GPT-5.4, its latest reasoning model with updated thinking capabilities and safety evaluations.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI and the Ship of Theseus</div>
+            <div class="oa-summary">Philosophical exploration of whether AI-rewritten code is still the same software or something new.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Reasoning models struggle to control their chains of thought, and that’s good</div>
+            <div class="oa-summary">OpenAI introduces CoT-Control and finds reasoning models struggle to control their chains of thought, reinforcing...</div>
+            <div class="oa-meta">OpenAI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">GPT-5.4 Thinking System Card</div>
+            <div class="oa-summary">OpenAI&#x27;s safety and capability evaluation report for the GPT-5.4 reasoning model.</div>
+            <div class="oa-meta">OpenAI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">LWiAI Podcast #235 - Sonnet 4.6, Deep-thinking tokens, Anthropic vs Pentagon</div>
+            <div class="oa-summary">Podcast covering Anthropic&#x27;s Sonnet 4.6 release, Google&#x27;s Gemini 3.1 Pro, and Anthropic&#x27;s Pentagon stance.</div>
+            <div class="oa-meta">Import AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Relicensing with AI-Assisted Rewrite</div>
+            <div class="oa-summary">Using AI to rewrite a codebase from scratch as a strategy to change its open-source license.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">The L in &quot;LLM&quot; Stands for Lying</div>
+            <div class="oa-summary">Critique arguing that LLMs fundamentally fabricate information and shouldn&#x27;t be trusted as reliable sources.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Regulator contacts Meta over workers watching intimate AI glasses videos</div>
+            <div class="oa-summary">Privacy regulator investigates Meta employees reportedly viewing personal footage captured by AI smart glasses.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Anthropic chief back in talks with Pentagon about AI deal</div>
+            <div class="oa-summary">Anthropic&#x27;s CEO resumes negotiations with the Pentagon over a potential defense AI contract.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Codex app for Windows</div>
+            <div class="oa-summary">OpenAI&#x27;s Codex coding agent now available as a native Windows desktop app with sandboxed execution.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "GPT-5.4", "tags": "", "source": "Hacker News AI"}, {"title": "AI and the Ship of Theseus", "tags": "", "source": "Hacker News AI"}, {"title": "Reasoning models struggle to control their chains of thought, and that’s good", "tags": "", "source": "OpenAI"}, {"title": "GPT-5.4 Thinking System Card", "tags": "", "source": "OpenAI"}, {"title": "LWiAI Podcast #235 - Sonnet 4.6, Deep-thinking tokens, Anthropic vs Pentagon", "tags": "", "source": "Import AI"}, {"title": "Relicensing with AI-Assisted Rewrite", "tags": "", "source": "Hacker News AI"}, {"title": "The L in \"LLM\" Stands for Lying", "tags": "", "source": "Hacker News AI"}, {"title": "Regulator contacts Meta over workers watching intimate AI glasses videos", "tags": "vision", "source": "Hacker News AI"}, {"title": "Anthropic chief back in talks with Pentagon about AI deal", "tags": "", "source": "Hacker News AI"}, {"title": "Codex app for Windows", "tags": "coding", "source": "Product Hunt AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-06";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

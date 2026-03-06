@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build a Tool-Using Agent with Qwen Open-Source Models — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Build a Tool-Using Agent with Qwen Open-Source Models</h1>
+      <div class="hero-subtitle">Deploy Qwen locally via vLLM and construct an agentic loop with custom tool calls — fully open-source, fully on your hardware</div>
+      <div class="hero-meta">
+        <span>35 min</span>
+        <span> <span class="tag">open-source-llm</span> <span class="tag">tool-use</span> <span class="tag">agents</span> <span class="tag">qwen</span> <span class="tag">local-deployment</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Alibaba Cloud&#x27;s Qwen model family represents a significant milestone in open-source large language models. The series spans from 1.8B to 72B parameters, with each variant available in base, chat-aligned, and quantized (Int4/Int8) forms. Crucially, Qwen-Chat models ship with <strong>native tool-use capability</strong> — the chat template includes a structured format for declaring functions, receiving tool-call requests from the model, and feeding results back into the conversation.</p>
+
+<p>This matters because tool use is the mechanism that transforms a language model from a text generator into an <em>agent</em>. An agent observes its environment, selects an action (a tool call), interprets the result, and decides what to do next. Qwen&#x27;s built-in support for this pattern means we can build agentic workflows without relying on proprietary APIs, running everything locally on consumer or workstation GPUs.</p>
+
+<p>The Qwen repository documents support for vLLM serving, GPTQ quantization, Q-LoRA fine-tuning, and a ReAct-style prompting format for tool use. In this session, we assemble these components into a working agent that can plan and execute multi-step tasks using custom Python functions — all orchestrated through careful prompting of an AI coding assistant.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Serve a Quantized Qwen-Chat Model Locally with vLLM</h2>
+      </div>
+      <div class="step-body">
+        <p>Before we can build an agent, we need an inference endpoint. <strong>vLLM</strong> is a high-throughput serving engine that supports paged attention, continuous batching, and GPTQ-quantized models out of the box. Our first task is to get a quantized Qwen-Chat model running locally behind an OpenAI-compatible API.</p>
+
+<p>The key architectural decision here is <strong>quantization level</strong>. Qwen offers Int4 and Int8 variants:</p>
+
+<ul>
+<li><strong>Int4 (GPTQ-Int4):</strong> Reduces model weights to 4-bit precision. A 14B-parameter model fits in roughly 13 GB of VRAM. There is a measurable quality degradation, particularly on tasks requiring precise numerical reasoning, but for tool-use routing — where the model&#x27;s primary job is selecting the right function and extracting arguments — Int4 is generally sufficient.</li>
+<li><strong>Int8:</strong> Preserves more precision at roughly double the memory cost. Preferable when GPU memory permits, especially for the 7B model where Int8 still fits comfortably on a 16 GB GPU.</li>
+</ul>
+
+<p>The goal in this step is not to memorize command-line flags. It is to understand what we need from a serving layer and how to instruct an AI agent to produce a working deployment script.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your agent to produce a deployment script that launches a quantized Qwen-Chat model via vLLM with an OpenAI-compatible API endpoint.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What model size and quantization level are appropriate for your available GPU memory? How would you communicate your hardware constraints to the agent?</li><li>vLLM can expose an OpenAI-compatible server. What does that mean for how downstream code will interact with the model?</li><li>What parameters matter for serving — maximum sequence length, GPU memory utilization fraction, tensor parallelism for multi-GPU setups?</li><li>How should the agent handle the difference between Hugging Face model IDs and local paths?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a short shell command or script that installs vLLM and launches the server. The essential elements are: the correct Hugging Face model identifier (e.g., <code>Qwen/Qwen-14B-Chat-Int4</code>), the <code>--quantization gptq</code> flag, a reasonable <code>--max-model-len</code> (e.g., 8192), and the <code>--served-model-name</code> parameter so downstream code can reference a stable name. The server should listen on a configurable port and expose <code>/v1/chat/completions</code>. A minimal example:</p>
+
+<p>```bash</p>
+<p>python -m vllm.entrypoints.openai.api_server \</p>
+<p>--model Qwen/Qwen-14B-Chat-Int4 \</p>
+<p>--quantization gptq \</p>
+<p>--max-model-len 8192 \</p>
+<p>--gpu-memory-utilization 0.9</p>
+<p>```</p>
+
+<p>The agent should note that this exposes an OpenAI-compatible endpoint at <code>http://localhost:8000/v1</code>.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        GPTQ quantization requires the <code>auto-gptq</code> library installed alongside vLLM. If the agent&#x27;s script omits this dependency, ask it to include installation steps for <code>auto-gptq</code> and <code>optimum</code>.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        If you have fewer than 10 GB of VRAM, consider the Qwen-7B-Chat-Int4 variant (approximately 8.2 GB for 2048-token generation). For CPU-only setups, vLLM is not suitable — you would need llama.cpp with a GGUF conversion, which is outside the scope of this session.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why vLLM instead of a simple Transformers pipeline?</summary>
+        <div class="reveal-body"><p>A raw Hugging Face <code>pipeline</code> loads the model and processes one request at a time. vLLM implements <strong>PagedAttention</strong>, which manages the KV cache in non-contiguous memory blocks (analogous to virtual memory paging in operating systems). This enables continuous batching — multiple requests share GPU resources concurrently — and dramatically improves throughput. For an agentic loop that may issue many sequential calls, low latency per call is critical, and vLLM&#x27;s architecture delivers this even on a single GPU.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Int4 vs. Int8: when does quality matter?</summary>
+        <div class="reveal-body"><p>Quantization compresses model weights from 16-bit floating point to lower precision. The trade-off is between memory savings and representational fidelity. For tool-use tasks, the model must reliably (1) select the correct function name, (2) extract arguments from user input, and (3) format a valid JSON call. Empirically, Int4 handles these structured-output tasks well because the model&#x27;s function-selection behavior is robust to moderate precision loss. Where Int4 struggles is in tasks requiring subtle reasoning or precise arithmetic — domains where the lost precision affects intermediate computation. For this workshop, Int4 is the recommended default unless you have ample VRAM.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have a clear mental model of the serving architecture: a quantized Qwen-Chat model running behind vLLM, exposing an OpenAI-compatible HTTP endpoint. All subsequent steps will interact with this endpoint as if it were any OpenAI-style API — the only difference is that it runs entirely on your local machine.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Understand Qwen&#x27;s Tool-Use Prompt Format</h2>
+      </div>
+      <div class="step-body">
+        <p>Qwen-Chat models support tool use through a specific <strong>system prompt structure</strong>. This is not a general-purpose hack — it is a format the model was explicitly trained on during supervised fine-tuning. Understanding this format is essential because it determines how the model decides to invoke tools, how it structures its requests, and how it interprets results.</p>
+
+<p>The Qwen tool-use protocol follows a <strong>ReAct-style</strong> pattern (Reason + Act). At each turn, the model may:</p>
+
+<ol>
+<li><strong>Reason</strong> — produce a natural-language thought about what to do next.</li>
+<li><strong>Act</strong> — emit a structured tool call specifying a function name and arguments.</li>
+<li><strong>Observe</strong> — receive the tool&#x27;s return value injected into the conversation.</li>
+<li><strong>Repeat or conclude</strong> — decide whether further tool calls are needed, or produce a final answer.</li>
+</ol>
+
+<p>The system prompt declares available tools as a JSON schema. Each tool has a name, description, and a <code>parameters</code> object following JSON Schema conventions. The model was trained to recognize this format and respond with structured <code>✿FUNCTION✿</code> markers when it decides a tool call is appropriate.</p>
+
+<p>This step focuses on getting the agent to produce a well-structured tool declaration — the system prompt that tells Qwen what tools exist.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to generate a Qwen-compatible system prompt that declares two tools: a web search function and a Python code execution function.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What information does each tool declaration need? Think about what the model requires to decide *when* to call a tool and *what arguments* to pass.</li><li>Qwen expects tools declared in a specific JSON Schema format within the system prompt. How would you ask the agent to match Qwen&#x27;s expected format rather than, say, OpenAI&#x27;s function-calling schema?</li><li>For the web search tool, what parameters are essential? For code execution, what safety considerations should the description convey?</li><li>How should the tool descriptions guide the model&#x27;s reasoning about when to use each tool?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a system prompt string containing two tool declarations in Qwen&#x27;s expected format. Each tool should have a <code>name_for_model</code>, <code>name_for_human</code>, <code>description_for_model</code>, and a <code>parameters</code> object with JSON Schema types. The web search tool should accept a <code>query</code> string parameter. The code execution tool should accept a <code>code</code> string parameter. The descriptions should be precise enough that the model can distinguish when to use each tool — e.g., the search tool for factual lookups, the code tool for computation or data manipulation. The overall structure nests these declarations within the Qwen system prompt template using the <code># Tools</code> section header that the model was trained to recognize.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Tool descriptions function as instructions to the model. A vague description like &#x27;runs code&#x27; gives the model little basis for deciding when to invoke the tool. A precise description like &#x27;Executes Python 3 code in a sandboxed environment and returns stdout/stderr. Use for arithmetic, data transformation, or any task requiring computation&#x27; significantly improves tool selection accuracy.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Qwen&#x27;s tool-use format differs from OpenAI&#x27;s function-calling API. If your agent produces OpenAI-style <code>functions</code> declarations, explicitly ask it to use Qwen&#x27;s native ReAct format with the <code>✿FUNCTION✿</code> markers. The model will not reliably respond to formats it was not trained on.
+      </div>
+        
+      <details class="reveal">
+        <summary>The ReAct pattern explained</summary>
+        <div class="reveal-body"><p>ReAct (Reasoning + Acting) is a prompting paradigm introduced by Yao et al. (2023). The core insight is that interleaving natural-language reasoning traces with concrete actions improves both the reliability of action selection and the interpretability of the agent&#x27;s behavior. Without reasoning traces, a model might select tools based on shallow pattern matching. With them, the model explicitly articulates <em>why</em> it is choosing a particular tool, which creates a self-correcting mechanism: if the reasoning is flawed, it often becomes apparent in the trace before the action is taken. Qwen&#x27;s training incorporated this pattern, so the model naturally produces <code>Thought:</code> prefixes before <code>✿FUNCTION✿</code> calls.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Why JSON Schema for parameters?</summary>
+        <div class="reveal-body"><p>JSON Schema is a vocabulary for annotating and validating JSON documents. By expressing tool parameters as JSON Schema, Qwen can leverage the structural constraints during generation — it knows that a parameter of type <code>string</code> should produce a quoted value, that <code>required</code> fields must be present, and that <code>enum</code> constraints limit valid values. This is not merely a convention; it provides the model with machine-readable guardrails that improve the syntactic validity of generated tool calls. When defining your own tools, using precise JSON Schema types (including <code>description</code> fields on individual parameters) gives the model maximum information for correct argument generation.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You have 16 GB of GPU VRAM and need to run the Qwen agent for a task that primarily involves tool routing — selecting the right function and extracting arguments from user queries. Which model configuration is the most appropriate?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Qwen-14B-Chat-Int4 (~13 GB VRAM)</label>
+          <div class="decision-feedback correct">&#10003; Correct! For tool routing tasks, Int4 quantization provides sufficient precision. The 14B model offers stronger reasoning than the 7B variant, and at Int4 quantization it fits within 16 GB. The primary task — function selection and argument extraction — is well within Int4&#x27;s capabilities.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">Qwen-72B-Chat-Int4 (~49 GB VRAM)</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This model requires approximately 49 GB of VRAM, which far exceeds the 16 GB constraint. While it offers superior reasoning, it is not deployable on the specified hardware.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">Qwen-7B-Chat (full precision, ~16 GB VRAM)</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. A full-precision 7B model uses the entire 16 GB budget, leaving no room for KV cache during inference. The model would either fail to load or be unable to process sequences of meaningful length. The quantized 14B model is both more capable and more memory-efficient.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt3">
+          <label for="decision_5_opt3">Qwen-14B-Chat-Int8 (~26 GB VRAM)</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Int8 quantization of the 14B model requires approximately 26 GB, exceeding the 16 GB budget. While Int8 offers better precision, it is not feasible on this hardware.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Build the Agentic Loop: Orchestrating Tool Calls</h2>
+      </div>
+      <div class="step-body">
+        <p>With a model served and tool declarations defined, we now construct the <strong>agentic loop</strong> — the control flow that sends messages to the model, detects tool-call requests in the response, executes the corresponding functions, and feeds results back.</p>
+
+<p>Conceptually, an agentic loop is a <strong>state machine</strong> with three states:</p>
+
+<ol>
+<li><strong>Query</strong> — send the current conversation history to the model and receive a response.</li>
+<li><strong>Parse</strong> — inspect the response for tool-call markers. If none are found, the model has produced a final answer; exit the loop.</li>
+<li><strong>Execute</strong> — call the indicated function with the provided arguments, append the result to the conversation as an <code>Observation</code>, and return to the Query state.</li>
+</ol>
+
+<p>The loop terminates when the model produces a response without tool-call markers, or when a maximum iteration count is reached (a safety measure against infinite loops).</p>
+
+<p>This is the architectural core of any tool-using agent. The model itself is stateless — it has no memory between calls. The loop maintains state by accumulating the full conversation history, including all prior thoughts, tool calls, and observations. Each iteration, the model sees the entire trajectory and decides the next action.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to build a Python function that implements the agentic loop: it should send messages to the local vLLM endpoint, parse Qwen&#x27;s tool-call markers from responses, execute the matching tool function, and iterate until a final answer is produced.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>The loop needs to interact with an OpenAI-compatible API. What client library can talk to a local vLLM server, and what base URL configuration is needed?</li><li>How should the function detect that the model wants to call a tool? What specific markers does Qwen-Chat use to signal a function call?</li><li>What data structure should maintain the conversation state across iterations? How do tool results get injected back into the conversation?</li><li>What termination conditions prevent the loop from running indefinitely? Consider both normal completion and error cases.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a Python function (roughly 20–30 lines, but we focus on the logic, not the code) that operates as follows: it initializes an OpenAI client pointed at <code>http://localhost:8000/v1</code>, maintains a <code>messages</code> list, and enters a while loop. On each iteration, it calls <code>client.chat.completions.create()</code>, inspects the response content for Qwen&#x27;s <code>✿FUNCTION✿</code> markers, and if found, extracts the function name and arguments. It then looks up the function in a registry dictionary, calls it, and appends the result as an observation message. The loop exits when no tool-call marker is detected or a max-iteration limit (e.g., 10) is reached. The key structural insight is:</p>
+
+<p>```python</p>
+<p>while iterations &lt; max_iterations:</p>
+<p>response = client.chat.completions.create(...)</p>
+<p>if &#x27;✿FUNCTION✿&#x27; in response_text:</p>
+<p>name, args = parse_tool_call(response_text)</p>
+<p>result = tool_registry<a href="**args">name</a></p>
+<p>messages.append(observation(result))</p>
+<p>else:</p>
+<p>return response_text</p>
+<p>```</p>
+
+<p>The agent should also define the <code>parse_tool_call</code> helper and the tool registry pattern.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The tool registry is simply a Python dictionary mapping function names (strings) to callable objects. This pattern decouples tool declaration (what the model knows about) from tool implementation (what actually runs). You can add, remove, or mock tools without modifying the loop logic.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Always set a maximum iteration limit. A model caught in a reasoning loop — calling the same tool repeatedly or alternating between two tools — will consume GPU cycles and potentially exhaust context length. A limit of 5–10 iterations is reasonable for most tasks.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why maintain the full conversation history?</summary>
+        <div class="reveal-body"><p>Language models are stateless functions: given an input sequence, they produce an output sequence. They have no persistent memory between calls. The agentic loop simulates continuity by appending every prior exchange — user message, model thought, tool call, observation — to the message list before each new call. This means the model &#x27;sees&#x27; its own prior reasoning and can build upon it. The cost is that context length grows with each iteration, eventually hitting the model&#x27;s maximum (8K for Qwen-14B, 32K for Qwen-72B). For long-running agents, strategies like summarizing prior observations or truncating early turns become necessary.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Parsing reliability and failure modes</summary>
+        <div class="reveal-body"><p>Qwen&#x27;s tool-call markers (<code>✿FUNCTION✿</code>, <code>✿ARGS✿</code>, <code>✿RESULT✿</code>) are special tokens the model was trained to emit. However, quantized models occasionally produce malformed output — a missing closing marker, invalid JSON in the arguments, or a hallucinated function name not in the registry. Robust agentic loops must handle these cases: validate JSON before parsing, check function names against the registry, and provide informative error messages back to the model as observations so it can self-correct. A well-prompted agent will include these error-handling paths in the generated code.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You now have the three foundational components: a locally served quantized model, a tool-declaring system prompt, and an agentic loop that orchestrates multi-step tool calls. Together, these form a complete — if minimal — tool-using agent running entirely on local hardware.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Implement and Register Custom Tools</h2>
+      </div>
+      <div class="step-body">
+        <p>The tools declared in the system prompt must correspond to actual Python functions that the agentic loop can invoke. This step focuses on <strong>tool implementation</strong> — writing the functions that perform real work when the model decides to call them.</p>
+
+<p>A well-designed tool has several properties:</p>
+
+<ul>
+<li><strong>Deterministic interface:</strong> The function signature must match the JSON Schema declared in the system prompt. If the schema says the search tool accepts a <code>query</code> string, the Python function must accept exactly that parameter.</li>
+<li><strong>Bounded execution:</strong> Tools should have timeouts and resource limits. A code execution tool without a timeout is a denial-of-service vulnerability against your own machine.</li>
+<li><strong>Informative return values:</strong> The string returned to the model becomes an <code>Observation</code> in the ReAct chain. It should contain enough information for the model to reason about the result, but not so much that it overwhelms the context window.</li>
+<li><strong>Error signaling:</strong> When a tool fails, the return value should describe the failure clearly. The model can often recover from a failed tool call by adjusting its approach — but only if it understands what went wrong.</li>
+</ul>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to implement two tool functions — a web search function using a free API and a sandboxed Python code execution function — along with the registration code that connects them to the agentic loop.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>For web search, what free or open APIs exist that require minimal setup? Think about DuckDuckGo, SearXNG, or similar services. What should the function return — raw HTML, snippets, or structured results?</li><li>For code execution, what does &#x27;sandboxed&#x27; mean in practice? How can the agent restrict the execution environment without requiring Docker or complex infrastructure?</li><li>How should each function format its return value so the model can effectively reason about the results?</li><li>What timeout values are appropriate, and how should timeout errors be communicated back to the model?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce two Python functions. The web search function should call a free search API (such as the <code>duckduckgo_search</code> Python package), accept a <code>query</code> parameter, and return a formatted string containing the top 3–5 result titles and snippets. The code execution function should use Python&#x27;s <code>subprocess</code> module with a timeout (e.g., 10 seconds) to execute code in a child process, capturing stdout and stderr. It should return the combined output as a string, or a clear error message if execution fails or times out. Both functions should be added to a <code>tool_registry</code> dictionary. The key design point is that return values are concise, informative strings — not raw data dumps.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Never execute model-generated code without sandboxing. At minimum, use <code>subprocess</code> with a timeout and restricted permissions. For production systems, use Docker containers or <code>nsjail</code>. The model may generate code that performs file operations, network calls, or other actions you did not intend.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        When testing your agent, start with a simple query that requires only one tool call (e.g., &#x27;What is the current population of Tokyo?&#x27;). Verify the full cycle — model emits a search call, the function executes, the result is returned, the model produces a final answer — before attempting multi-step tasks.
+      </div>
+        
+      <details class="reveal">
+        <summary>Designing tool return values for model consumption</summary>
+        <div class="reveal-body"><p>The observation returned by a tool becomes part of the model&#x27;s context. This creates a tension: more information helps the model reason accurately, but excessive information wastes context tokens and may confuse the model. A good heuristic is to return <strong>structured summaries</strong> rather than raw data. For web search, return titles and two-sentence snippets rather than full page content. For code execution, return stdout (truncated to ~500 characters) and any error messages. If the model needs more detail, it can make a follow-up tool call — that is precisely the advantage of the agentic loop pattern.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Refine Tool-Call Accuracy with Q-LoRA Fine-Tuning</h2>
+      </div>
+      <div class="step-body">
+        <p>Out-of-the-box Qwen-Chat models handle tool use competently, but for domain-specific tools or complex multi-step workflows, accuracy can degrade. <strong>Q-LoRA</strong> (Quantized Low-Rank Adaptation) offers a path to improvement without the prohibitive cost of full fine-tuning.</p>
+
+<p>Q-LoRA works by freezing the quantized base model weights and training small adapter matrices (typically rank 8–64) on top. The training data consists of example conversations where the model correctly selects and invokes tools. Because only the adapter weights are updated, the GPU memory requirement is dramatically lower than full fine-tuning — Qwen&#x27;s documentation reports that Q-LoRA for the 14B model requires approximately 18.7 GB of VRAM.</p>
+
+<p>The critical question is not <em>how</em> to run Q-LoRA (the agent can generate the training script) but <em>what data to train on</em>. Effective fine-tuning data for tool use consists of:</p>
+
+<ol>
+<li><strong>Diverse queries</strong> that map to each tool, including edge cases and ambiguous inputs.</li>
+<li><strong>Correct tool selections</strong> with properly formatted arguments.</li>
+<li><strong>Multi-turn sequences</strong> where the model must chain multiple tool calls.</li>
+<li><strong>Negative examples</strong> where the correct action is to answer directly without any tool call.</li>
+</ol>
+
+<p>This step focuses on getting the agent to produce a training data generation strategy and the Q-LoRA configuration.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to design a training data schema for tool-use fine-tuning and generate a Q-LoRA configuration that could be used with Qwen&#x27;s training scripts.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What fields should each training example contain? Think about the full ReAct trajectory: user query, model thought, tool call, observation, and final answer.</li><li>How many training examples are typically needed for Q-LoRA to show measurable improvement on a narrow task like tool selection? What does the research literature suggest?</li><li>What hyperparameters matter most for Q-LoRA — learning rate, rank, alpha, number of epochs? How should these be communicated to the agent?</li><li>How would you evaluate whether fine-tuning actually improved tool-call accuracy? What metrics or test sets would you need?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce two outputs. First, a JSON schema for training examples that includes fields for the system prompt (with tool declarations), a multi-turn conversation array containing user messages, assistant responses with ReAct formatting, and tool observations. Second, a Q-LoRA configuration specifying key hyperparameters: LoRA rank (e.g., 16), alpha (e.g., 32), target modules (attention projections), learning rate (e.g., 1e-4), and number of epochs (e.g., 3). The agent should recommend 200–500 high-quality examples as a starting point and suggest an evaluation protocol: hold out 20% of examples, measure exact-match accuracy on function name selection, and argument extraction F1 score.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Quality of training data matters far more than quantity for Q-LoRA. Fifty carefully constructed examples with diverse tool-call patterns will outperform five hundred repetitive examples. Focus on coverage of edge cases: queries that could plausibly map to multiple tools, queries that require no tool at all, and queries that require chaining two or more tools in sequence.
+      </div>
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        Q-LoRA fine-tuning requires significant GPU time. On a single A100 (80 GB), expect approximately 2–4 hours for 500 examples over 3 epochs on the 14B model. On consumer GPUs (RTX 4090, 24 GB), training is feasible for the 7B model but may require gradient checkpointing for the 14B variant.
+      </div>
+        
+      <details class="reveal">
+        <summary>LoRA rank selection: the bias-variance trade-off</summary>
+        <div class="reveal-body"><p>The rank parameter in LoRA controls the dimensionality of the adapter matrices. Higher rank means more trainable parameters and greater capacity to learn new behavior — but also greater risk of overfitting to the training data. For tool-use fine-tuning, the task is relatively structured (select a function, extract arguments), so low ranks (8–16) are typically sufficient. Ranks above 64 rarely provide additional benefit for this type of task and may cause the model to memorize specific query phrasings rather than learning generalizable tool-selection patterns. A practical approach is to train at ranks 8, 16, and 32, then evaluate on a held-out test set to identify the sweet spot.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Extend the agent with a third tool: a file-reading function that accepts a file path and returns the file&#x27;s contents. Then prompt your agent to update the system prompt, implement the tool function with appropriate safety checks, and test the complete three-tool agent on a query that requires chaining web search and file reading.</div>
+      <div class="your-turn-context">Real-world agents frequently need to access local files — reading configuration, inspecting logs, or processing data files. Adding a file-reading tool exercises the full workflow: declaring the tool in the system prompt, implementing it with safety constraints (path validation, size limits), registering it in the tool registry, and testing a multi-step scenario where the model must decide which tools to invoke and in what order.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What safety constraints should a file-reading tool enforce? Think about path traversal attacks, maximum file sizes, and allowed directories.</li><li>How should you describe this tool in the system prompt so the model understands when to use file reading versus code execution (which could also read files)?</li><li>For a chained query like &#x27;Find the latest Python release version online, then check if my requirements.txt uses that version,&#x27; which tools fire in what order?</li><li>How would you verify that the model chains the tools correctly rather than trying to answer from its training data?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>I need to add a file-reading tool to my Qwen agent. Please do three things:
+
+1. Add a third tool declaration to the Qwen system prompt for a `read_file` function. It should accept a `file_path` string parameter. The description should clarify that this reads local files and should be used when the user references specific files on disk — distinct from code execution.
+
+2. Implement the `read_file` Python function with these safety measures: restrict paths to a configurable base directory (no path traversal via `..`), limit file size to 50 KB, handle missing files gracefully, and return a clear error message for any violation.
+
+3. Show me a test query that forces the agent to chain web search and file reading: first search for information online, then read a local file to compare or verify. Walk me through the expected ReAct trace — what the model thinks, which tools it calls, and in what order.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>This session constructed a fully open-source tool-using agent from four components: a quantized Qwen-Chat model served via vLLM, a structured system prompt declaring tools in Qwen&#x27;s native format, an agentic loop implementing the ReAct pattern, and concrete tool implementations with proper sandboxing. We also examined how Q-LoRA fine-tuning can sharpen tool-call accuracy for domain-specific applications.</p>
+
+<p>The central insight is architectural: the model is a stateless reasoning engine, and the agentic loop provides the memory, control flow, and environmental interface that transform it into an agent. Every component — the serving layer, the prompt format, the tool registry, the parsing logic — exists to support this transformation. Understanding this architecture enables you to extend the system with new tools, swap in different models, or adapt the pattern to entirely different domains.</p></div>
+      <ul class="takeaways-list"><li>An agentic loop is a state machine with three states (query, parse, execute) that gives a stateless LLM the appearance of persistent, goal-directed behavior.</li><li>Qwen&#x27;s native tool-use format (ReAct-style with <code>✿FUNCTION✿</code> markers) is a trained capability, not a prompt hack — using the correct format is essential for reliable tool selection.</li><li>Int4 quantization is sufficient for tool-routing tasks on memory-constrained hardware, because function selection and argument extraction are robust to moderate precision loss.</li><li>Tool descriptions in the system prompt function as instructions to the model — their precision directly determines tool-selection accuracy.</li><li>Q-LoRA fine-tuning on 200–500 high-quality tool-use examples can substantially improve accuracy for domain-specific tool configurations, at modest computational cost.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Explore Qwen2&#x27;s updated tool-use capabilities, which include improved function-calling reliability and support for parallel tool calls.</li><li>Implement a memory module — a tool that writes and retrieves notes — to give the agent persistent state across sessions.</li><li>Benchmark your agent&#x27;s tool-selection accuracy across 50+ test queries to establish a baseline before and after Q-LoRA fine-tuning.</li><li>Investigate structured generation (constrained decoding) via vLLM&#x27;s guided generation feature to guarantee syntactically valid tool calls without post-hoc parsing.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/QwenLM/Qwen" target="_blank" rel="noopener">QwenLM/Qwen</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <div class="other-articles">
+      <h3>What else was in the news</h3>
+      <p class="oa-intro">These articles were also available today. Vote to help shape future sessions.</p>
+      
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">GPT-5.4</div>
+            <div class="oa-summary">OpenAI releases GPT-5.4, its latest large language model with advanced thinking capabilities.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_0" value="up" id="vote_0_up" class="oa-toggle" data-idx="0">
+            <label for="vote_0_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_0" value="down" id="vote_0_down" class="oa-toggle" data-idx="0">
+            <label for="vote_0_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">AI and the Ship of Theseus</div>
+            <div class="oa-summary">Explores whether code gradually rewritten by AI still counts as your own creation.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_1" value="up" id="vote_1_up" class="oa-toggle" data-idx="1">
+            <label for="vote_1_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_1" value="down" id="vote_1_down" class="oa-toggle" data-idx="1">
+            <label for="vote_1_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Reasoning models struggle to control their chains of thought, and that’s good</div>
+            <div class="oa-summary">OpenAI introduces CoT-Control and finds reasoning models struggle to control their chains of thought, reinforcing...</div>
+            <div class="oa-meta">OpenAI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_2" value="up" id="vote_2_up" class="oa-toggle" data-idx="2">
+            <label for="vote_2_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_2" value="down" id="vote_2_down" class="oa-toggle" data-idx="2">
+            <label for="vote_2_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">GPT-5.4 Thinking System Card</div>
+            <div class="oa-summary">OpenAI&#x27;s safety evaluation and risk assessment documentation for the GPT-5.4 thinking model.</div>
+            <div class="oa-meta">OpenAI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_3" value="up" id="vote_3_up" class="oa-toggle" data-idx="3">
+            <label for="vote_3_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_3" value="down" id="vote_3_down" class="oa-toggle" data-idx="3">
+            <label for="vote_3_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">LWiAI Podcast #235 - Sonnet 4.6, Deep-thinking tokens, Anthropic vs Pentagon</div>
+            <div class="oa-summary">Podcast covering Anthropic&#x27;s Sonnet 4.6 release, Google&#x27;s Gemini 3.1 Pro, and Anthropic&#x27;s Pentagon stance.</div>
+            <div class="oa-meta">Import AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_4" value="up" id="vote_4_up" class="oa-toggle" data-idx="4">
+            <label for="vote_4_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_4" value="down" id="vote_4_down" class="oa-toggle" data-idx="4">
+            <label for="vote_4_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Relicensing with AI-Assisted Rewrite</div>
+            <div class="oa-summary">Using AI to rewrite a codebase from scratch as a strategy to change its software license.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_5" value="up" id="vote_5_up" class="oa-toggle" data-idx="5">
+            <label for="vote_5_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_5" value="down" id="vote_5_down" class="oa-toggle" data-idx="5">
+            <label for="vote_5_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">The L in &quot;LLM&quot; Stands for Lying</div>
+            <div class="oa-summary">Argues that large language models fundamentally fabricate outputs rather than retrieving truthful information.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_6" value="up" id="vote_6_up" class="oa-toggle" data-idx="6">
+            <label for="vote_6_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_6" value="down" id="vote_6_down" class="oa-toggle" data-idx="6">
+            <label for="vote_6_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Regulator contacts Meta over workers watching intimate AI glasses videos</div>
+            <div class="oa-summary">Privacy regulator investigates Meta employees accessing intimate video footage from AI-powered smart glasses.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_7" value="up" id="vote_7_up" class="oa-toggle" data-idx="7">
+            <label for="vote_7_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_7" value="down" id="vote_7_down" class="oa-toggle" data-idx="7">
+            <label for="vote_7_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Anthropic chief back in talks with Pentagon about AI deal</div>
+            <div class="oa-summary">Anthropic&#x27;s CEO resumes negotiations with the Pentagon over a military AI contract.</div>
+            <div class="oa-meta">Hacker News AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_8" value="up" id="vote_8_up" class="oa-toggle" data-idx="8">
+            <label for="vote_8_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_8" value="down" id="vote_8_down" class="oa-toggle" data-idx="8">
+            <label for="vote_8_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+        <div class="other-article-card">
+          <div class="oa-info">
+            <div class="oa-title">Codex app for Windows</div>
+            <div class="oa-summary">OpenAI&#x27;s Codex coding agent now available as a native Windows desktop application with sandboxing.</div>
+            <div class="oa-meta">Product Hunt AI · Mar 5</div>
+          </div>
+          <div class="oa-votes">
+            <input type="radio" name="vote_9" value="up" id="vote_9_up" class="oa-toggle" data-idx="9">
+            <label for="vote_9_up" class="oa-toggle-label vote-up" title="More like this">&#x25B2;</label>
+            <input type="radio" name="vote_9" value="down" id="vote_9_down" class="oa-toggle" data-idx="9">
+            <label for="vote_9_down" class="oa-toggle-label vote-down" title="Not interested">&#x25BC;</label>
+          </div>
+        </div>
+      <div class="oa-submit-row">
+        <button id="oa-submit" class="oa-submit-btn" disabled>Submit votes</button>
+        <span id="oa-hint" class="oa-submit-hint">Select at least one vote</span>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var articles = [{"title": "GPT-5.4", "tags": "", "source": "Hacker News AI"}, {"title": "AI and the Ship of Theseus", "tags": "", "source": "Hacker News AI"}, {"title": "Reasoning models struggle to control their chains of thought, and that’s good", "tags": "", "source": "OpenAI"}, {"title": "GPT-5.4 Thinking System Card", "tags": "", "source": "OpenAI"}, {"title": "LWiAI Podcast #235 - Sonnet 4.6, Deep-thinking tokens, Anthropic vs Pentagon", "tags": "", "source": "Import AI"}, {"title": "Relicensing with AI-Assisted Rewrite", "tags": "", "source": "Hacker News AI"}, {"title": "The L in \"LLM\" Stands for Lying", "tags": "", "source": "Hacker News AI"}, {"title": "Regulator contacts Meta over workers watching intimate AI glasses videos", "tags": "vision", "source": "Hacker News AI"}, {"title": "Anthropic chief back in talks with Pentagon about AI deal", "tags": "", "source": "Hacker News AI"}, {"title": "Codex app for Windows", "tags": "coding", "source": "Product Hunt AI"}];
+      var repo = "coldbrewnosugar/ai-course";
+      var track = "general";
+      var date = "2026-03-06";
+
+      var toggles = document.querySelectorAll('.oa-toggle');
+      var btn = document.getElementById('oa-submit');
+      var hint = document.getElementById('oa-hint');
+
+      function updateBtn() {
+        var any = false;
+        toggles.forEach(function(t) { if (t.checked) any = true; });
+        btn.disabled = !any;
+        hint.textContent = any ? '' : 'Select at least one vote';
+      }
+      toggles.forEach(function(t) { t.addEventListener('change', updateBtn); });
+
+      btn.addEventListener('click', function() {
+        var lines = [];
+        for (var i = 0; i < articles.length; i++) {
+          var up = document.getElementById('vote_' + i + '_up');
+          var down = document.getElementById('vote_' + i + '_down');
+          var vote = '';
+          if (up && up.checked) vote = 'up';
+          if (down && down.checked) vote = 'down';
+          if (vote) {
+            lines.push(vote + ' | ' + articles[i].title + ' | tags:' + articles[i].tags + ' | source:' + articles[i].source);
+          }
+        }
+        if (lines.length === 0) return;
+
+        var body = 'track:' + track + '\ndate:' + date + '\n\n' + lines.join('\n');
+        var title = 'Votes from ' + date + ' (' + track + ')';
+        var url = 'https://github.com/' + repo + '/issues/new?labels=vote&title=' +
+          encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+        window.open(url, '_blank');
+      });
+    })();</script>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
