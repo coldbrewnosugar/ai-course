@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build a Multi-Provider AI Gateway with LiteLLM and A2A Agent Routing — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Build a Multi-Provider AI Gateway with LiteLLM and A2A Agent Routing</h1>
+      <div class="hero-subtitle">Stand up a unified proxy that routes requests across LLMs and agents using a single API</div>
+      <div class="hero-meta">
+        <span>35 min</span>
+        <span> <span class="tag">litellm</span> <span class="tag">ai-gateway</span> <span class="tag">a2a-protocol</span> <span class="tag">multi-provider</span> <span class="tag">proxy</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <h2>The Gateway Problem</h2>
+
+<p>Most organizations working with large language models now consume multiple providers simultaneously — OpenAI for certain tasks, Anthropic for others, open-source models via Bedrock or Vertex AI for cost-sensitive workloads. Each provider exposes a different API surface, different authentication schemes, and different pricing structures. The operational burden of managing these integrations grows linearly with each new provider.</p>
+
+<p>LiteLLM has matured from a lightweight Python SDK into a full-featured <strong>AI Gateway</strong> — a proxy server that sits between your applications and every LLM provider, presenting a single OpenAI-compatible interface regardless of the downstream model. Recent additions include first-class support for the <strong>A2A (Agent-to-Agent) protocol</strong>, which allows autonomous agents to be registered behind the gateway and invoked through the same unified endpoint, and <strong>MCP tool bridging</strong>, which exposes MCP tool servers to any model routed through the proxy.</p>
+
+<p>The implications are significant: a team can issue virtual API keys with per-key spend limits, route requests across providers with automatic fallback, track costs in a single dashboard, and now orchestrate agent-to-agent communication — all without modifying application code. This session walks through standing up that infrastructure.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Generate the LiteLLM Proxy Configuration</h2>
+      </div>
+      <div class="step-body">
+        <p>The LiteLLM proxy server is configured through a YAML file that declares which models are available, how they map to upstream providers, and what policies govern their use. This configuration file is the single source of truth for the entire gateway.</p>
+
+<p>The core abstraction is the <strong>model list</strong> — an array of model definitions, each specifying a <code>model_name</code> (the alias your applications use) and <code>litellm_params</code> (the actual provider, model identifier, and API key reference). When a client sends a request to <code>model: &quot;claude&quot;</code>, the proxy resolves that alias to the corresponding upstream provider and forwards the request in the correct format.</p>
+
+<p>This indirection is powerful: you can swap providers, add fallback models, or introduce load balancing without any client-side changes. The client always speaks OpenAI-format to a single endpoint.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to generate a LiteLLM proxy configuration file that registers at least three models across two different providers, with appropriate environment variable references for API keys.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What models should be available through the gateway, and what friendly aliases should clients use to address them?</li><li>How should API keys be referenced — hardcoded or via environment variables? What are the security implications of each approach?</li><li>What general settings does a proxy need — port, logging level, request timeouts?</li><li>Should any model be designated as a fallback if the primary is unavailable?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a YAML configuration file (typically named <code>litellm_config.yaml</code>) containing a <code>model_list</code> with at least three entries — for example, an OpenAI GPT-4o model aliased as <code>gpt-4o</code>, an Anthropic Claude model aliased as <code>claude</code>, and a cheaper model aliased as <code>gpt-4o-mini</code> for cost-sensitive routing. Each entry should reference API keys through <code>os.environ/</code> syntax rather than hardcoding secrets. The file should also include a <code>general_settings</code> block specifying the master key and completion model. The structure follows this pattern:</p>
+
+<p>```yaml</p>
+<p>model_list:</p>
+<ul>
+<li>model_name: claude</li>
+</ul>
+<p>litellm_params:</p>
+<p>model: anthropic/claude-sonnet-4-20250514</p>
+<p>api_key: os.environ/ANTHROPIC_API_KEY</p>
+<p>```</p>
+
+<p>The critical detail is that <code>model_name</code> is the client-facing alias, while <code>litellm_params.model</code> uses the <code>provider/model</code> format that LiteLLM requires for routing.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        You will need valid API keys for each provider you configure. Set them as environment variables (e.g., <code>export OPENAI_API_KEY=sk-...</code>) before starting the proxy. The <code>os.environ/</code> prefix in the YAML tells LiteLLM to read the value from the environment at startup.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>model_name</code> alias is what clients specify in their requests. You can map multiple upstream models to the same alias — LiteLLM will load-balance across them automatically. This is how you implement redundancy without client changes.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does the provider/model format work?</summary>
+        <div class="reveal-body"><p>LiteLLM uses the <code>provider/model-id</code> convention to determine which API translation layer to activate. When you write <code>anthropic/claude-sonnet-4-20250514</code>, LiteLLM knows to format the request using Anthropic&#x27;s Messages API, handle the authentication header correctly, and parse the response back into OpenAI-compatible format. Over 100 providers are supported, each with its own translation module. The full list is maintained in LiteLLM&#x27;s provider documentation. If you omit the provider prefix, LiteLLM assumes OpenAI format.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Launch the Gateway and Verify Cross-Provider Routing</h2>
+      </div>
+      <div class="step-body">
+        <p>With the configuration file in place, the next step is to start the proxy server and confirm that requests are correctly routed to different providers through a single endpoint.</p>
+
+<p>The LiteLLM proxy runs as a local HTTP server — by default on port 4000 — and exposes the standard OpenAI-compatible endpoints: <code>/chat/completions</code>, <code>/embeddings</code>, <code>/responses</code>, and others. Any HTTP client, OpenAI SDK, or tool that speaks the OpenAI format can connect to it without modification. This is the fundamental value proposition: <strong>one endpoint, many providers</strong>.</p>
+
+<p>The proxy also exposes a <code>/model/info</code> endpoint that returns metadata about all configured models, including their providers, supported parameters, and current status. This is useful for programmatic discovery.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to produce the startup command for the LiteLLM proxy and a set of test requests — using standard curl or the OpenAI Python SDK — that demonstrate routing to at least two different providers through the single gateway endpoint.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What command starts the LiteLLM proxy with a specific config file? What flags control port and logging verbosity?</li><li>If a client uses the OpenAI Python SDK, what two parameters must change to point it at the local proxy instead of OpenAI&#x27;s servers?</li><li>How can you verify that a response actually came from the intended provider rather than a default?</li><li>What happens if you request a model alias that isn&#x27;t in the configuration?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should provide the proxy launch command (<code>litellm --config litellm_config.yaml</code>) and then demonstrate two approaches to testing. First, a curl command that sends a chat completion request to <code>http://localhost:4000/v1/chat/completions</code> with a model alias from the config. Second, a brief Python snippet showing the OpenAI SDK pointed at the local proxy:</p>
+
+<p>```python</p>
+<p>client = openai.OpenAI(</p>
+<p>api_key=&quot;your-master-key&quot;,</p>
+<p>base_url=&quot;http://localhost:4000/v1&quot;</p>
+<p>)</p>
+<p>response = client.chat.completions.create(</p>
+<p>model=&quot;claude&quot;, messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Which provider are you?&quot;}]</p>
+<p>)</p>
+<p>```</p>
+
+<p>The key insight is that <code>base_url</code> redirects the SDK to the proxy, and <code>model</code> uses the alias — the client never needs to know about Anthropic&#x27;s API format.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The <code>api_key</code> parameter in the OpenAI SDK client must match the <code>master_key</code> defined in your LiteLLM configuration&#x27;s <code>general_settings</code>. This is not your OpenAI API key — it is the gateway&#x27;s own authentication token. Confusing these two is a common source of 401 errors.
+      </div>
+        
+      <details class="reveal">
+        <summary>What does the proxy actually do to each request?</summary>
+        <div class="reveal-body"><p>When a request arrives at the proxy, LiteLLM performs several transformations:</p>
+
+<ol>
+<li><strong>Authentication</strong> — validates the provided key against virtual keys or the master key.</li>
+<li><strong>Model resolution</strong> — maps the client-facing alias to an upstream provider and model ID.</li>
+<li><strong>Format translation</strong> — converts the OpenAI-format request into the provider&#x27;s native format (e.g., Anthropic&#x27;s Messages API uses <code>system</code> as a top-level parameter, not a message role).</li>
+<li><strong>Request forwarding</strong> — sends the transformed request to the upstream provider.</li>
+<li><strong>Response normalization</strong> — converts the provider&#x27;s response back into OpenAI format.</li>
+<li><strong>Logging and metering</strong> — records token usage, latency, and cost for the virtual key that made the request.</li>
+</ol>
+
+<p>This pipeline is transparent to the client. From its perspective, it is talking to an OpenAI-compatible server.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have a running LiteLLM proxy server that accepts requests on a single local endpoint and routes them to at least two different LLM providers. Requests using the OpenAI SDK format should return valid completions from whichever provider corresponds to the model alias in the request.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Configure Virtual Keys and Spend Controls</h2>
+      </div>
+      <div class="step-body">
+        <p>A gateway without access control is just a transparent proxy. LiteLLM&#x27;s <strong>virtual key</strong> system introduces a management layer that mirrors how organizations actually operate: different teams, different budgets, different access levels.</p>
+
+<p>A virtual key is a proxy-level API key that LiteLLM issues and manages independently of any upstream provider key. When a request arrives bearing a virtual key, the proxy checks whether that key is authorized to use the requested model, whether its spend limit has been reached, and which upstream provider key to use on its behalf. This decouples consumer identity from provider credentials entirely.</p>
+
+<p>The practical consequence is substantial: you can give a frontend team a key limited to <code>gpt-4o-mini</code> with a $50/month budget, give the research team access to <code>claude</code> with a $500 budget, and revoke or rotate any key without touching the underlying provider accounts. Cost tracking is per-key, per-model, and per-team — all through the gateway&#x27;s admin API.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to explain how to create virtual keys using LiteLLM&#x27;s admin API, including model restrictions and spend limits, and to generate the necessary API calls.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What endpoint does LiteLLM expose for key management, and what authentication does it require?</li><li>What parameters control which models a virtual key can access? What happens when a key tries to use an unauthorized model?</li><li>How are spend limits enforced — per request, per day, or cumulative? What response does the client receive when a limit is exceeded?</li><li>How would you set up different keys for different teams with different budgets?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should describe the <code>/key/generate</code> admin endpoint and provide a curl example or equivalent showing how to create a virtual key with specific constraints. The response should cover three key parameters: <code>models</code> (an array of allowed model aliases), <code>max_budget</code> (cumulative dollar spend limit), and optionally <code>metadata</code> for tagging keys by team or project. The agent should also explain that the admin endpoint requires the <code>master_key</code> for authentication and that created keys are returned as <code>sk-</code> prefixed tokens. A brief example:</p>
+
+<p>```bash</p>
+<p>curl -X POST http://localhost:4000/key/generate \</p>
+<p>-H &quot;Authorization: Bearer your-master-key&quot; \</p>
+<p>-H &quot;Content-Type: application/json&quot; \</p>
+<p>-d &#x27;{&quot;models&quot;: [&quot;gpt-4o-mini&quot;], &quot;max_budget&quot;: 50.0, &quot;metadata&quot;: {&quot;team&quot;: &quot;frontend&quot;}}&#x27;</p>
+<p>```</p>
+
+<p>The agent should note that once the budget is exhausted, subsequent requests return a 400-level error with a clear message about the exceeded limit.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Virtual keys require a database backend for persistence. For local development, LiteLLM uses SQLite by default — no additional setup required. For production, PostgreSQL is recommended. Add <code>database_url</code> to your configuration&#x27;s <code>general_settings</code> to specify the connection string.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does cost tracking work across different providers?</summary>
+        <div class="reveal-body"><p>LiteLLM maintains an internal pricing table that maps each model to its per-token input and output costs. After each request completes, the proxy calculates the cost based on the actual token usage reported by the upstream provider and debits it against the virtual key&#x27;s budget. This pricing data is updated regularly but can also be overridden in the configuration for custom or self-hosted models. The <code>/spend/logs</code> endpoint provides detailed breakdowns by key, model, and time period — effectively a cost dashboard accessible via API. For models with non-standard pricing (e.g., per-image or per-character), LiteLLM maps to the closest token-equivalent cost.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to ensure that if your primary Claude model is unavailable, requests automatically fall back to GPT-4o. How should you configure this in LiteLLM?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">Add both models under the same `model_name` alias in the model list, so LiteLLM load-balances and falls back automatically</label>
+          <div class="decision-feedback correct">&#10003; Correct! When multiple entries share the same `model_name`, LiteLLM treats them as a pool. If one fails, it retries with the next. This is the idiomatic approach — you get both load balancing and failover with zero client-side changes. The client just requests the alias and the proxy handles routing.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Write client-side retry logic that catches errors and re-sends the request with a different model name</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This defeats the purpose of the gateway. The entire point of a proxy-level abstraction is to handle failover transparently. Client-side retry logic reintroduces provider awareness into application code and must be replicated across every client.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Create a separate endpoint on the proxy for each fallback chain</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. LiteLLM does not work this way. Failover is configured at the model-alias level, not the endpoint level. All models — including fallback pools — are accessed through the same `/chat/completions` endpoint.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Register an A2A Agent Behind the Gateway</h2>
+      </div>
+      <div class="step-body">
+        <p>The <strong>Agent-to-Agent (A2A) protocol</strong> is an open specification — originally proposed by Google — that defines how autonomous agents discover each other&#x27;s capabilities and exchange messages. An A2A-compliant agent publishes an <strong>Agent Card</strong> (a JSON manifest describing its name, capabilities, and endpoint) and exposes a message-passing interface for receiving tasks.</p>
+
+<p>LiteLLM&#x27;s gateway now supports A2A natively: you can register external A2A agents in your proxy configuration, and they become accessible through the gateway at <code>/a2a/{agent-name}</code>. This means the same virtual key system, spend tracking, and access controls that govern LLM requests also govern agent invocations. The agent itself can be built with any framework — LangGraph, Pydantic AI, a custom implementation — as long as it speaks A2A.</p>
+
+<p>The architecture is composable: an agent behind the gateway can itself call back into the gateway to access LLMs, creating a loop where the proxy serves as both the agent&#x27;s interface to the outside world and its access point for language model capabilities.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to extend your LiteLLM configuration to register an A2A agent, and explain the minimal structure an A2A agent must implement to be compatible.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What information does the gateway need about an A2A agent — just a URL, or additional metadata?</li><li>What is an Agent Card, and what role does it play in the A2A protocol&#x27;s discovery mechanism?</li><li>How does the gateway&#x27;s `/a2a/{agent-name}` path relate to the agent&#x27;s own endpoint?</li><li>What happens to authentication — does the gateway forward virtual key credentials to the agent, or handle them separately?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce an updated YAML configuration with an <code>a2a_config</code> section (or equivalent) that registers at least one external agent by specifying its name and upstream URL. It should explain that the A2A protocol requires the agent to serve an Agent Card at <code>/.well-known/agent.json</code> describing its capabilities, and to accept <code>SendMessage</code> requests at its root endpoint. The gateway acts as a reverse proxy: it authenticates the incoming request using its own virtual key system, then forwards the A2A message to the registered agent. A minimal config addition:</p>
+
+<p>```yaml</p>
+<p>a2a_config:</p>
+<p>agents:</p>
+<ul>
+<li>agent_name: my-agent</li>
+</ul>
+<p>agent_url: http://localhost:10001</p>
+<p>```</p>
+
+<p>The agent should clarify that the registered agent must be running independently and serving the A2A protocol — LiteLLM does not host the agent, it merely routes to it.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The A2A protocol distinguishes between synchronous and streaming responses. An agent can return a complete response immediately or stream partial updates via Server-Sent Events (SSE). LiteLLM supports both modes and passes the streaming preference through from the client.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        A2A is still a relatively young protocol. While LiteLLM supports it as a first-class routing target, the ecosystem of production-ready A2A agents is still developing. Expect the configuration syntax and protocol details to evolve.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does A2A differ from MCP?</summary>
+        <div class="reveal-body"><p>A2A and MCP (Model Context Protocol) address different layers of the agent architecture:</p>
+
+<ul>
+<li><strong>MCP</strong> defines how an LLM accesses external <strong>tools and data sources</strong>. It is a protocol between a model (or its host application) and a tool server. The model decides when to invoke a tool based on the conversation context.</li>
+</ul>
+
+<ul>
+<li><strong>A2A</strong> defines how <strong>agents communicate with each other</strong>. It is a protocol between two autonomous agents, each of which may internally use LLMs, tools, or other agents. The key difference is that an A2A agent has its own agency — it interprets the message, decides on a plan, and may perform multiple internal steps before responding.</li>
+</ul>
+
+<p>Think of MCP as giving an agent hands (access to tools), and A2A as giving agents the ability to delegate to and collaborate with other agents. LiteLLM&#x27;s gateway can broker both: MCP tools are bridged to any model via the proxy, and A2A agents are registered as routable endpoints.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Bridge MCP Tools Through the Gateway</h2>
+      </div>
+      <div class="step-body">
+        <p>The final piece of the gateway architecture is <strong>MCP tool bridging</strong> — the ability to connect Model Context Protocol tool servers to any LLM routed through the proxy, regardless of whether that LLM natively supports tool use.</p>
+
+<p>MCP defines a standard interface for tools: each tool has a name, a description, and an input schema. LiteLLM&#x27;s <code>experimental_mcp_client</code> can connect to any MCP server, load its available tools, and translate them into the OpenAI function-calling format. Once translated, these tools can be passed to any model in the gateway&#x27;s model list. The proxy handles the round-trip: it sends the tool definitions with the completion request, receives the model&#x27;s tool-call response, executes the tool via MCP, and feeds the result back into the conversation.</p>
+
+<p>This bridging is significant because it decouples tool availability from model choice. A tool server built for Claude can be used with GPT-4o, Gemini, or any other model that supports function calling — the gateway handles the format translation.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to explain how MCP tool bridging works in LiteLLM and produce a configuration or code snippet that connects an MCP tool server to a model through the gateway.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What does `load_mcp_tools` actually return, and in what format? Why does the format matter for cross-provider compatibility?</li><li>Who executes the tool — the LLM, the proxy, or the MCP server? Trace the full request lifecycle.</li><li>Can MCP tools be configured at the proxy level (in YAML), or must they be set up in application code?</li><li>What happens if a model does not support function calling — can MCP tools still be used?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should explain the three-phase lifecycle: (1) tool discovery, where the proxy connects to an MCP server and loads tool definitions; (2) tool-augmented completion, where the tool schemas are included in the LLM request as function definitions; and (3) tool execution, where the model&#x27;s tool-call response is sent back to the MCP server for execution, and the result is returned to the model for a final response.</p>
+
+<p>The agent should note that MCP tools can be configured at the proxy level in the YAML config under individual model entries or globally under settings, or loaded programmatically via the Python SDK. It should clarify that tool bridging requires the target LLM to support function calling — models without this capability cannot participate. A conceptual config snippet:</p>
+
+<p>```yaml</p>
+<p>model_list:</p>
+<ul>
+<li>model_name: gpt-4o-with-tools</li>
+</ul>
+<p>litellm_params:</p>
+<p>model: openai/gpt-4o</p>
+<p>api_key: os.environ/OPENAI_API_KEY</p>
+<p>mcp_servers:</p>
+<ul>
+<li>url: http://localhost:3001</li>
+</ul>
+<p>```</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>experimental_mcp_client</code> module&#x27;s name reflects its current status — the API surface may change. However, the underlying mechanism (translating MCP tool definitions into OpenAI function-calling format) is stable and well-understood.
+      </div>
+        
+      <details class="reveal">
+        <summary>What is the security model for MCP tools behind the gateway?</summary>
+        <div class="reveal-body"><p>MCP tool execution introduces a significant trust boundary. When a tool is bridged through the gateway, the LLM can invoke it based on user input — which means a user can indirectly trigger actions on the MCP server (file reads, API calls, database queries) by crafting their prompt appropriately.</p>
+
+<p>LiteLLM&#x27;s virtual key system provides the first layer of defense: you can restrict which models (and therefore which tool configurations) a given key can access. However, fine-grained per-tool authorization is not yet part of the proxy layer — if a key has access to a model with MCP tools, it can invoke any of those tools.</p>
+
+<p>For production deployments, the recommendation is to run MCP servers with minimal permissions, use separate model configurations for tool-augmented and tool-free access, and audit tool invocation logs through the gateway&#x27;s spending and logging endpoints.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a complete AI gateway architecture: a LiteLLM proxy routing requests to multiple LLM providers, virtual keys with spend controls for access management, an A2A agent registered and accessible through the gateway, and an understanding of how MCP tools can be bridged to any model through the proxy. The gateway serves as a single control plane for all AI interactions.</div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Configure a load-balanced model group with automatic failover and request-based routing</div>
+      <div class="your-turn-context">In production, you would rarely point a model alias at a single upstream provider. Instead, you want resilience: if OpenAI is slow or down, requests should automatically route to Anthropic or another provider. LiteLLM supports this through model groups — multiple upstream models sharing a single alias — with configurable routing strategies (lowest latency, lowest cost, round-robin).</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>How do you register multiple upstream models under the same client-facing alias?</li><li>What routing strategies does LiteLLM support, and how do you specify one in the configuration?</li><li>What parameters control retry behavior — number of retries, timeout thresholds, cooldown periods for failed providers?</li><li>How would you verify that failover actually works without taking down a real provider?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Generate a LiteLLM proxy YAML configuration where the model alias &#x27;smart&#x27; maps to three upstream models: anthropic/claude-sonnet-4-20250514 as the primary, openai/gpt-4o as the first fallback, and openai/gpt-4o-mini as the budget fallback. Configure the routing strategy to prefer the lowest-latency provider, with 3 retries on failure and a 60-second cooldown before retrying a failed provider. Include the relevant router_settings section. Explain how LiteLLM determines latency rankings and when it triggers a failover.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>This session constructed a complete AI gateway using LiteLLM&#x27;s proxy server — a single infrastructure component that abstracts the complexity of multi-provider LLM access, agent orchestration, and tool bridging.</p>
+
+<p>We began with the core abstraction: a YAML configuration that maps client-facing model aliases to upstream providers, allowing any OpenAI-compatible client to access any supported LLM without modification. We then layered on operational controls — virtual API keys with model restrictions and spend limits — that mirror real organizational access patterns. The A2A protocol integration demonstrated how autonomous agents can be registered behind the same gateway, inheriting the same access controls and cost tracking that govern LLM requests. Finally, MCP tool bridging showed how external tools can be made available to any model through the proxy, decoupling tool availability from provider choice.</p>
+
+<p>The resulting architecture is a <strong>single pane of glass</strong> for all AI interactions: one endpoint, one authentication system, one cost ledger, one place to add providers, agents, or tools.</p></div>
+      <ul class="takeaways-list"><li>An AI gateway decouples application code from provider specifics — clients speak one format, the proxy handles translation, authentication, and routing for 100+ providers.</li><li>Virtual keys create an organizational layer above provider credentials, enabling per-team budgets, model restrictions, and key rotation without touching upstream accounts.</li><li>The A2A protocol and MCP serve complementary roles: A2A enables agent-to-agent delegation, while MCP bridges tools to models. Both can be routed through the same gateway.</li><li>Load balancing and failover are configured at the alias level — multiple upstream models sharing one alias gives you resilience with zero client-side changes.</li><li>Cost tracking is automatic and per-key, using LiteLLM&#x27;s internal pricing tables to meter spend across all providers in a single ledger.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Deploy the proxy with PostgreSQL for persistent key and spend storage, and explore the <code>/spend/logs</code> endpoint for cost analysis.</li><li>Build a simple A2A agent using Pydantic AI or LangGraph and register it behind the gateway to experiment with agent orchestration.</li><li>Explore LiteLLM&#x27;s guardrails system — content filtering, PII detection, and prompt injection defenses — configurable per model or per key.</li><li>Investigate the <code>/responses</code> endpoint for OpenAI&#x27;s Responses API format, which supports multi-turn agentic workflows natively through the proxy.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/BerriAI/litellm" target="_blank" rel="noopener">BerriAI/litellm</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

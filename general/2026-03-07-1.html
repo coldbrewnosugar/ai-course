@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build a Tool-Calling Agent with Qwen-Agent and MCP — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Build a Tool-Calling Agent with Qwen-Agent and MCP</h1>
+      <div class="hero-subtitle">From a bare model endpoint to an autonomous, tool-wielding agent — guided entirely through AI-assisted development</div>
+      <div class="hero-meta">
+        <span>40 min</span>
+        <span> <span class="tag">agents</span> <span class="tag">function-calling</span> <span class="tag">MCP</span> <span class="tag">Qwen</span> <span class="tag">open-source</span> <span class="tag">RAG</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Qwen-Agent, the open-source framework maintained by Alibaba&#x27;s Qwen team, has matured into one of the most complete agent scaffolds available for open-weight models. With the February 2026 release of Qwen3.5 and the accompanying agent demo, the framework now offers first-class support for <strong>Model Context Protocol (MCP)</strong> servers, multi-step function calling, code interpretation, and retrieval-augmented generation — all from a single <code>pip install</code>.</p>
+
+<p>This matters for a specific reason: until recently, sophisticated tool-calling agents were tightly coupled to proprietary APIs. Qwen-Agent demonstrates that the same agentic patterns — plan-then-execute loops, parallel tool dispatch, memory-augmented reasoning — can run against a model you host yourself, with no API keys leaving your infrastructure.</p>
+
+<p>In this session, we construct a working tool-calling agent step by step. We will not write code from scratch. Instead, we will formulate precise prompts to an AI coding assistant and evaluate the output at each stage. The objective is twofold: to understand the architecture of a tool-calling agent pipeline, and to develop fluency in directing an AI agent to build one for us.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Establish the Model Service and Agent Skeleton</h2>
+      </div>
+      <div class="step-body">
+        <p>Every Qwen-Agent application begins with two primitives: a <strong>model service</strong> (an OpenAI-compatible endpoint serving a Qwen model) and an <strong>agent class</strong> that orchestrates interactions with that service.</p>
+
+<p>Qwen-Agent supports two deployment paths. You can use Alibaba Cloud&#x27;s DashScope API, which requires only an API key. Alternatively, you can serve an open-weight Qwen model locally via vLLM or Ollama. For this workshop, either path works — the agent code is identical in both cases because Qwen-Agent abstracts the model behind a uniform <code>llm</code> configuration dictionary.</p>
+
+<p>The agent skeleton itself is minimal. Qwen-Agent provides a base class called <code>Assistant</code> that handles the core loop: receive a user message, decide whether to call tools or respond directly, execute any tool calls, and return a final answer. Our first task is to get this skeleton running with a simple greeting exchange — no tools yet, just proof that the model service and the agent framework are connected.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to produce a minimal Qwen-Agent script that connects to a model endpoint and handles a single conversational turn.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What information does the agent framework need to locate and authenticate with the model service? Think about endpoint URL, model name, and API key.</li><li>Qwen-Agent&#x27;s `Assistant` class accepts an `llm` configuration — what shape should that configuration take?</li><li>How should the script invoke the agent and display its response? Consider that Qwen-Agent uses a generator-based response pattern.</li><li>What installation extras are needed if we plan to add MCP and RAG later?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a short Python script — roughly 15 lines — that imports <code>Assistant</code> from <code>qwen_agent.agents</code>, configures it with an <code>llm</code> dictionary specifying <code>model</code>, <code>model_server</code>, and <code>api_key</code>, then calls <code>agent.run()</code> with a simple user message and prints the streamed response. The critical configuration looks like this:</p>
+
+<p>```python</p>
+<p>llm = {</p>
+<p>&#x27;model&#x27;: &#x27;qwen3.5-72b&#x27;,</p>
+<p>&#x27;model_server&#x27;: &#x27;https://dashscope.aliyuncs.com/compatible-mode/v1&#x27;,</p>
+<p>&#x27;api_key&#x27;: os.getenv(&#x27;DASHSCOPE_API_KEY&#x27;),</p>
+<p>}</p>
+<p>```</p>
+
+<p>The script should confirm that the agent responds coherently, proving the connection is live.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-api-key-note">
+        <div class="callout-label">API Key Note</div>
+        If using DashScope, set the <code>DASHSCOPE_API_KEY</code> environment variable before running. If using a local model via Ollama or vLLM, point <code>model_server</code> to your local endpoint (e.g., <code>http://localhost:11434/v1</code>) and set <code>api_key</code> to any non-empty string.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        For local deployment, Ollama is the simplest path: <code>ollama run qwen3.5</code> starts a compatible server immediately. vLLM offers higher throughput but requires a GPU with sufficient VRAM. For this workshop, model size matters less than having a working endpoint — even a 7B parameter model supports tool calling.
+      </div>
+        
+      <details class="reveal">
+        <summary>What does `Assistant` actually do under the hood?</summary>
+        <div class="reveal-body"><p>The <code>Assistant</code> class implements a ReAct-style loop. On each turn, it sends the conversation history (plus any system prompt and tool descriptions) to the model. If the model&#x27;s response contains a function call, <code>Assistant</code> executes the corresponding tool, appends the result to the conversation, and loops again. If the response contains no function call, the loop terminates and the final text is yielded to the caller. This loop is the fundamental pattern behind nearly all tool-calling agents, regardless of framework.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Define a Custom Tool with Function Calling</h2>
+      </div>
+      <div class="step-body">
+        <p>A tool, in the context of an LLM agent, is a function that the model can choose to invoke when it determines that its parametric knowledge is insufficient. The model does not execute the function itself — it produces a structured request (a function call) specifying the tool name and arguments, and the agent framework dispatches the actual execution.</p>
+
+<p>Qwen-Agent models tools as subclasses of <code>BaseTool</code>. Each tool declares three things: a <strong>name</strong>, a <strong>description</strong> (which the model reads to decide when to use the tool), and a <strong>parameters schema</strong> (a JSON Schema object defining the inputs). The framework injects these declarations into the system prompt so the model understands what capabilities are available.</p>
+
+<p>The quality of the tool description is decisive. A vague description leads to misuse; an overly narrow one leads to under-use. This is a prompt engineering problem, not a coding problem — and it is where your judgment matters most.</p>
+
+<p>For our first tool, we will build a simple weather lookup. The purpose is not meteorological accuracy but structural clarity: it demonstrates the full lifecycle of a tool call.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to produce a custom Qwen-Agent tool class that simulates a weather lookup, and wire it into the Assistant from Step 1.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What should the tool&#x27;s description say so that the model knows *when* to call it? Think about what would make the model choose this tool over generating a freeform answer.</li><li>What parameters does a weather lookup require? What JSON Schema types and constraints are appropriate?</li><li>How does the `Assistant` class learn about available tools — does it discover them automatically, or must they be explicitly registered?</li><li>What should the tool&#x27;s `call()` method return? Consider the format the agent framework expects.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a class that extends <code>BaseTool</code>, with <code>name</code>, <code>description</code>, and <code>parameters</code> class attributes. The <code>description</code> should be precise — something like &#x27;Retrieves the current weather for a specified city, returning temperature, conditions, and humidity.&#x27; The <code>parameters</code> list defines a required <code>city</code> field of type string. The <code>call()</code> method returns a dictionary with mock data. The tool is then passed to <code>Assistant</code> via the <code>function_list</code> parameter. When the user asks &#x27;What is the weather in Tokyo?&#x27;, the agent should invoke the tool and incorporate the result into its response.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Tool descriptions function as prompts to the model. Treat them with the same care you would give a system prompt. Specify what the tool does, what it returns, and — critically — when it should <em>not</em> be used.
+      </div>
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        Qwen-Agent parses tool calls from the model output using its own template, not vLLM&#x27;s built-in parser. When serving Qwen3.5 with vLLM, do <em>not</em> pass <code>--enable-auto-tool-choice</code> or <code>--tool-call-parser hermes</code> — these flags conflict with Qwen-Agent&#x27;s parsing logic.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does function calling actually work at the token level?</summary>
+        <div class="reveal-body"><p>During fine-tuning, Qwen models are trained to emit special tokens (such as <code>✿FUNCTION✿</code> and <code>✿ARGS✿</code> in earlier versions, or structured JSON blocks in Qwen3.5) when they determine a tool call is appropriate. The agent framework scans the model output for these patterns, extracts the function name and arguments, executes the corresponding Python method, and injects the return value back into the conversation as an <code>observation</code>. The model then generates a final response that synthesizes the observation with the user&#x27;s original question. This two-phase generation (call, then summarize) is why tool-calling agents typically require two model forward passes per tool use.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>Parallel and multi-step tool calls</summary>
+        <div class="reveal-body"><p>Qwen3.5 supports parallel tool calling — the model can emit multiple function calls in a single response, and the agent framework executes them concurrently. It also supports multi-step calling, where the result of one tool informs the next call. The <code>Assistant</code> class handles both patterns transparently: it loops until the model produces a response with no further tool calls. This means a well-described set of tools can enable surprisingly complex workflows without any additional orchestration code.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have a running Qwen-Agent `Assistant` connected to a model endpoint, with a custom weather tool that the agent can invoke in response to user queries. The agent should demonstrate the full tool-calling lifecycle: receive a question, decide to call the tool, execute it, and return a natural-language response incorporating the tool&#x27;s output.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You want to add a new tool that queries a live database. Where should you invest the most effort to ensure the agent uses it correctly?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">Writing a precise tool description and parameter schema</label>
+          <div class="decision-feedback correct">&#10003; Correct! The model decides whether and how to call a tool based entirely on its description and parameter schema — these are the only information the model receives about the tool. A well-crafted description with clear usage boundaries and a rigorous parameter schema is the single most important factor in reliable tool use. The implementation of the tool itself is a standard programming task; the description is the prompt engineering task.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">Optimizing the tool&#x27;s internal implementation for speed</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Execution speed matters for user experience, but it has no effect on whether the agent selects and invokes the tool correctly. A fast tool with a poor description will still be misused or ignored. Correctness of invocation must be established before performance is optimized.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">Adding more tools so the model has fallback options</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Adding more tools without clear descriptions increases ambiguity. The model must choose among tools based on their descriptions, and overlapping or vaguely described tools lead to unreliable selection. Precision in a small tool set outperforms breadth in a poorly described one.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Connect an MCP Server for External Tool Discovery</h2>
+      </div>
+      <div class="step-body">
+        <p>The Model Context Protocol (MCP) is an open standard that allows an agent to discover and invoke tools hosted by an external server, rather than defining them in-line within the agent code. Think of MCP as a USB port for AI agents: any MCP-compliant server can plug in, and the agent automatically learns what tools are available, what parameters they accept, and how to call them.</p>
+
+<p>This decoupling is architecturally significant. Without MCP, every tool must be defined as a Python class within your agent codebase. With MCP, tools can be maintained as separate services — potentially written in different languages, operated by different teams, and versioned independently. The agent queries the MCP server at startup, receives a manifest of available tools, and treats them identically to locally defined ones.</p>
+
+<p>Qwen-Agent integrates MCP through its <code>mcpServers</code> configuration key, which mirrors the format used by Claude Desktop and other MCP-aware clients. Each server entry specifies either a <code>command</code> (for stdio-based servers) or a <code>url</code> (for HTTP-based servers).</p>
+
+<p>For this step, we will connect the widely-used <code>filesystem</code> MCP server, which exposes file system operations (read, write, list, search) as tools the agent can call.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to modify the existing script so that it connects to an MCP server (the filesystem server) and can use its tools alongside the custom weather tool.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How does Qwen-Agent&#x27;s `Assistant` accept MCP server configuration? What key do you add to its constructor?</li><li>The filesystem MCP server runs as a subprocess via `npx`. What command and arguments does it require, and how do you restrict which directories it can access?</li><li>Can locally defined tools and MCP-provided tools coexist in the same agent? How does the agent&#x27;s tool selection logic handle both?</li><li>What happens at agent startup — does it connect to the MCP server immediately, or lazily on first tool call?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce an updated <code>Assistant</code> configuration that includes an <code>mcp_servers</code> parameter alongside the existing <code>function_list</code>. The MCP configuration specifies the filesystem server:</p>
+
+<p>```python</p>
+<p>mcp_servers = [{</p>
+<p>&#x27;command&#x27;: &#x27;npx&#x27;,</p>
+<p>&#x27;args&#x27;: [&#x27;-y&#x27;, &#x27;@modelcontextprotocol/server-filesystem&#x27;, &#x27;/tmp/workspace&#x27;],</p>
+<p>}]</p>
+<p>```</p>
+
+<p>When the agent starts, it should connect to the MCP server, discover the available filesystem tools (read_file, write_file, list_directory, etc.), and make them available alongside the custom weather tool. A test query like &#x27;List the files in /tmp/workspace&#x27; should trigger the MCP filesystem tool.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The filesystem MCP server grants the agent real read/write access to the directories you specify. Always scope it to a dedicated workspace directory. Never point it at your home directory or system paths.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        You can connect multiple MCP servers simultaneously. Each one contributes its tools to the agent&#x27;s available pool. This composability is MCP&#x27;s primary design advantage — you can assemble an agent&#x27;s capabilities from a library of independent servers.
+      </div>
+        
+      <details class="reveal">
+        <summary>stdio vs. HTTP transport for MCP servers</summary>
+        <div class="reveal-body"><p>MCP defines two transport modes. The <strong>stdio</strong> transport launches the server as a child process and communicates via stdin/stdout — this is what the <code>command</code>/<code>args</code> configuration uses. It is simpler to set up and is the default for local development. The <strong>HTTP</strong> transport connects to a running server via HTTP with Server-Sent Events, suitable for remote or shared servers. Qwen-Agent supports both; the choice depends on your deployment context, not on the agent code itself.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does MCP tool discovery work?</summary>
+        <div class="reveal-body"><p>When the agent initializes, it sends a <code>tools/list</code> request to each configured MCP server. The server responds with a JSON manifest containing each tool&#x27;s name, description, and input schema — exactly the same information you would define manually in a <code>BaseTool</code> subclass. Qwen-Agent wraps each discovered tool as an internal tool object and adds it to the agent&#x27;s tool registry. From the model&#x27;s perspective, there is no difference between a locally defined tool and an MCP-provided one.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Add RAG: Give the Agent a Knowledge Base</h2>
+      </div>
+      <div class="step-body">
+        <p>Retrieval-Augmented Generation (RAG) allows an agent to ground its responses in a specific document corpus rather than relying solely on its training data. In Qwen-Agent, RAG is implemented as a built-in tool — the agent can decide to search a document collection just as it would decide to call any other tool.</p>
+
+<p>The architecture is straightforward. You provide a set of documents (files, URLs, or raw text) to the agent. Qwen-Agent chunks these documents, builds a retrieval index, and exposes a <code>retrieval</code> tool that the model can invoke when it needs information from the corpus. The model formulates a search query, the retrieval tool returns relevant chunks, and the model synthesizes a response from those chunks.</p>
+
+<p>This is conceptually identical to how a human researcher works: faced with a question outside their immediate knowledge, they consult reference materials, extract relevant passages, and compose an answer. The difference is that the model decides autonomously whether retrieval is necessary — it is not forced to retrieve on every query.</p>
+
+<p>For this step, we will give the agent access to a small set of documents and verify that it can answer questions from them.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to add RAG capability to the existing Qwen-Agent setup, enabling the agent to answer questions from a set of provided documents.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How does Qwen-Agent&#x27;s `Assistant` accept reference documents? What parameter carries the document list, and what format does each document entry use?</li><li>Does the retrieval tool need to be explicitly added to `function_list`, or does specifying documents automatically enable it?</li><li>What document formats does Qwen-Agent support out of the box — PDF, plain text, URLs?</li><li>How would you test that the agent is actually retrieving from the documents rather than answering from its training data? Think about questions with answers that only exist in your specific documents.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce an updated configuration where the <code>Assistant</code> receives a <code>files</code> parameter — a list of file paths or URLs pointing to reference documents. Qwen-Agent automatically enables its built-in retrieval tool when documents are provided. The key addition is simply passing documents at construction time. When asked a question whose answer resides in the documents, the agent should invoke the retrieval tool, extract relevant passages, and cite them in its response. A good test is to provide a document with a specific, unusual fact and then ask the agent about it — if it answers correctly, retrieval is working.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Qwen-Agent&#x27;s RAG pipeline uses its own chunking and retrieval logic. For production workloads with large corpora, you may want to replace this with a dedicated vector database (such as Qdrant or Milvus) exposed as an MCP server — combining the patterns from Steps 3 and 4.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does the agent decide when to retrieve?</summary>
+        <div class="reveal-body"><p>The retrieval tool has a description — just like any other tool — that tells the model it can search a document collection. The model evaluates each user query against all available tool descriptions and decides whether retrieval is likely to help. This means the agent will not retrieve for simple conversational queries (&#x27;hello&#x27;) but will retrieve for domain-specific questions (&#x27;what was the Q3 revenue?&#x27;). The quality of this decision depends on the model&#x27;s instruction-following capability and the clarity of the retrieval tool&#x27;s description.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a Qwen-Agent `Assistant` with three capability layers: custom tools (the weather lookup), MCP-provided tools (filesystem operations), and RAG (document retrieval). The agent autonomously decides which capabilities to use based on the user&#x27;s query. Test this by asking a weather question, a file operation question, and a document-specific question in sequence.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Orchestrate Multi-Step Tasks with Agent Planning</h2>
+      </div>
+      <div class="step-body">
+        <p>The preceding steps established individual capabilities — tools the agent can invoke one at a time. The final architectural layer is <strong>planning</strong>: the agent&#x27;s ability to decompose a complex request into a sequence of tool calls, execute them in order, and synthesize the results into a coherent response.</p>
+
+<p>Qwen3.5 handles planning through its extended reasoning capability. When the model encounters a complex query, it first generates a chain-of-thought plan (visible in the <code>reasoning_content</code> field of the response), then executes the plan step by step. Each step may involve a tool call, a retrieval, or pure reasoning. The <code>Assistant</code> class manages this loop automatically — it continues invoking tools and feeding results back to the model until the model produces a final response with no further tool calls.</p>
+
+<p>The practical implication is that you do not need to write orchestration logic. A well-described set of tools, combined with a sufficiently capable model, produces emergent multi-step behavior. Your role is to ensure that the tool descriptions form a coherent vocabulary — each tool&#x27;s description should clarify not only what it does in isolation, but how it relates to other available tools.</p>
+
+<p>For this final step, we will craft a system prompt that guides the agent toward planning behavior and test it with a multi-step task.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get your AI agent to add a system prompt and test configuration that enables and demonstrates multi-step planning across all available tools.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What should the system prompt convey to encourage the model to plan before acting? Think about decomposition instructions and tool-use guidelines.</li><li>How do you make the reasoning process visible — does Qwen-Agent expose the model&#x27;s chain-of-thought separately from the final response?</li><li>What would a good multi-step test task look like? It should require at least two different tools in sequence — for example, retrieving information from a document and then writing a summary to a file.</li><li>How does error handling work if a tool call fails mid-plan? Does the agent retry, skip, or abort?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a system prompt that instructs the model to think step by step, identify which tools are needed, and execute them in sequence. A good multi-step test might be: &#x27;Find the key points from the reference documents about Qwen-Agent&#x27;s MCP support, then write a summary to /tmp/workspace/mcp-summary.txt.&#x27; The agent should first invoke the retrieval tool to gather relevant passages, then invoke the filesystem MCP tool to write the summary file. The <code>reasoning_content</code> field in the response should reveal the agent&#x27;s plan before execution begins.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The <code>reasoning_content</code> field is Qwen3.5&#x27;s equivalent of extended thinking. It contains the model&#x27;s internal deliberation — including its plan for tool use — before it begins generating the visible response. Logging this field is invaluable for debugging agent behavior.
+      </div>
+        
+      <details class="reveal">
+        <summary>Planning limitations and failure modes</summary>
+        <div class="reveal-body"><p>Emergent planning has known failure modes. The model may call tools in a suboptimal order, repeat unnecessary calls, or fail to use a result from an earlier step. These issues are more common with smaller models and less precise tool descriptions. Mitigation strategies include: (1) providing few-shot examples in the system prompt showing correct multi-step behavior, (2) limiting the number of available tools to reduce decision complexity, and (3) using the <code>max_ref_token</code> parameter to control how much retrieved content the model processes at once. For mission-critical workflows, consider using Qwen-Agent&#x27;s <code>Router</code> agent, which delegates subtasks to specialized sub-agents rather than relying on a single model to plan everything.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build a &#x27;research assistant&#x27; agent that combines all the capabilities from this session: it should accept a research question, search its document knowledge base, look up supplementary data via a custom API tool, and produce a structured report saved to the filesystem via MCP.</div>
+      <div class="your-turn-context">This challenge integrates every layer of the agent pipeline — custom tools, MCP tools, RAG retrieval, and multi-step planning. The key difficulty is not in the implementation but in crafting a prompt to your AI coding assistant that specifies the interactions between these components clearly enough to produce a working result on the first attempt.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What does &#x27;structured report&#x27; mean concretely? How should you specify the output format so the agent knows what to produce?</li><li>How will the agent know which source of information to consult first — the document corpus or the custom API tool? Should your system prompt encode a preference order?</li><li>What error cases should you mention in your prompt? Consider what happens if retrieval returns no relevant results or the API tool fails.</li><li>How should the final file be named and where should it be saved? Think about how to make this configurable rather than hardcoded.</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Build a Qwen-Agent Assistant configured as a research assistant. It should have: (1) An LLM config pointing to my local Qwen3.5 endpoint at localhost:8000/v1. (2) A custom tool called &#x27;arxiv_search&#x27; that takes a query string and returns mock paper titles and abstracts — define it as a BaseTool subclass. (3) MCP connection to the filesystem server, scoped to /tmp/research-output. (4) RAG enabled with a list of reference documents I&#x27;ll provide as file paths. (5) A system prompt that instructs the agent to: first consult reference documents, then supplement with arxiv_search if needed, and finally write a structured Markdown report (with sections: Summary, Key Findings, Sources) to the filesystem. Test it with the query &#x27;What are recent advances in MCP-based agent architectures?&#x27;</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">Your agent sometimes calls the retrieval tool when the question could be answered directly from its training data, adding unnecessary latency. What is the most effective fix?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Refine the retrieval tool&#x27;s description to specify the exact scope of the document corpus</label>
+          <div class="decision-feedback correct">&#10003; Correct! If the tool description says &#x27;searches the knowledge base,&#x27; the model has no basis for deciding whether a given question falls within that knowledge base. A description like &#x27;searches the internal product documentation for Acme Corp release notes, pricing tables, and support policies&#x27; gives the model enough context to distinguish questions that require retrieval from those it can answer directly.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Remove the retrieval tool and only enable it for specific query types</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This shifts the routing logic from the model to your application code, losing the benefit of autonomous tool selection. The better approach is to give the model enough information to make the routing decision itself — through a precise tool description.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Increase the model temperature to encourage more varied tool selection</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Temperature affects the randomness of token generation, not the quality of tool selection decisions. Increasing temperature would make tool selection *less* predictable, not more appropriate. The issue is informational (the model lacks context to decide), not statistical.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>We have constructed a complete tool-calling agent pipeline using Qwen-Agent, progressing through five architectural layers: a model connection, custom tool definition, MCP server integration, retrieval-augmented generation, and multi-step planning. At each stage, the work was performed by prompting an AI coding assistant — our role was to define objectives, evaluate outputs, and iterate.</p>
+
+<p>The central insight of this session is that building an agent is primarily a <em>design</em> activity, not a <em>coding</em> activity. The framework handles execution mechanics. Your leverage lies in three areas: the precision of your tool descriptions (which determine whether the model selects tools correctly), the clarity of your system prompt (which shapes planning behavior), and the composition of your tool set (which defines the agent&#x27;s capability boundary).</p>
+
+<p>The Qwen-Agent framework, combined with MCP, provides a modular architecture where tools can be developed, tested, and deployed independently of the agent code itself. This separation of concerns — agent logic, tool implementation, and model serving as three distinct layers — is the foundation for building agents that are maintainable and extensible in production.</p></div>
+      <ul class="takeaways-list"><li>Tool descriptions are prompts to the model — their precision directly determines the reliability of tool selection and invocation.</li><li>MCP decouples tool implementation from agent code, enabling plug-and-play composition of capabilities from independent servers.</li><li>Multi-step planning is an emergent property of capable models with well-described tools, not something you need to hard-code.</li><li>RAG in Qwen-Agent is implemented as a tool, meaning the model decides autonomously when retrieval is necessary — the quality of this decision depends on the retrieval tool&#x27;s description.</li><li>The <code>reasoning_content</code> field in Qwen3.5 responses exposes the model&#x27;s internal planning, providing a critical debugging surface for agent behavior.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Deploy a production MCP server (e.g., a database query server or API gateway) and connect it to the agent to handle real-world tasks.</li><li>Explore Qwen-Agent&#x27;s <code>Router</code> agent class, which delegates subtasks to specialized sub-agents for more complex workflows.</li><li>Benchmark tool-calling accuracy using Qwen-Agent&#x27;s DeepPlanning evaluation suite to quantify how well your tool descriptions perform.</li><li>Integrate a Gradio-based GUI using Qwen-Agent&#x27;s <code>[gui]</code> extra to provide a web interface for the agent.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/QwenLM/Qwen-Agent" target="_blank" rel="noopener">QwenLM/Qwen-Agent</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
