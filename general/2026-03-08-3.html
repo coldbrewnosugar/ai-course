@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Causal Discovery and Inference with pgmpy — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>Causal Discovery and Inference with pgmpy</h1>
+      <div class="hero-subtitle">Move beyond correlation: learn causal graph structures from data, then ask interventional and counterfactual questions that standard ML cannot answer.</div>
+      <div class="hero-meta">
+        <span>35 min</span>
+        <span> <span class="tag">causal-ai</span> <span class="tag">bayesian-networks</span> <span class="tag">probabilistic-modeling</span> <span class="tag">python</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>Most machine learning models answer the question <em>&quot;What is the probability of Y given that we observed X?&quot;</em> — a purely associational query. But many real-world decisions require a fundamentally different kind of reasoning: <em>&quot;What happens to Y if we intervene and force X to a particular value?&quot;</em> or even <em>&quot;Would Y have been different had X not occurred?&quot;</em></p>
+
+<p>These are causal questions, and answering them requires a model that encodes not just statistical dependencies but the direction of influence between variables. A Bayesian Network — a directed acyclic graph (DAG) where edges represent direct causal relationships and nodes carry conditional probability distributions — provides exactly this structure.</p>
+
+<p><strong>pgmpy</strong>, a mature Python library for probabilistic graphical models, has recently consolidated its causal inference capabilities into a clean, end-to-end pipeline: discover structure from data, validate it, learn parameters, and then compute interventional distributions using Judea Pearl&#x27;s do-calculus. This session walks through that pipeline, with you directing an AI agent to build each component.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Load a dataset and explore its causal plausibility</h2>
+      </div>
+      <div class="step-body">
+        <p>Before any algorithm touches our data, we need to develop causal intuition about the domain. Structure learning algorithms can identify statistical dependencies, but they cannot tell us whether those dependencies make <em>causal sense</em> — that judgement requires domain knowledge.</p>
+
+<p>In this step, we ask the agent to set up the environment and load a well-known example dataset that ships with pgmpy. The <strong>alarm</strong> network — originally developed for patient monitoring in intensive care — contains 37 variables representing physiological measurements, ventilator settings, and disease states. It is a standard benchmark in the Bayesian Network literature because its causal structure is well-understood, which means we can validate what our algorithms discover.</p>
+
+<p>The key mental shift here: we are not loading data to train a classifier. We are loading data to <em>recover the causal mechanism that generated it</em>.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to set up a Python environment with pgmpy, load the alarm example model, simulate a dataset from it, and provide a summary of the dataset&#x27;s structure — number of variables, sample size, and variable types.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What library do we need installed, and what submodule provides example models?</li><li>How many samples should we simulate to give a structure-learning algorithm enough statistical power? Consider that we have 37 variables — what does that imply about the minimum sample size?</li><li>What kind of summary would help us reason about causal plausibility before running any algorithm? Think: variable names, cardinality, obvious groupings.</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a short script that installs pgmpy, loads the alarm model via <code>get_example_model(&#x27;alarm&#x27;)</code>, simulates around 5,000 samples, and prints a summary showing all 37 variable names, each variable&#x27;s number of discrete states, and the DataFrame shape. The agent should note that this is a discrete Bayesian Network — all variables are categorical — which determines which conditional independence test we will use later.</p>
+
+<p>```python</p>
+<p>from pgmpy.utils import get_example_model</p>
+
+<p>model = get_example_model(&quot;alarm&quot;)</p>
+<p>df = model.simulate(n_samples=5000)</p>
+<p>print(df.shape, df.nunique())</p>
+<p>```</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        We are deliberately using a model with <em>known</em> ground-truth structure. This is not a shortcut — it is sound methodology. When evaluating a causal discovery algorithm, you need a reference graph to measure accuracy against. In practice, you would compare algorithmic output against expert-elicited structures.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why simulate from a known model instead of using real-world data?</summary>
+        <div class="reveal-body"><p>Using a model with known ground truth lets us <em>validate</em> structure learning. If the PC algorithm recovers edges that match the true alarm network, we gain confidence in its output. If it misses edges or adds spurious ones, we can diagnose why — perhaps insufficient sample size, or violations of the faithfulness assumption. This calibration step is essential before applying the same algorithm to data where the true structure is unknown.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Discover causal structure with the PC algorithm</h2>
+      </div>
+      <div class="step-body">
+        <p>The PC algorithm (named after its inventors, Peter Spirtes and Clark Glymour) is the foundational constraint-based structure learning method. Its logic is elegantly simple:</p>
+
+<ol>
+<li><strong>Start with a fully connected undirected graph</strong> — assume every variable could be connected to every other variable.</li>
+<li><strong>Test pairs of variables for conditional independence.</strong> If X and Y are conditionally independent given some set of other variables Z, remove the edge between them.</li>
+<li><strong>Orient the remaining edges</strong> using a set of orientation rules. The most important is the <em>v-structure</em> rule: if X — Z — Y with no edge between X and Y, and Z was not in the conditioning set that separated X and Y, then orient as X → Z ← Y.</li>
+</ol>
+
+<p>The result is a <em>completed partially directed acyclic graph</em> (CPDAG) — some edges are directed, others remain ambiguous because the data alone cannot distinguish their orientation. This is a fundamental limitation: observational data can identify the <em>Markov equivalence class</em> (the set of DAGs encoding the same conditional independencies) but often cannot pinpoint a unique DAG without additional assumptions or interventional data.</p>
+
+<p>The choice of <strong>conditional independence test</strong> matters. For discrete data, the chi-square test is standard. For continuous Gaussian data, partial correlation (Pearson&#x27;s r) is appropriate.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to run the PC algorithm on the simulated alarm dataset, produce the learned DAG, and compare it against the ground-truth structure by reporting how many true edges were recovered, how many were missed, and how many spurious edges were added.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>Which conditional independence test is appropriate for discrete categorical data?</li><li>What does the `return_type` parameter control — and why would we want a DAG rather than a CPDAG for downstream use?</li><li>How can we quantify structural accuracy? Think about set operations on edge lists: intersection, difference.</li><li>What significance level should the CI test use, and what is the tradeoff of making it more or less strict?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should instantiate <code>PC(data=df)</code>, call <code>.estimate()</code> with <code>ci_test=&#x27;chi_square&#x27;</code> and <code>return_type=&#x27;dag&#x27;</code>, then compare the learned edges against the true model&#x27;s edges. It should report three numbers: true positives (correctly recovered edges), false negatives (missed edges), and false positives (spurious edges). With 5,000 samples, expect roughly 60–80% of true edges recovered, with a modest number of false positives. The agent should note that some edges may be oriented incorrectly because the CPDAG-to-DAG conversion involves arbitrary choices within each equivalence class.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The PC algorithm assumes <strong>causal sufficiency</strong> — that there are no unmeasured common causes (latent confounders). If this assumption is violated, the algorithm may orient edges incorrectly or add spurious connections. The FCI algorithm relaxes this assumption at the cost of less definitive edge orientations.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Structure learning on 37 variables with 5,000 samples may take 30–60 seconds. If your agent&#x27;s output times out, ask it to reduce the significance level (e.g., <code>significance_level=0.01</code>) to prune tests more aggressively, or reduce the variable set.
+      </div>
+        
+      <details class="reveal">
+        <summary>What is a Markov equivalence class?</summary>
+        <div class="reveal-body"><p>Multiple DAGs can encode exactly the same set of conditional independence relationships. These DAGs form a <em>Markov equivalence class</em>, represented compactly by a CPDAG. For example, X → Y and X ← Y are Markov equivalent if there are no other variables — both encode the same (trivial) independence structure. The PC algorithm identifies the equivalence class, not a unique DAG. Edges that are directed in the CPDAG are genuinely identifiable from data; undirected edges represent genuine ambiguity that only domain knowledge or interventional experiments can resolve.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>How does the significance level affect structure learning?</summary>
+        <div class="reveal-body"><p>The significance level (α) controls the threshold for declaring two variables conditionally independent. A lower α (e.g., 0.01) requires stronger evidence of dependence before retaining an edge, producing a sparser graph with fewer false positives but potentially more false negatives. A higher α (e.g., 0.1) retains more edges, capturing weaker dependencies at the cost of more spurious connections. The default (0.05) is a reasonable starting point, but domain-specific tuning is often necessary.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have a learned DAG structure stored as a pgmpy graph object, along with a quantitative comparison to the ground-truth alarm network. You understand that the PC algorithm discovers structure through conditional independence testing, and that observational data alone may leave some edge orientations ambiguous.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Fit parameters and perform probabilistic inference</h2>
+      </div>
+      <div class="step-body">
+        <p>A DAG without parameters is a skeleton — it tells us <em>which</em> variables influence <em>which</em>, but not <em>how strongly</em> or <em>in what way</em>. Parameter learning fills in the conditional probability distributions (CPDs) at each node.</p>
+
+<p>For a discrete Bayesian Network, each node&#x27;s CPD is a conditional probability table (CPT): a table specifying the probability of each state of the node given every combination of its parents&#x27; states. With the alarm network&#x27;s discrete variables, these tables can be estimated directly from data using <strong>maximum likelihood estimation</strong> (MLE) — simply counting frequencies — or <strong>Bayesian estimation</strong>, which incorporates a prior (typically a Dirichlet distribution) to handle sparse data more gracefully.</p>
+
+<p>Once parameters are fitted, we can perform <strong>probabilistic inference</strong>: computing the posterior distribution of any variable given observed evidence on other variables. This is the standard &quot;prediction&quot; task — analogous to what any classifier does, but with the added benefit that a Bayesian Network can predict <em>any</em> variable from <em>any</em> subset of observations, not just a single target from a fixed feature set.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to fit parameters to the learned DAG using the simulated data, then demonstrate probabilistic inference by predicting the value of a dropped variable from the remaining observations.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>Should the model be built from the learned DAG or the ground-truth DAG? What are the implications of each choice?</li><li>What is the difference between MLE and Bayesian parameter estimation, and when would you prefer one over the other?</li><li>For the prediction demonstration, which variable should we drop, and how do we measure prediction accuracy?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should construct a <code>DiscreteBayesianNetwork</code> from the learned DAG&#x27;s edges and nodes, call <code>.fit(df)</code> to estimate CPDs via MLE, then drop one column (e.g., &#x27;VENTALV&#x27;) from the DataFrame and use <code>.predict()</code> to infer its values from the remaining columns. It should report prediction accuracy by comparing against the true values. The agent should also briefly show how to inspect a CPD for one node using <code>.get_cpds()</code>, noting the table&#x27;s dimensions (rows = node states, columns = parent state combinations).</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Probabilistic inference in a Bayesian Network is <strong>omnidirectional</strong>: you can predict any variable from any subset of others. This contrasts with discriminative models (e.g., logistic regression), which are trained to predict a single target variable. This flexibility is one reason Bayesian Networks are valued in domains like medical diagnosis, where the &#x27;target&#x27; variable changes depending on the clinical question.
+      </div>
+        
+      <details class="reveal">
+        <summary>MLE vs. Bayesian estimation: when does it matter?</summary>
+        <div class="reveal-body"><p>Maximum likelihood estimation sets each conditional probability to the observed frequency. This works well with sufficient data but produces zero probabilities for state combinations not observed in the sample — a problem known as <em>data sparsity</em>. Bayesian estimation (with a Dirichlet prior) adds pseudocounts, ensuring no probability is exactly zero. This is analogous to Laplace smoothing in naive Bayes classifiers. With 5,000 samples and 37 variables, some parent-state combinations will be rare, making Bayesian estimation the safer default for production use.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You have a fitted Bayesian Network and want to answer the question: &#x27;If we force the ventilator pressure to HIGH, what happens to blood oxygen levels?&#x27; Which type of query is this?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt0">
+          <label for="decision_6_opt0">Probabilistic inference — condition on ventilator pressure being HIGH</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. Conditioning (observing) is not the same as intervening. P(Oxygen | Pressure=HIGH) reflects the joint distribution of patients who *happen to have* high ventilator pressure — a population that may differ systematically from others. It conflates the causal effect of pressure with selection bias.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt1">
+          <label for="decision_6_opt1">Interventional query — compute P(Oxygen | do(Pressure=HIGH))</label>
+          <div class="decision-feedback correct">&#10003; Correct! The &#x27;do&#x27; operator represents a physical intervention: we reach into the system and set pressure to HIGH regardless of its natural causes. This severs all incoming edges to the Pressure node (the &#x27;graph surgery&#x27; operation), isolating the downstream causal effect from confounding. This is Pearl&#x27;s do-calculus, and it is precisely what distinguishes causal inference from standard probabilistic conditioning.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_6" id="decision_6_opt2">
+          <label for="decision_6_opt2">Counterfactual query — ask what *would have happened*</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. A counterfactual query is more specific: it asks about a particular individual or observation. For example, &#x27;Given that this patient had low oxygen, *would* their oxygen have been normal *had* we set pressure to HIGH?&#x27; Counterfactuals require stronger assumptions (typically a fully specified structural equation model) and answer a different question than the population-level interventional query posed here.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Interventional queries with do-calculus</h2>
+      </div>
+      <div class="step-body">
+        <p>This is where causal inference departs from standard machine learning. The <strong>do-operator</strong>, introduced by Judea Pearl, formalizes the difference between <em>seeing</em> and <em>doing</em>.</p>
+
+<p>When we observe that X = x (conditioning), we update our beliefs about all variables correlated with X — including X&#x27;s causes. When we intervene and set X = x (the do-operation), we physically force X to that value, severing it from its natural causes. Graphically, this is represented by <strong>graph surgery</strong>: deleting all incoming edges to X in the DAG, then computing the resulting probability distribution.</p>
+
+<p>The practical consequence is profound. Consider a medical example: observing that a patient has high ventilator pressure and low oxygen does not mean that <em>reducing</em> ventilator pressure would <em>improve</em> oxygen. The association may be confounded — perhaps both are caused by severe lung disease. The do-calculus answers the <em>interventional</em> question correctly by adjusting for confounding through the graph structure.</p>
+
+<p>pgmpy implements this through its <code>CausalInference</code> class, which takes a fitted Bayesian Network and computes interventional distributions using the adjustment formula derived from the graph.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to use pgmpy&#x27;s CausalInference class to compute an interventional distribution — specifically, the effect of intervening on one variable and observing the resulting distribution of a downstream variable — and contrast the result with the corresponding observational conditional distribution.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>Which pgmpy class handles causal queries, and what does it need as input — a fitted model or just a DAG?</li><li>How do you specify the intervention (the &#x27;do&#x27; operation) and the target variable in pgmpy&#x27;s API?</li><li>Why is it important to compare the interventional result with the observational conditional? What would a large discrepancy tell you about the causal structure?</li><li>Which pair of variables would best illustrate the difference — ideally a pair where confounding is present?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should instantiate <code>CausalInference</code> with the fitted model, then compute <code>query(variables=[&#x27;target&#x27;], do={&#x27;intervention_var&#x27;: value})</code> for a chosen variable pair. It should also compute the standard conditional probability <code>P(target | intervention_var = value)</code> using <code>VariableElimination</code> for comparison. The key output is a side-by-side comparison showing that the interventional and observational distributions differ — evidence of confounding. The agent should explain that the difference arises because the do-operator removes the influence of common causes, while conditioning does not.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The do-calculus requires that the causal graph is correctly specified. If the DAG is wrong — missing edges, incorrect orientations — interventional estimates may be biased. This is why structure validation (comparing learned structure against domain knowledge) is not optional; it is a prerequisite for trustworthy causal inference.
+      </div>
+        
+      <details class="reveal">
+        <summary>The adjustment formula, intuitively</summary>
+        <div class="reveal-body"><p>When we cannot run a randomized experiment, the do-calculus tells us how to compute interventional distributions from observational data — <em>if</em> we know the causal graph. The simplest case is the <strong>back-door adjustment formula</strong>: to estimate P(Y | do(X=x)), identify a set of variables Z that blocks all &#x27;back-door paths&#x27; (non-causal paths) between X and Y, then compute the weighted average P(Y | X=x, Z=z) × P(Z=z), summing over all values of Z. This is precisely what pgmpy&#x27;s <code>CausalInference.query()</code> automates: it identifies the appropriate adjustment set from the graph and applies the formula.</p></div>
+      </details>
+      <details class="reveal">
+        <summary>When do-calculus cannot help</summary>
+        <div class="reveal-body"><p>The do-calculus is not omnipotent. If a required adjustment set is not available — for example, because a necessary confounder is unmeasured — the interventional distribution is not identifiable from observational data alone. Pearl&#x27;s completeness results show that the three rules of do-calculus, combined with graph structure, can identify every identifiable causal effect, but some effects are genuinely not identifiable without additional data (e.g., from experiments or instrumental variables).</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Simulate under interventions and counterfactual scenarios</h2>
+      </div>
+      <div class="step-body">
+        <p>Beyond computing a single interventional probability, we often want to <strong>simulate</strong> what an entire dataset would look like under a hypothetical intervention. This is the causal analogue of synthetic data generation: instead of sampling from the observational distribution, we sample from the <em>interventional</em> distribution.</p>
+
+<p>pgmpy supports this through its <code>.simulate()</code> method with a <code>do</code> parameter. When you specify <code>do={&#x27;X&#x27;: value}</code>, the simulator performs graph surgery internally — it fixes X to the specified value, removes its dependence on parents, and then generates samples by ancestral sampling through the modified graph.</p>
+
+<p>This capability has direct practical applications:</p>
+<ul>
+<li><strong>Policy evaluation</strong>: &quot;If we mandate treatment A for all patients, what is the expected distribution of outcomes?&quot;</li>
+<li><strong>Fairness auditing</strong>: &quot;If we intervene to equalize a protected attribute, how do downstream predictions change?&quot;</li>
+<li><strong>Scenario planning</strong>: &quot;If we force a supply chain variable to a stress value, how do downstream metrics respond?&quot;</li>
+</ul>
+
+<p>Counterfactual reasoning goes one step further. Rather than asking about populations, counterfactuals ask about specific individuals: &quot;Given that <em>this particular patient</em> experienced outcome Y, <em>would</em> the outcome have been different <em>had</em> we administered treatment X instead?&quot; This requires a fully specified structural equation model and involves three steps: abduction (infer latent variables for the individual), action (perform the intervention), and prediction (compute the counterfactual outcome).</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Get the agent to simulate data under two different interventions — one where a variable is forced to a &#x27;high&#x27; state and one where it is forced to a &#x27;low&#x27; state — then compare the resulting distributions of a downstream variable to quantify the causal effect.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How does the `simulate()` method&#x27;s `do` parameter differ from its `evidence` parameter? Why does this distinction matter?</li><li>What sample size is sufficient to get stable distributional estimates from simulation?</li><li>How would you visualize or summarize the difference between the two intervention scenarios — a table of proportions, a histogram, a statistical test?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should call <code>model.simulate(n_samples=2000, do={&#x27;VAR&#x27;: &#x27;HIGH&#x27;})</code> and <code>model.simulate(n_samples=2000, do={&#x27;VAR&#x27;: &#x27;LOW&#x27;})</code> for a chosen variable, then compare the distribution of a downstream variable across the two simulated datasets. The output should include a summary table showing the proportion of each state of the downstream variable under each intervention, making the causal effect visually apparent. The agent should note that the difference in these proportions is an estimate of the average causal effect (ACE) of the intervention.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        Simulation under intervention is particularly powerful for sensitivity analysis. By sweeping the intervention variable across all its possible states, you can construct a complete dose-response curve — entirely from observational data and a validated causal graph, without running a single experiment.
+      </div>
+        
+      <details class="reveal">
+        <summary>The three levels of Pearl&#x27;s causal hierarchy</summary>
+        <div class="reveal-body"><p>Judea Pearl organizes causal reasoning into three levels, often called the <em>causal ladder</em>:</p>
+
+<ol>
+<li><strong>Association</strong> (seeing): P(Y | X) — standard conditional probability. Answered by any statistical model.</li>
+<li><strong>Intervention</strong> (doing): P(Y | do(X)) — what happens if we force X. Requires a causal model (DAG + parameters).</li>
+<li><strong>Counterfactual</strong> (imagining): P(Y_x | X&#x27;=x&#x27;, Y&#x27;=y&#x27;) — what <em>would have happened</em> to a specific unit. Requires a fully specified structural equation model.</li>
+</ol>
+
+<p>Each level subsumes the one below it: a model that can answer counterfactual questions can also answer interventional ones, which can also answer associational ones. The reverse is not true. Most ML models operate at level 1. This workshop has taken you to level 2, with a glimpse of level 3.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a complete causal inference pipeline: data loading, structure learning via the PC algorithm, parameter fitting, probabilistic inference, interventional queries via do-calculus, and simulation under hypothetical interventions. You have seen that interventional and observational distributions can differ — a direct consequence of confounding — and understand why graph surgery is necessary.</div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Prompt your agent to build a reusable causal analysis function that takes any pgmpy example model name, a variable to intervene on, an intervention value, and a target variable — then returns a comparison of the observational conditional distribution versus the interventional distribution, along with the identified adjustment set.</div>
+      <div class="your-turn-context">Throughout this session, each query was performed manually for a specific variable pair. A reusable function encapsulates the full pipeline and makes it applicable to any Bayesian Network — a necessary step toward using causal inference in practice. The function should also surface the adjustment set, which tells the user *which confounders* the do-calculus is adjusting for.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What inputs does the function need? Think about the full pipeline: model loading, data simulation, structure learning, parameter fitting, and querying.</li><li>Should the function learn structure from scratch each time, or accept a pre-fitted model? What are the tradeoffs?</li><li>How should the output be formatted to make the comparison between observational and interventional distributions immediately interpretable?</li><li>What error handling is needed — what happens if the intervention variable has no causal path to the target?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Build a Python function called `causal_compare` that accepts four arguments: a pgmpy example model name (string), an intervention variable name, an intervention value, and a target variable name. The function should: (1) load the example model and simulate 5000 samples, (2) fit a DiscreteBayesianNetwork using the true model structure, (3) compute P(target | intervention_var = value) using VariableElimination, (4) compute P(target | do(intervention_var = value)) using CausalInference, (5) return a dictionary with keys &#x27;observational&#x27;, &#x27;interventional&#x27;, and &#x27;adjustment_set&#x27;. Include a docstring explaining the difference between the two distributions. Handle the case where the target variable is not in the model by raising a ValueError with a clear message.</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>In this session, we moved through the complete pgmpy causal inference pipeline — not by writing code from scratch, but by directing an AI agent with increasingly precise prompts. We began with data loading and domain exploration, progressed through structure learning with the PC algorithm, fitted parameters via maximum likelihood, and then crossed the critical boundary from <em>associational</em> to <em>causal</em> reasoning by computing interventional distributions with do-calculus.</p>
+
+<p>The central insight is that causal inference requires more than data — it requires a <em>model of the data-generating process</em>. A DAG encodes assumptions about which variables cause which, and those assumptions enable questions that no amount of correlational analysis can answer. The do-operator, graph surgery, and the adjustment formula are the formal tools that make this possible.</p>
+
+<p>Equally important: causal discovery algorithms like PC are tools for <em>hypothesis generation</em>, not ground truth. Their output must be validated against domain knowledge, and their assumptions (causal sufficiency, faithfulness) must be critically examined. A learned graph is a starting point for causal reasoning, not an endpoint.</p></div>
+      <ul class="takeaways-list"><li>The do-operator formalizes the difference between observing and intervening — P(Y|X) and P(Y|do(X)) can differ when confounding is present, and only the latter answers causal questions.</li><li>The PC algorithm discovers causal structure by systematically testing conditional independence, but it identifies an equivalence class of DAGs, not a unique graph — some edge orientations remain ambiguous from observational data alone.</li><li>Bayesian Networks enable omnidirectional inference: any variable can be predicted from any subset of observations, and the same model supports both probabilistic conditioning and causal interventional queries.</li><li>Structure learning is hypothesis generation, not proof. Algorithmic output must be validated against domain knowledge, and the assumptions (causal sufficiency, faithfulness, correct graph) must hold for interventional estimates to be trustworthy.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Apply the pipeline to your own dataset: define candidate variables, run structure learning, and compare the learned graph against your domain expertise before trusting interventional queries.</li><li>Explore the FCI algorithm (<code>pgmpy.estimators.FCI</code>) for settings where latent confounders may be present — it relaxes the causal sufficiency assumption at the cost of less definitive edge orientations.</li><li>Investigate pgmpy&#x27;s <code>LinearGaussianBayesianNetwork</code> for continuous data, using Pearson partial correlation as the CI test — the same conceptual pipeline applies, but with different distributional assumptions.</li><li>Read Judea Pearl&#x27;s &#x27;The Book of Why&#x27; for an accessible introduction to causal reasoning, or &#x27;Causality&#x27; (2nd edition) for the full technical treatment of do-calculus and its completeness results.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/pgmpy/pgmpy" target="_blank" rel="noopener">pgmpy/pgmpy</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>

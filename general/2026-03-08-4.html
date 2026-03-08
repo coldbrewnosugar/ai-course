@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlashAttention-4: CuTeDSL-Powered Attention for Hopper &amp; Blackwell GPUs — Tinker</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root {
+  --bg: #F7F4F0;
+  --bg-subtle: #EFEBE5;
+  --bg-elevated: #FFFDF9;
+  --ink: #1C1917;
+  --ink-secondary: #57534E;
+  --muted: #A8A29E;
+  --accent: #2B6B6B;
+  --accent-hover: #1F5252;
+  --accent-light: rgba(43,107,107,0.06);
+  --accent-subtle: rgba(43,107,107,0.14);
+  --blue: #3B82F6;
+  --red: #EF4444;
+  --yellow: #EAB308;
+  --green: #22C55E;
+  --surface: #EFEBE5;
+  --border: #DDD7CF;
+  --border-subtle: #EFEBE5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --max-w: 680px;
+  --max-w-wide: 780px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+  font-size: 17px;
+  border-top: 3px solid var(--accent);
+}
+
+/* ── Track color worlds ── */
+body.track-general { /* default teal — uses :root values */ }
+body.track-image-gen { --accent: #C4563A; --accent-hover: #A8452E; --accent-light: rgba(196,86,58,0.06); --accent-subtle: rgba(196,86,58,0.14); }
+body.track-audio { --accent: #6B5B95; --accent-hover: #574A7D; --accent-light: rgba(107,91,149,0.06); --accent-subtle: rgba(107,91,149,0.14); }
+
+/* ── Layout ── */
+.session-container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* ── Back link ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2rem 0 1.25rem;
+  transition: color 0.15s;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hero ── */
+.session-hero {
+  padding: 1rem 0 2.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.session-hero .hero-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.3rem 0.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+}
+.session-hero h1 {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.6rem;
+  font-optical-sizing: auto;
+}
+.session-hero .hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.session-hero .hero-meta {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.hero-meta .tag {
+  display: inline-block;
+  background: var(--surface);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  border: none;
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin: 3rem 0;
+}
+
+/* ── Context block ── */
+.context-block {
+  background: var(--bg-elevated);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.context-block h2 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.context-block p { margin-bottom: 0.75rem; }
+.context-block p:last-child { margin-bottom: 0; }
+
+/* ── Steps ── */
+.step-section { margin-bottom: 3rem; }
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.step-number {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.step-header h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-top: 0.35rem;
+}
+.step-body p { margin-bottom: 0.75rem; }
+.step-body ul, .step-body ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.step-body li { margin-bottom: 0.35rem; }
+.step-body strong { font-weight: 600; }
+.step-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-subtle); text-underline-offset: 2px; }
+.step-body a:hover { text-decoration-color: var(--accent); }
+
+/* ── Code blocks ── */
+.code-block {
+  position: relative;
+  margin: 1.25rem 0;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.code-caption {
+  display: block;
+  padding: 0.55rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.code-block pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0;
+  background: transparent;
+}
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #E4E4E7;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: none;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.copy-btn.copied { background: var(--green); color: #fff; }
+
+/* ── Callouts ── */
+.callout {
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  background: var(--bg-elevated);
+}
+.callout-tip {
+  border-color: rgba(43,107,107,0.2);
+  background: rgba(43,107,107,0.04);
+}
+.callout-warning {
+  border-color: rgba(196,86,58,0.3);
+  background: rgba(196,86,58,0.04);
+}
+.callout-api-key-note {
+  border-color: rgba(202,138,4,0.25);
+  background: rgba(202,138,4,0.04);
+}
+.callout-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.callout-tip .callout-label { color: var(--accent); }
+.callout-warning .callout-label { color: #B84533; }
+.callout-api-key-note .callout-label { color: #CA8A04; }
+
+/* ── Reveals (details/summary) ── */
+.reveal {
+  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.reveal summary {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.reveal summary:hover { background: var(--surface); }
+.reveal summary::before {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.reveal[open] summary::before {
+  content: "\2212";
+}
+.reveal .reveal-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.reveal .reveal-body p { margin-bottom: 0.5rem; }
+.reveal .reveal-body p:last-child { margin-bottom: 0; }
+
+/* ── Checkpoint ── */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--accent-light);
+  color: var(--ink);
+  margin: 2rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-subtle);
+}
+.checkpoint-icon {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ── Decision point ── */
+.decision-point {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.decision-point h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.decision-point .question {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  line-height: 1.35;
+}
+.decision-option {
+  margin-bottom: 0.5rem;
+}
+.decision-option input[type="radio"] {
+  display: none;
+}
+.decision-option label {
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+  border-radius: var(--radius-md);
+}
+.decision-option label:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.decision-option input:checked + label {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.decision-feedback {
+  display: none;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+}
+.decision-option input:checked ~ .decision-feedback {
+  display: block;
+}
+.decision-feedback.correct {
+  border-color: #3D9A6D;
+  background: rgba(61,154,109,0.06);
+  color: #2D7A54;
+}
+.decision-feedback.incorrect {
+  border-color: #C4563A;
+  background: rgba(196,86,58,0.05);
+  color: #A8452E;
+}
+
+/* ── Agent interaction ── */
+.agent-interaction {
+  margin: 1.5rem calc((var(--max-w) - var(--max-w-wide)) / 2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.agent-goal {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  color: #E4E4E7;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.agent-goal::before {
+  content: none;
+}
+.agent-goal-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.35);
+}
+.agent-goal-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+.agent-hints {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.agent-hints-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.agent-hints ul {
+  list-style: none;
+  padding: 0;
+}
+.agent-hints li {
+  padding: 0.3rem 0 0.3rem 1.25rem;
+  position: relative;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+.agent-hints li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--mono);
+}
+
+/* Agent interaction reveals */
+.agent-interaction .reveal {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.agent-interaction .reveal summary {
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+/* ── Your turn ── */
+.your-turn {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent-subtle);
+}
+.your-turn h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.your-turn .your-turn-goal {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+.your-turn .your-turn-context {
+  font-size: 0.92rem;
+  color: var(--ink-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Recap ── */
+.recap-section {
+  padding-top: 2.5rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+}
+.recap-section h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.recap-body { margin-bottom: 1.5rem; }
+.recap-body p { margin-bottom: 0.75rem; }
+.takeaways-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+.takeaways-list li {
+  padding: 0.55rem 0 0.55rem 1.75rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+.takeaways-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.next-steps h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+}
+.next-steps li {
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  position: relative;
+}
+.next-steps li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Sources ── */
+.sources-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sources-section h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.sources-list {
+  list-style: none;
+  padding: 0;
+}
+.sources-list li {
+  padding: 0.3rem 0;
+}
+.sources-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-subtle);
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+}
+.sources-list a:hover { text-decoration-color: var(--accent); }
+.sources-list .source-name {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+/* ── Other articles ── */
+.other-articles {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+.other-articles h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.other-articles .oa-intro {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.other-article-card {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.other-article-card:hover {
+  border-color: var(--accent-subtle);
+  background: var(--accent-light);
+}
+.oa-info {
+  flex: 1;
+  min-width: 0;
+}
+.oa-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.1rem;
+}
+.oa-summary {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  margin: 0.1rem 0;
+  line-height: 1.4;
+}
+.oa-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.oa-votes {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.oa-toggle {
+  display: none;
+}
+.oa-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+  user-select: none;
+  border-radius: var(--radius-sm);
+}
+.oa-toggle-label:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+.oa-toggle:checked + .oa-toggle-label.vote-up {
+  background: rgba(61,154,109,0.1);
+  border-color: #3D9A6D;
+  color: #3D9A6D;
+}
+.oa-toggle:checked + .oa-toggle-label.vote-down {
+  background: rgba(196,86,58,0.08);
+  border-color: #C4563A;
+  color: #C4563A;
+}
+.oa-submit-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.oa-submit-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: var(--radius-md);
+}
+.oa-submit-btn:hover { background: #27272A; }
+.oa-submit-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+.oa-submit-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ── Footer ── */
+.session-footer {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4rem;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.session-footer span { color: var(--ink); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .session-hero h1 { font-size: 1.75rem; }
+  .step-number { width: 36px; height: 36px; font-size: 0.8rem; }
+  .session-container { padding: 0 1.15rem 3rem; }
+  .hero-meta { flex-wrap: wrap; gap: 0.75rem; }
+  .agent-interaction { margin-left: 0; margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body class="track-general">
+  <div class="session-container">
+    <a href="../index.html" class="back-link">&larr; Back to calendar</a>
+    
+    <div class="session-hero">
+      <div class="hero-tag">Workshop</div>
+      <h1>FlashAttention-4: CuTeDSL-Powered Attention for Hopper &amp; Blackwell GPUs</h1>
+      <div class="hero-subtitle">Install, benchmark, and integrate FlashAttention-4 into your inference and training pipelines</div>
+      <div class="hero-meta">
+        <span>35 min</span>
+        <span> <span class="tag">flash-attention</span> <span class="tag">cuda</span> <span class="tag">performance</span> <span class="tag">transformers</span> <span class="tag">inference</span></span>
+      </div>
+    </div>
+    <div class="context-block">
+      <h2>What's happening</h2>
+      <p>The attention mechanism is the computational bottleneck of every transformer model. Standard self-attention scales quadratically in both time and memory with sequence length, which makes long-context inference and training prohibitively expensive on commodity hardware. FlashAttention, introduced by Tri Dao et al. in 2022, addressed this by restructuring the attention computation to be <em>IO-aware</em> — tiling the operation to exploit the GPU memory hierarchy (SRAM vs. HBM) rather than materializing the full N×N attention matrix.</p>
+
+<p>FlashAttention-2 improved parallelism and work partitioning. FlashAttention-3 targeted Hopper GPUs (H100) specifically, adding FP8 forward pass support and leveraging the Tensor Memory Accelerator (TMA) asynchronous data movement features unique to the Hopper architecture.</p>
+
+<p>Now, <strong>FlashAttention-4</strong> arrives with a significant architectural shift: it is written entirely in <strong>CuTeDSL</strong>, NVIDIA&#x27;s new domain-specific language for composing CUDA kernels at the CuTE (CUDA Templates) abstraction level. This is consequential for two reasons. First, CuTeDSL enables a single codebase to target both Hopper (H100) and Blackwell (B200) GPUs without maintaining separate kernel implementations. Second, the <code>pip install flash-attn-4</code> installation path eliminates the notoriously painful compilation step that plagued earlier versions — a change that meaningfully lowers the barrier to adoption.</p>
+
+<p>In this session, we will install the package, construct benchmarking scripts to measure latency and memory across varying sequence lengths, integrate FlashAttention-4 into a transformer training loop, and explore FP8 mixed-precision inference.</p>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Understanding the Architecture: IO-Awareness and CuTeDSL</h2>
+      </div>
+      <div class="step-body">
+        <p>Before installing anything, it is worth understanding <em>why</em> FlashAttention produces identical results to standard attention while using dramatically less memory.</p>
+
+<h3>The Memory Hierarchy Problem</h3>
+
+<p>A GPU has two relevant tiers of memory: <strong>HBM</strong> (High Bandwidth Memory) — large but relatively slow — and <strong>SRAM</strong> (on-chip shared memory) — fast but extremely small. Standard attention computes Q·Kᵀ, writes the full N×N matrix to HBM, reads it back for softmax, writes the result to HBM again, then reads it for the final multiplication with V. Each of these read/write operations is a memory-bound bottleneck.</p>
+
+<p>FlashAttention restructures this computation using a <strong>tiling strategy</strong>: it processes the attention computation in blocks that fit entirely in SRAM, never materializing the full attention matrix in HBM. The key mathematical insight is an <strong>online softmax</strong> algorithm that accumulates the softmax normalization statistics incrementally across tiles, producing numerically exact results.</p>
+
+<h3>What CuTeDSL Changes</h3>
+
+<p>Previous versions of FlashAttention were written in raw CUDA with hand-tuned assembly for specific GPU architectures. CuTeDSL — a Python-embedded DSL built on top of NVIDIA&#x27;s CuTE (CUDA Templates) library — allows kernel authors to express the same tiling, data movement, and MMA (Matrix Multiply-Accumulate) operations at a higher abstraction level while still generating architecture-specific code. The practical consequence: a single CuTeDSL kernel can be compiled for both Hopper&#x27;s TMA units and Blackwell&#x27;s extended tensor cores.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to explain the memory access pattern difference between standard attention and FlashAttention, including a concrete numerical example of HBM reads/writes for a given sequence length.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What are the dimensions of the intermediate matrices in standard attention (the Q·Kᵀ product, the softmax output)?</li><li>If the sequence length is 4096 and the head dimension is 128, how many bytes does the full attention matrix occupy in BF16?</li><li>How does tiling eliminate the need to store this matrix, and what must the algorithm track instead?</li><li>What is the difference in total HBM I/O between the two approaches?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a clear comparison showing that for sequence length N=4096 and head dimension d=128, standard attention writes an N×N = 16M-element attention matrix to HBM (32 MB in BF16), reads it back for softmax, then writes and reads again — totaling roughly 128 MB of HBM traffic for that matrix alone. FlashAttention, by contrast, processes in SRAM tiles (e.g., 128×128 blocks), never writes the attention matrix to HBM, and tracks only two running statistics per row (the softmax maximum and denominator). Total HBM traffic drops to O(N·d) rather than O(N²). The agent should note that the results are mathematically identical — this is not an approximation.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        FlashAttention is <em>exact</em> attention — it produces bit-identical results to the naive implementation. The optimization is purely in memory access patterns, not in mathematical approximation. This distinguishes it from methods like sparse attention or linear attention, which trade accuracy for speed.
+      </div>
+        
+      <details class="reveal">
+        <summary>How does online softmax work across tiles?</summary>
+        <div class="reveal-body"><p>The standard softmax requires knowing the maximum value across the entire row before computing any exponentials (for numerical stability). The online softmax algorithm processes tiles sequentially, maintaining a running maximum <em>m</em> and a running sum of exponentials <em>l</em>. When a new tile introduces a larger maximum, all previously accumulated exponentials are rescaled by exp(m_old − m_new). This rescaling is exact — no precision is lost. The key insight from Milakov &amp; Gimelshein (2018) is that this online correction can be fused with the matrix multiplication itself, eliminating extra memory passes. FlashAttention extends this to the backward pass as well, recomputing the attention matrix from Q, K, V blocks rather than storing it — trading modest extra computation for dramatic memory savings.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Installation and Environment Verification</h2>
+      </div>
+      <div class="step-body">
+        <p>FlashAttention-4 introduces a much simpler installation path compared to its predecessors. Earlier versions required compiling CUDA kernels from source (often taking 30+ minutes and consuming significant RAM), but FlashAttention-4&#x27;s CuTeDSL foundation enables distribution as prebuilt wheels.</p>
+
+<h3>Prerequisites</h3>
+
+<p>The requirements are straightforward: a Hopper or Blackwell GPU (H100, H800, B200, or B200A), CUDA toolkit 12.3 or later (12.8 recommended for best performance), and PyTorch 2.2+. The package is Linux-only at present.</p>
+
+<h3>The Installation Itself</h3>
+
+<p>The installation is a single pip command: <code>pip install flash-attn-4</code>. This stands in contrast to <code>flash-attn</code> (versions 1–2), which required <code>--no-build-isolation</code> and often the <code>MAX_JOBS</code> environment variable to prevent OOM during compilation.</p>
+
+<p>Once installed, the module is imported as <code>flash_attn.cute</code> — note the <code>.cute</code> submodule, which distinguishes the CuTeDSL implementation from the legacy CUDA path.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to generate a concise environment-verification script that confirms GPU compatibility, CUDA version, PyTorch version, and successful import of flash_attn.cute — printing a clear pass/fail summary.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What specific GPU architectures (compute capabilities) correspond to Hopper and Blackwell?</li><li>How do you query the CUDA toolkit version from within Python, versus the CUDA runtime version PyTorch was compiled against?</li><li>What should the script report if the GPU is an A100 (Ampere) — is that a soft warning or a hard failure?</li><li>How can you verify that the `flash_attn_func` callable is actually accessible from the imported module?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a short diagnostic script (under 15 lines) that checks <code>torch.cuda.get_device_capability()</code> for sm_90 (Hopper) or sm_100 (Blackwell), verifies the CUDA toolkit version is ≥12.3, confirms PyTorch ≥2.2, attempts to import <code>flash_attn.cute.flash_attn_func</code>, and prints a summary table of pass/fail results. For unsupported GPUs, it should print a clear message explaining which architectures are supported rather than failing silently.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        FlashAttention-4 does <strong>not</strong> support Ampere GPUs (A100, A10G). If you are running on Ampere hardware, you must use FlashAttention-2 (<code>pip install flash-attn --no-build-isolation</code>). The CuTeDSL kernels rely on Hopper-specific hardware features (TMA, wgmma instructions) that have no Ampere equivalent.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        CUDA 12.8 is strongly recommended even though 12.3 is the minimum. The performance gap between 12.3 and 12.8 on Hopper can be substantial due to compiler improvements in ptxas that better schedule TMA operations.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why did earlier versions require --no-build-isolation?</summary>
+        <div class="reveal-body"><p>FlashAttention 1 and 2 ship as a source distribution that compiles CUDA kernels at install time using PyTorch&#x27;s JIT compilation infrastructure. The <code>--no-build-isolation</code> flag tells pip to use the <em>current</em> Python environment rather than creating a fresh virtual environment for the build — which is necessary because the build process needs access to the already-installed PyTorch and CUDA headers. Without this flag, pip creates an isolated build environment that lacks these dependencies, causing compilation to fail. FlashAttention-4&#x27;s switch to CuTeDSL enables ahead-of-time compilation into prebuilt wheels, eliminating this pain point entirely.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>At this point, you should have a clear mental model of *why* FlashAttention is fast (IO-aware tiling that avoids materializing the N×N attention matrix in HBM) and *what changed* in version 4 (CuTeDSL enabling a single codebase for Hopper and Blackwell, plus pip-installable wheels). You should also have a diagnostic script ready to verify your environment.</div>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You are benchmarking FlashAttention-4 and notice that at sequence length 512 with head dimension 64, FlashAttention-4 is actually *slower* than a standard PyTorch `F.scaled_dot_product_attention` call. What is the most likely explanation?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt0">
+          <label for="decision_5_opt0">FlashAttention-4 has a bug at short sequence lengths</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. This is unlikely. The algorithm is correct at all sequence lengths. The issue is performance-economic, not correctness-related.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt1">
+          <label for="decision_5_opt1">At short sequences, the N×N attention matrix fits in SRAM anyway, so the IO-aware tiling adds overhead without benefit</label>
+          <div class="decision-feedback correct">&#10003; Correct! Correct. FlashAttention&#x27;s advantage comes from avoiding HBM traffic for the attention matrix. When N is small enough that the matrix fits comfortably in SRAM (or the HBM traffic is negligible relative to kernel launch overhead), the tiling and online softmax bookkeeping add cost without corresponding savings. PyTorch&#x27;s built-in SDPA may dispatch to a simpler cuBLAS-based path that has lower overhead at these sizes. FlashAttention&#x27;s crossover point is typically around N=1024–2048, depending on head dimension and batch size.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt2">
+          <label for="decision_5_opt2">PyTorch&#x27;s SDPA is secretly using FlashAttention under the hood, so they should be identical</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. While PyTorch&#x27;s SDPA *can* dispatch to FlashAttention-2 as one of its backends, it can also dispatch to a memory-efficient attention implementation or a standard math path. Moreover, `flash-attn-4` is a separate package — PyTorch&#x27;s built-in SDPA does not use it. The two are distinct code paths.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_5" id="decision_5_opt3">
+          <label for="decision_5_opt3">FP8 quantization in FlashAttention-4 introduces rounding errors that slow down the computation</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. FP8 is an optional forward-pass feature, not the default. Using BF16 or FP16 does not involve any quantization. Moreover, FP8 is designed to be *faster* (not slower) due to higher tensor core throughput — any slowdown would come from quantization overhead, not rounding errors themselves.</div>
+        </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Benchmarking: Latency and Memory Across Sequence Lengths</h2>
+      </div>
+      <div class="step-body">
+        <p>The central claim of FlashAttention is that it provides sub-quadratic memory scaling and significant speedups at long sequence lengths. Rather than accepting these claims at face value, we will construct a systematic benchmark.</p>
+
+<h3>What to Measure</h3>
+
+<p>Two metrics matter: <strong>wall-clock latency</strong> (measured via CUDA events, not Python <code>time.time()</code>, to avoid CPU-GPU synchronization artifacts) and <strong>peak GPU memory</strong> (measured via <code>torch.cuda.max_memory_allocated()</code>). We want to sweep across:</p>
+
+<ul>
+<li><strong>Sequence lengths</strong>: 512, 1024, 2048, 4096, 8192, 16384</li>
+<li><strong>Batch sizes</strong>: 1, 4, 16</li>
+<li><strong>Head dimension</strong>: 128 (the standard for most modern LLMs)</li>
+<li><strong>Number of heads</strong>: 32</li>
+</ul>
+
+<p>The comparison should include three implementations: standard PyTorch <code>F.scaled_dot_product_attention</code>, FlashAttention-2 (if installed), and FlashAttention-4.</p>
+
+<h3>Warmup and Statistical Rigor</h3>
+
+<p>GPU benchmarking requires care. The first kernel launch incurs JIT compilation and initialization overhead. A proper benchmark discards several warmup iterations, then averages across many timed iterations, reporting both mean and standard deviation.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to build a benchmarking harness that compares FlashAttention-4 against PyTorch&#x27;s built-in SDPA across the parameter sweep described above, measuring latency (via CUDA events) and peak memory, and outputting results as a formatted table.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How should CUDA events be used to time GPU operations accurately? Why is `torch.cuda.synchronize()` important before recording events?</li><li>What is the correct way to reset peak memory statistics between benchmark runs to get isolated measurements?</li><li>How many warmup iterations and timed iterations provide a reasonable tradeoff between accuracy and total benchmark runtime?</li><li>Should the benchmark use `torch.no_grad()` for forward-only measurement? What changes if we also want to benchmark the backward pass?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a benchmark script that: (1) creates random Q, K, V tensors for each configuration in BF16 on CUDA, (2) runs 10 warmup iterations followed by 50 timed iterations using CUDA event pairs for each implementation, (3) calls <code>torch.cuda.reset_peak_memory_stats()</code> before each configuration, (4) collects latency mean/std and peak memory, (5) prints a table with columns for sequence length, batch size, implementation, mean latency (ms), std latency, and peak memory (MB). The key structural insight is that CUDA events must bracket only the kernel execution, with a <code>torch.cuda.synchronize()</code> after the final event to ensure all operations complete before reading elapsed time.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        When prompting your agent for benchmarking code, explicitly request CUDA event timing rather than wall-clock timing. Many agents default to <code>time.time()</code> or <code>time.perf_counter()</code>, which include CPU-GPU synchronization delays and produce misleading results for GPU-bound operations.
+      </div>
+        
+      <details class="reveal">
+        <summary>Expected performance characteristics</summary>
+        <div class="reveal-body"><p>At sequence length 512, FlashAttention-4 and SDPA should perform similarly (within ~10%), as the attention matrix is small enough that HBM traffic is not the bottleneck. At 2048, FlashAttention-4 should show a 1.5–2× speedup. At 8192 and above, the speedup grows to 2–4× and the memory advantage becomes dramatic: standard attention requires storing an 8192×8192 matrix (128 MB in BF16 per head), while FlashAttention&#x27;s memory usage scales linearly. At 16384, standard attention will likely OOM on a single GPU even at batch size 1 with 32 heads, while FlashAttention-4 handles it comfortably. These are the numbers that should motivate the integration work in the next steps.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Integration: Drop-In Replacement in a Transformer Training Loop</h2>
+      </div>
+      <div class="step-body">
+        <p>With performance characteristics established, the next task is integrating FlashAttention-4 into an actual model. The API is designed as a <strong>drop-in replacement</strong>: the function signature accepts Q, K, V tensors and returns the attention output, with the same semantics as standard attention.</p>
+
+<h3>The Interface</h3>
+
+<p>The core function is:</p>
+
+<p>```python</p>
+<p>from flash_attn.cute import flash_attn_func</p>
+<p>out = flash_attn_func(q, k, v, causal=True)</p>
+<p>```</p>
+
+<p>The key detail is <strong>tensor layout</strong>. FlashAttention-4 expects Q, K, V in the shape <code>(batch, seqlen, nheads, headdim)</code> — note that <code>nheads</code> and <code>seqlen</code> are in a different order than some libraries expect (<code>batch, nheads, seqlen, headdim</code>). A transpose or <code>einops</code> rearrangement may be necessary.</p>
+
+<h3>Causal vs. Non-Causal</h3>
+
+<p>The <code>causal=True</code> flag applies a causal mask (lower-triangular), which is essential for autoregressive language models. For bidirectional models (e.g., BERT-style encoders), set <code>causal=False</code>. The causal variant is slightly faster because it skips computation for the upper-triangular portion of the attention matrix.</p>
+
+<h3>Gradient Computation</h3>
+
+<p>FlashAttention-4 supports both forward and backward passes in BF16/FP16. The backward pass uses the <strong>recomputation</strong> strategy: rather than storing the attention matrix from the forward pass (which would defeat the memory savings), it recomputes it from Q, K, V during the backward pass. This trades a modest amount of extra computation (~25% more FLOPs in the backward pass) for dramatic memory savings.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to modify a standard multi-head attention module to use FlashAttention-4, handling the tensor layout conversion and supporting both causal and non-causal modes.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>What is the expected input shape for `flash_attn_func`, and how does it differ from PyTorch&#x27;s standard `(batch, nheads, seqlen, headdim)` convention?</li><li>Should the conversion logic live inside the attention module, or should the model&#x27;s architecture be refactored to use FlashAttention&#x27;s native layout throughout?</li><li>How should the module handle the case where FlashAttention-4 is not installed — should it fall back gracefully to standard attention?</li><li>What happens to attention dropout during training — does `flash_attn_func` support a dropout parameter?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a <code>FlashMultiHeadAttention</code> module (a PyTorch <code>nn.Module</code>) that: (1) accepts Q, K, V in the standard <code>(batch, nheads, seqlen, headdim)</code> format, (2) transposes them to <code>(batch, seqlen, nheads, headdim)</code> for FlashAttention-4, (3) calls <code>flash_attn_func</code> with the <code>causal</code> flag, (4) transposes the output back to the caller&#x27;s expected format, and (5) includes a fallback to <code>F.scaled_dot_product_attention</code> if <code>flash_attn.cute</code> is not importable. The module should be no more than 20 lines. The agent should note that FlashAttention supports a <code>dropout_p</code> parameter for training-time attention dropout.</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        The tensor layout difference between <code>(batch, nheads, seqlen, headdim)</code> and <code>(batch, seqlen, nheads, headdim)</code> is the single most common source of silent correctness bugs when integrating FlashAttention. The operation will <em>run</em> with the wrong layout — tensors are just blocks of memory — but produce incorrect attention outputs. Always verify with a small test case against the reference implementation.
+      </div>
+        
+      <details class="reveal">
+        <summary>Why does FlashAttention use a different tensor layout?</summary>
+        <div class="reveal-body"><p>The <code>(batch, seqlen, nheads, headdim)</code> layout is chosen because it makes the data for each sequence position contiguous in memory. When tiling across the sequence dimension (which is what FlashAttention does), contiguous access patterns maximize memory bandwidth utilization. In the <code>(batch, nheads, seqlen, headdim)</code> layout, accessing a tile of consecutive sequence positions for a single head requires strided memory access, which wastes bandwidth. This is a concrete example of how the algorithm&#x27;s tiling strategy dictates the optimal data layout — and why systems-level understanding of memory access patterns matters for high-performance ML.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="checkpoint">
+      <div class="checkpoint-icon">&#10003;</div>
+      <div>You should now have a working FlashAttention-4 integration inside a multi-head attention module, complete with layout conversion and a fallback path. The benchmarking results from Step 3 should show clear latency and memory advantages at sequence lengths ≥2048.</div>
+    </div>
+    <div class="step-section">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>FP8 Forward Pass for Mixed-Precision Inference</h2>
+      </div>
+      <div class="step-body">
+        <p>FlashAttention-3 introduced FP8 forward pass support on Hopper GPUs, and FlashAttention-4 extends this to Blackwell. FP8 (8-bit floating point) is significant for <strong>inference</strong> scenarios because it doubles the effective throughput of tensor cores compared to FP16/BF16: each tensor core cycle processes twice as many elements.</p>
+
+<h3>FP8 Formats: E4M3 vs. E5M2</h3>
+
+<p>Two FP8 formats exist. <strong>E4M3</strong> has 4 exponent bits and 3 mantissa bits, providing higher precision but a narrower dynamic range. <strong>E5M2</strong> has 5 exponent bits and 2 mantissa bits, offering wider range but lower precision. For attention, E4M3 is generally preferred because the softmax output is bounded between 0 and 1, requiring precision rather than range.</p>
+
+<h3>When to Use FP8 Attention</h3>
+
+<p>FP8 forward is appropriate for inference and the forward pass of training with FP8-aware training recipes (e.g., combined with loss scaling). It is <em>not</em> appropriate as a standalone change in a BF16 training pipeline — the reduced precision can destabilize training if the rest of the pipeline does not account for it.</p>
+
+<p>The backward pass remains in BF16/FP16 even when the forward pass uses FP8, because gradient computation is more sensitive to precision.</p>
+        
+      <div class="agent-interaction">
+        <div class="agent-goal">
+          <div class="agent-goal-label">Ask your agent</div>
+          Ask your agent to create a comparison script that runs FlashAttention-4 forward passes in both BF16 and FP8 (E4M3), measuring throughput (TFLOPS) and maximum absolute error relative to a full-precision reference.
+        </div>
+        
+        <div class="agent-hints">
+          <div class="agent-hints-label">Think about it</div>
+          <ul><li>How do you create FP8 E4M3 tensors in PyTorch? What `dtype` corresponds to this format?</li><li>What is the appropriate reference for measuring numerical error — FP32 standard attention, or BF16 FlashAttention?</li><li>How do you compute TFLOPS for attention? What is the FLOP count for a forward attention pass as a function of N, d, and batch size?</li><li>Should the Q, K, V tensors be cast to FP8 *before* calling `flash_attn_func`, or does the function handle internal casting?</li></ul>
+        </div>
+        
+      <details class="reveal">
+        <summary>What the agent gives back</summary>
+        <div class="reveal-body"><p>The agent should produce a script that: (1) generates reference Q, K, V in FP32 and computes reference attention output, (2) runs FlashAttention-4 in BF16 and measures latency, (3) runs FlashAttention-4 in FP8 E4M3 (<code>torch.float8_e4m3fn</code>) and measures latency, (4) computes max absolute error of both against the FP32 reference, (5) reports throughput in TFLOPS using the formula <code>2 <em> batch </em> nheads <em> seqlen² </em> headdim / (latency_seconds * 1e12)</code>. Expected results: FP8 should show roughly 1.5–2× throughput improvement over BF16, with max absolute error in the range of 1e-2 to 1e-3 (compared to ~1e-3 to 1e-4 for BF16).</p></div>
+      </details>
+      </div>
+        
+        
+      <div class="callout callout-warning">
+        <div class="callout-label">Warning</div>
+        FP8 attention is a <strong>forward-only</strong> feature. Do not attempt to call <code>.backward()</code> on FP8 attention outputs — the backward pass requires BF16 or FP16 precision. For training, use FP8 forward within a mixed-precision recipe that handles gradient scaling appropriately.
+      </div>
+      <div class="callout callout-tip">
+        <div class="callout-label">Tip</div>
+        The FLOP count for attention forward is approximately <code>4 <em> N² </em> d</code> per head (two matrix multiplications of size N×d by d×N, each costing 2·N²·d FLOPs). This is the standard formula for computing TFLOPS from measured latency.
+      </div>
+        
+      <details class="reveal">
+        <summary>FP8 on Blackwell vs. Hopper</summary>
+        <div class="reveal-body"><p>Blackwell GPUs (B200) offer roughly 2× the FP8 tensor core throughput of Hopper (H100) — approximately 4.5 PFLOPS vs. 2 PFLOPS for dense FP8 operations. This means the speedup from using FP8 attention on Blackwell is even more pronounced than on Hopper. However, the same precision considerations apply: the attention softmax distribution must remain representable in E4M3&#x27;s dynamic range. For very long sequences where the attention distribution becomes extremely peaked (high-confidence attention patterns), the precision loss in FP8 can be more noticeable. Monitoring the max absolute error at your target sequence length is essential before deploying FP8 attention in production.</p></div>
+      </details>
+      </div>
+    </div>
+    <div class="your-turn">
+      <h3>Your Turn</h3>
+      <div class="your-turn-goal">Build an end-to-end throughput benchmark that measures tokens-per-second for a full GPT-2–scale transformer forward pass (12 layers, 12 heads, head dimension 64, vocabulary size 50257) using FlashAttention-4 versus PyTorch SDPA, across sequence lengths 1024, 2048, and 4096.</div>
+      <div class="your-turn-context">Individual attention kernel benchmarks (Step 3) tell only part of the story. In a real transformer, attention competes for GPU resources with feedforward layers, layer norms, and embedding lookups. The end-to-end throughput measurement reveals whether FlashAttention-4&#x27;s kernel-level improvements translate into meaningful model-level speedups — or whether other layers become the new bottleneck.</div>
+      
+      <div class="agent-hints">
+        <div class="agent-hints-label">Think about it</div>
+        <ul><li>What does &#x27;tokens per second&#x27; mean in this context — is it `batch_size × seqlen / latency`, or something else?</li><li>Should the model use the standard PyTorch `nn.TransformerEncoder`, or a custom stack? What are the tradeoffs?</li><li>How do you isolate the attention implementation as the only variable while keeping everything else constant?</li><li>What batch size should you use — the largest that fits in memory, or a fixed value across all configurations?</li></ul>
+      </div>
+      
+      <details class="reveal">
+        <summary>See a sample prompt</summary>
+        <div class="reveal-body">
+          <div class="code-block">
+            <span class="code-caption">One way you could prompt it</span>
+            <button class="copy-btn">COPY</button>
+            <pre><code>Build a PyTorch benchmarking script that measures end-to-end forward-pass throughput (tokens/second) for a GPT-2-sized transformer (12 layers, 12 attention heads, head dim 64, hidden dim 768, vocab 50257). Compare two configurations: one using PyTorch&#x27;s built-in F.scaled_dot_product_attention, and one using flash_attn.cute.flash_attn_func with causal=True. Sweep sequence lengths [1024, 2048, 4096] with batch size 8. Use CUDA event timing with 5 warmup and 30 timed iterations. The model should be identical in both cases except for the attention function. Report a table with columns: seq_len, implementation, mean_latency_ms, tokens_per_second. Use BF16 autocast and torch.no_grad().</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="decision-point">
+      <h3>Quick Check</h3>
+      <div class="question">You are deploying FlashAttention-4 in a production inference service for a 7B-parameter language model. The service handles both short prompts (128–512 tokens) and long documents (8K–32K tokens). Which deployment strategy is most appropriate?</div>
+      
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt0">
+          <label for="decision_11_opt0">Always use FlashAttention-4 — it is strictly better than standard attention</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. As discussed in the earlier decision point, FlashAttention-4 incurs overhead at short sequence lengths due to its tiling machinery. For 128-token prompts, standard attention or PyTorch&#x27;s SDPA (which can dispatch to an optimized short-sequence path) may be faster.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt1">
+          <label for="decision_11_opt1">Use a dynamic dispatch strategy: standard SDPA for sequences below a crossover threshold (~1024 tokens), FlashAttention-4 for longer sequences</label>
+          <div class="decision-feedback correct">&#10003; Correct! This is the pragmatic choice. By profiling both implementations on your specific hardware and model to find the crossover point, you get optimal performance across the full range of input lengths. The crossover typically falls between 512 and 2048 tokens depending on head dimension and batch size. PyTorch&#x27;s own SDPA uses a similar dispatch strategy internally.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt2">
+          <label for="decision_11_opt2">Use FP8 FlashAttention-4 for all inference to maximize throughput</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. FP8 introduces measurable precision loss (max absolute error ~1e-2). For a production language model, this can degrade output quality — particularly for tasks requiring precise reasoning or numerical answers. FP8 attention should be validated against quality benchmarks for your specific use case before deployment, not applied as a blanket optimization.</div>
+        </div>
+        <div class="decision-option">
+          <input type="radio" name="decision_11" id="decision_11_opt3">
+          <label for="decision_11_opt3">Use FlashAttention-2 instead — it supports more GPU architectures</label>
+          <div class="decision-feedback incorrect">&#10007; Not quite. If you have Hopper or Blackwell GPUs (which the question implies), FlashAttention-4 provides better performance than FlashAttention-2 due to architecture-specific optimizations. FlashAttention-2 is the right choice only if you need Ampere support.</div>
+        </div>
+    </div>
+    <div class="recap-section">
+      <h2>Recap</h2>
+      <div class="recap-body"><p>In this session, we examined FlashAttention-4 from its theoretical foundations through practical deployment considerations. We began with the IO-awareness principle — the insight that restructuring attention to work within the GPU&#x27;s SRAM, rather than repeatedly reading and writing the full attention matrix through HBM, yields dramatic performance gains without any mathematical approximation.</p>
+
+<p>We then explored the architectural shift to CuTeDSL, which provides a unified kernel codebase targeting both Hopper and Blackwell GPUs while enabling simpler pip-based installation. We built benchmarking infrastructure using proper GPU timing methodology (CUDA events, warmup iterations, memory reset), integrated FlashAttention-4 into a transformer module with appropriate tensor layout handling, and examined the FP8 forward pass as an inference optimization with well-defined precision tradeoffs.</p>
+
+<p>The overarching lesson extends beyond this specific library: understanding the memory hierarchy of your compute hardware is often more important than algorithmic cleverness. FlashAttention performs exactly the same mathematical operations as standard attention — it simply moves data more efficiently.</p></div>
+      <ul class="takeaways-list"><li>FlashAttention achieves its speedup through IO-aware tiling that avoids materializing the N×N attention matrix in HBM, using online softmax to maintain numerical exactness across tiles.</li><li>FlashAttention-4&#x27;s CuTeDSL implementation provides a single codebase for Hopper and Blackwell GPUs with pip-installable wheels — a significant usability improvement over prior versions that required source compilation.</li><li>The tensor layout convention — (batch, seqlen, nheads, headdim) rather than (batch, nheads, seqlen, headdim) — is critical for correctness and reflects the algorithm&#x27;s preference for sequence-contiguous memory access patterns.</li><li>FP8 attention (E4M3 format) offers roughly 1.5–2× throughput gains for inference but introduces precision tradeoffs that must be validated against quality benchmarks for your specific model and use case.</li><li>FlashAttention&#x27;s advantages are most pronounced at long sequence lengths (≥2048); at short sequences, the tiling overhead can make it slower than simpler implementations, motivating dynamic dispatch strategies in production.</li></ul>
+      
+      <div class="next-steps">
+        <h3>Where to go next</h3>
+        <ul><li>Explore FlashAttention-4&#x27;s support for grouped-query attention (GQA) and multi-query attention (MQA), which are used in Llama-2, Mistral, and other modern architectures — the key is the <code>flash_attn_func</code> parameter for specifying K/V head counts.</li><li>Investigate variable-length sequence batching (the <code>flash_attn_varlen_func</code> variant), which avoids padding waste when processing batches of sequences with different lengths — essential for production inference servers.</li><li>Profile FlashAttention-4&#x27;s backward pass performance and memory savings in a full training run, comparing total training throughput (samples/second) against PyTorch&#x27;s native SDPA on your target model scale.</li></ul>
+      </div>
+    </div>
+    <div class="sources-section">
+      <h3>Sources</h3>
+      <ul class="sources-list"><li><a href="https://github.com/Dao-AILab/flash-attention" target="_blank" rel="noopener">Dao-AILab/flash-attention</a> <span class="source-name">(GitHub Trending Python)</span></li></ul>
+    </div>
+    <footer class="session-footer">
+      <span>Tinker</span> &middot; Build with AI, daily
+    </footer>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy-to-clipboard
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var code = btn.closest('.code-block').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function() {
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
